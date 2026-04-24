@@ -2,6 +2,7 @@ extends Node3D
 
 ## THE DEEP STATE: Player Input Controller
 ## Left-click to select, shift+left to add, right-click to move/attack.
+## Q = Fact Check (AOE de-suppress), E = Call Backup (spawn reinforcements).
 
 var selected_units: Array[Unit] = []
 var _camera: Camera3D
@@ -10,15 +11,18 @@ func _ready():
 	_camera = get_parent().get_node("RTSCamera/Camera3D")
 
 func _input(event: InputEvent):
-	if not event is InputEventMouseButton or not event.pressed:
-		return
-	match event.button_index:
-		MOUSE_BUTTON_LEFT:
-			_handle_select(event.position, event.shift_pressed)
-			get_viewport().set_input_as_handled()
-		MOUSE_BUTTON_RIGHT:
-			_handle_order(event.position)
-			get_viewport().set_input_as_handled()
+	if event is InputEventMouseButton and event.pressed:
+		match event.button_index:
+			MOUSE_BUTTON_LEFT:
+				_handle_select(event.position, event.shift_pressed)
+				get_viewport().set_input_as_handled()
+			MOUSE_BUTTON_RIGHT:
+				_handle_order(event.position)
+				get_viewport().set_input_as_handled()
+	elif event is InputEventKey and event.pressed and not event.echo:
+		match event.keycode:
+			KEY_Q: _cast_ability(true)
+			KEY_E: _cast_ability(false)
 
 func _handle_select(mouse_pos: Vector2, additive: bool):
 	var hit = _raycast(mouse_pos)
@@ -26,6 +30,7 @@ func _handle_select(mouse_pos: Vector2, additive: bool):
 		_deselect_all()
 	if hit and hit.collider is Unit:
 		_select_unit(hit.collider)
+	_notify_hud()
 
 func _handle_order(mouse_pos: Vector2):
 	selected_units = selected_units.filter(func(u): return is_instance_valid(u))
@@ -34,7 +39,6 @@ func _handle_order(mouse_pos: Vector2):
 	var hit = _raycast(mouse_pos)
 	if not hit:
 		return
-
 	if hit.collider is Unit:
 		var target = hit.collider as Unit
 		if target.data.faction != selected_units[0].data.faction:
@@ -48,7 +52,23 @@ func _handle_order(mouse_pos: Vector2):
 			var offset = Vector3((col - 1) * 2.0, 0, row * 2.0)
 			selected_units[i].target_unit = null
 			selected_units[i].target_position = dest + offset
-			print("ORDER set target_position on unit ", i, ": ", dest + offset)
+
+func _cast_ability(is_q: bool):
+	var hud = get_tree().get_first_node_in_group("hud")
+	if not hud:
+		return
+	var world_pos := _get_screen_center_world()
+	if world_pos == Vector3.ZERO:
+		return
+	if is_q:
+		hud.try_q(world_pos)
+	else:
+		hud.try_e(world_pos)
+
+func _get_screen_center_world() -> Vector3:
+	var center = get_viewport().get_visible_rect().size / 2.0
+	var hit = _raycast(center)
+	return hit.position if hit else Vector3.ZERO
 
 func _select_unit(unit: Unit):
 	if unit not in selected_units:
@@ -60,6 +80,11 @@ func _deselect_all():
 		if is_instance_valid(unit):
 			unit.set_selected(false)
 	selected_units.clear()
+
+func _notify_hud():
+	var hud = get_tree().get_first_node_in_group("hud")
+	if hud:
+		hud.update_selection(selected_units)
 
 func _raycast(mouse_pos: Vector2) -> Dictionary:
 	var from = _camera.project_ray_origin(mouse_pos)

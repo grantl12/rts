@@ -1,10 +1,12 @@
-[gd_scene load_steps=6 format=3 uid="uid://c8y5j2w1u6k5b"]
+[gd_scene load_steps=8 format=3 uid="uid://c8y5j2w1u6k5b"]
 
 [ext_resource type="Script" path="res://scripts/maps/map_base.gd" id="1_map"]
 [ext_resource type="Material" path="res://materials/neon_grid_mat.tres" id="2_mat"]
 [ext_resource type="Script" path="res://scripts/camera_controller.gd" id="3_cam"]
 [ext_resource type="Script" path="res://scripts/managers/skirmish_manager.gd" id="4_skirmish"]
 [ext_resource type="Script" path="res://scripts/input_controller.gd" id="5_input"]
+[ext_resource type="Script" path="res://scripts/ui/game_hud.gd" id="6_hud"]
+[ext_resource type="Script" path="res://scripts/maps/audit_point.gd" id="7_ap"]
 
 [node name="TheQuad" type="Node3D"]
 script = ExtResource("1_map")
@@ -20,6 +22,9 @@ script = ExtResource("3_cam")
 
 [node name="InputController" type="Node3D" parent="."]
 script = ExtResource("5_input")
+
+[node name="GameHUD" type="CanvasLayer" parent="."]
+script = ExtResource("6_hud")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 
@@ -47,3 +52,18 @@ size = Vector3(20, 10, 40)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 3, 0)
 use_collision = true
 size = Vector3(20, 6, 40)
+
+[node name="AP_Center" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+script = ExtResource("7_ap")
+point_name = "THE QUAD"
+
+[node name="AP_North" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -28)
+script = ExtResource("7_ap")
+point_name = "NORTH PLAZA"
+
+[node name="AP_South" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 28)
+script = ExtResource("7_ap")
+point_name = "SOUTH STEPS"

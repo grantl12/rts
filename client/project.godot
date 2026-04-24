@@ -22,6 +22,8 @@ config/icon="res://icon.svg"
 [autoload]
 
 SupabaseManager="*res://scripts/managers/supabase_manager.gd"
+ResourceManager="*res://scripts/managers/resource_manager.gd"
+AbilityManager="*res://scripts/managers/ability_manager.gd"
 
 [display]
 
