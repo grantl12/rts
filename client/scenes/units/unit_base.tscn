@@ -1,0 +1,42 @@
+[gd_scene load_steps=5 format=3 uid="uid://b8y5j2w1u6k5b"]
+
+[ext_resource type="Script" path="res://scripts/units/unit.gd" id="1_unit"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1"]
+radius = 0.5
+height = 1.8
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1"]
+transparency = 1
+albedo_color = Color(0, 0, 0, 0.5)
+
+[node name="UnitBase" type="CharacterBody3D" groups=["units"]]
+script = ExtResource("1_unit")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_1")
+
+[node name="Sprite3D" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+pixel_size = 0.02
+billboard = 2
+fixed_size = true
+# Texture will be set by the unit data
+
+[node name="Shadow" type="CSGCylinder3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+radius = 0.4
+height = 0.1
+material = SubResource("StandardMaterial3D_1")
+
+[node name="NavigationAgent3D" type="NavigationAgent3D" parent="."]
+path_desired_distance = 0.5
+target_desired_distance = 0.5
+
+[node name="StatusLabel" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.2, 0)
+billboard = 3
+font_size = 8
+outline_size = 4
+text = ""

@@ -1,0 +1,96 @@
+[gd_scene load_steps=2 format=3 uid="uid://a1b2c3d4e5f6a"]
+
+[ext_resource type="Script" path="res://scripts/ui/faction_selection.gd" id="1_fact"]
+
+[node name="FactionSelection" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_fact")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.05, 0.05, 0.08, 1)
+
+[node name="Title" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -200.0
+offset_top = 50.0
+offset_right = 200.0
+offset_bottom = 100.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 32
+text = "SELECT JURISDICTION"
+horizontal_alignment = 1
+
+[node name="Grid" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -400.0
+offset_top = -100.0
+offset_right = 400.0
+offset_bottom = 100.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 40
+alignment = 1
+
+[node name="Regency" type="Button" parent="Grid"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "THE REGENCY
+(Order)"
+
+[node name="Oligarchy" type="Button" parent="Grid"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "THE OLIGARCHY
+(Brute)"
+
+[node name="Frontline" type="Button" parent="Grid"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "FRONTLINE
+(Asymmetric)"
+
+[node name="Sovereign" type="Button" parent="Grid"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "SOVEREIGN
+(Traditional)"
+
+[node name="Back" type="Button" parent="."]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -50.0
+offset_top = -80.0
+offset_right = 50.0
+offset_bottom = -50.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "BACK"
+
+[connection signal="pressed" from="Grid/Regency" to="." method="_on_faction_selected" binds= ["Regency"]]
+[connection signal="pressed" from="Grid/Oligarchy" to="." method="_on_faction_selected" binds= ["Oligarchy"]]
+[connection signal="pressed" from="Grid/Frontline" to="." method="_on_faction_selected" binds= ["Frontline"]]
+[connection signal="pressed" from="Grid/Sovereign" to="." method="_on_faction_selected" binds= ["Sovereign"]]
+[connection signal="pressed" from="Back" to="." method="_on_back_pressed"]

@@ -1,0 +1,21 @@
+# Godot
+.godot/
+*.import
+export.cfg
+export_presets.cfg
+.import/
+*.translation
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code
+.claude/
