@@ -9,14 +9,16 @@ var _camera: Camera3D
 func _ready():
 	_camera = get_parent().get_node("RTSCamera/Camera3D")
 
-func _unhandled_input(event: InputEvent):
+func _input(event: InputEvent):
 	if not event is InputEventMouseButton or not event.pressed:
 		return
 	match event.button_index:
 		MOUSE_BUTTON_LEFT:
 			_handle_select(event.position, event.shift_pressed)
+			get_viewport().set_input_as_handled()
 		MOUSE_BUTTON_RIGHT:
 			_handle_order(event.position)
+			get_viewport().set_input_as_handled()
 
 func _handle_select(mouse_pos: Vector2, additive: bool):
 	var hit = _raycast(mouse_pos)
@@ -26,6 +28,7 @@ func _handle_select(mouse_pos: Vector2, additive: bool):
 		_select_unit(hit.collider)
 
 func _handle_order(mouse_pos: Vector2):
+	selected_units = selected_units.filter(func(u): return is_instance_valid(u))
 	if selected_units.is_empty():
 		return
 	var hit = _raycast(mouse_pos)
@@ -34,19 +37,18 @@ func _handle_order(mouse_pos: Vector2):
 
 	if hit.collider is Unit:
 		var target = hit.collider as Unit
-		# Only issue attack order against enemies
 		if target.data.faction != selected_units[0].data.faction:
 			for unit in selected_units:
 				unit.target_unit = target
 	else:
-		# Move order — spread units in a 3-wide formation
 		var dest = hit.position
 		for i in selected_units.size():
-			var col = i % 3
-			var row = i / 3
+			var col: int = i % 3
+			var row: int = i / 3
 			var offset = Vector3((col - 1) * 2.0, 0, row * 2.0)
 			selected_units[i].target_unit = null
 			selected_units[i].target_position = dest + offset
+			print("ORDER set target_position on unit ", i, ": ", dest + offset)
 
 func _select_unit(unit: Unit):
 	if unit not in selected_units:

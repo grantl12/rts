@@ -36,7 +36,7 @@ target_desired_distance = 0.5
 
 [node name="StatusLabel" type="Label3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.2, 0)
-billboard = 3
+billboard = 1
 font_size = 8
 outline_size = 4
 text = ""

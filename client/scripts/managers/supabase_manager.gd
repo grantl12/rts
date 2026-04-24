@@ -21,7 +21,7 @@ func save_hero_to_cloud(hero_data: Dictionary):
 	var body = JSON.stringify(hero_data)
 	http.request(url, headers, HTTPClient.METHOD_POST, body)
 
-func sync_global_conflict(theater_data: Dictionary):
+func sync_global_conflict(_theater_data: Dictionary):
 	print("SYNCHRONIZING GLOBAL CONFLICT...")
 	# Logic to update the global_conflict_stats table
 	pass

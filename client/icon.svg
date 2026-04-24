@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <rect width="128" height="128" fill="#0a0a12"/>
+  <rect x="16" y="16" width="96" height="96" fill="none" stroke="#00ffcc" stroke-width="2"/>
+  <text x="64" y="52" font-family="monospace" font-size="11" fill="#00ffcc" text-anchor="middle">THE</text>
+  <text x="64" y="68" font-family="monospace" font-size="11" fill="#00ffcc" text-anchor="middle">DEEP</text>
+  <text x="64" y="84" font-family="monospace" font-size="11" fill="#00ffcc" text-anchor="middle">STATE</text>
+</svg>
