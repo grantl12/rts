@@ -1,8 +1,8 @@
 shader_type canvas_item;
 
 uniform int pixel_size = 3;
-uniform float scanline_intensity = 0.15;
-uniform float color_bleed = 0.001;
+uniform float scanline_intensity : hint_range(0.0, 0.5) = 0.15;
+uniform float color_bleed : hint_range(0.0, 0.01) = 0.001;
 uniform sampler2D screen_texture : hint_screen_texture, repeat_disable, filter_nearest;
 
 void fragment() {
@@ -23,7 +23,7 @@ void fragment() {
     color -= scanline;
     
     // Gritty Contrast / Color Crushing
-    color = mix(color, floor(color * 8.0) / 8.0, 0.5); // Gritty palette
+    color = mix(color, floor(color * 8.0) / 8.0, 0.5); # Gritty palette
     
     COLOR = vec4(color, 1.0);
 }

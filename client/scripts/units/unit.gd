@@ -49,6 +49,7 @@ func _build_visuals():
 		_build_mesh_visuals()
 	
 	_build_selection_ui()
+	_build_shadow()
 
 	# Soul leader crown indicator
 	if is_soul_leader:
