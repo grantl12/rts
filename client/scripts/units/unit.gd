@@ -325,7 +325,7 @@ func tether_civilians(radius: float = 5.0):
 	var results = space_state.intersect_shape(query)
 	for res in results:
 		var obj = res.collider
-		if obj is Civilian and obj.current_state == Civilian.CivilianState.IDLE:
+		if obj.has_method("tether_to") and obj.current_state == 0: # 0 is IDLE in CivilianState
 			obj.tether_to(self)
 			tethered_units.append(obj)
 			# Infamy spike if ROE is high during "forced" tethering
