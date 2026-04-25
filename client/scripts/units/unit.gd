@@ -8,6 +8,7 @@ class_name Unit
 @export var soul_id: String = ""
 
 @onready var _status_label: Label3D = $StatusLabel
+@onready var _nav_agent: NavigationAgent3D = $NavigationAgent3D
 
 var target_position: Vector3
 var target_unit: Unit = null
@@ -175,10 +176,26 @@ func shoot():
 		target_unit.take_damage(data.damage, "Vitality")
 
 func move_to_target(_delta):
-	var dir = Vector3(target_position.x - global_position.x, 0, target_position.z - global_position.z)
-	if dir.length() > 0.1:
+	if global_position.distance_to(target_position) <= 0.5:
+		velocity = Vector3.ZERO
+		return
+
+	_nav_agent.target_position = target_position
+
+	var dir: Vector3
+	if not _nav_agent.is_navigation_finished():
+		var next_pos := _nav_agent.get_next_path_position()
+		dir = next_pos - global_position
+	else:
+		# Fallback: straight-line movement (before navmesh is ready)
+		dir = target_position - global_position
+
+	dir.y = 0.0
+	if dir.length() > 0.05:
 		velocity = dir.normalized() * 5.0
 		move_and_slide()
+	else:
+		velocity = Vector3.ZERO
 
 func take_damage(amount: float, type: String = "Vitality"):
 	var final_amount = amount

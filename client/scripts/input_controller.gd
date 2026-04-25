@@ -1,8 +1,8 @@
 extends Node3D
 
 ## THE DEEP STATE: Player Input Controller
-## Left-click to select, shift+left to add, right-click to move/attack.
-## Q = Fact Check (AOE de-suppress), E = Call Backup (spawn reinforcements).
+## Left-click to select units/buildings, right-click to move/attack.
+## Q = Fact Check, E = Call Backup.
 
 var selected_units: Array[Unit] = []
 var _camera: Camera3D
@@ -25,36 +25,45 @@ func _input(event: InputEvent):
 			KEY_E: _cast_ability(false)
 
 func _handle_select(mouse_pos: Vector2, additive: bool):
-	var hit = _raycast(mouse_pos)
+	var hit := _raycast(mouse_pos)
 	if not additive:
 		_deselect_all()
-	if hit and hit.collider is Unit:
+	if not hit:
+		_get_hud().deselect_building()
+		_notify_hud()
+		return
+	if hit.collider is Unit:
+		_get_hud().deselect_building()
 		_select_unit(hit.collider)
+	elif hit.collider is Building:
+		_deselect_all()
+		_get_hud().select_building(hit.collider as Building)
+		return
 	_notify_hud()
 
 func _handle_order(mouse_pos: Vector2):
 	selected_units = selected_units.filter(func(u): return is_instance_valid(u))
 	if selected_units.is_empty():
 		return
-	var hit = _raycast(mouse_pos)
+	var hit := _raycast(mouse_pos)
 	if not hit:
 		return
 	if hit.collider is Unit:
-		var target = hit.collider as Unit
+		var target := hit.collider as Unit
 		if target.data.faction != selected_units[0].data.faction:
 			for unit in selected_units:
 				unit.target_unit = target
 	else:
-		var dest = hit.position
+		var dest := hit.position
 		for i in selected_units.size():
 			var col: int = i % 3
 			var row: int = i / 3
-			var offset = Vector3((col - 1) * 2.0, 0, row * 2.0)
+			var offset := Vector3((col - 1) * 2.0, 0, row * 2.0)
 			selected_units[i].target_unit = null
 			selected_units[i].target_position = dest + offset
 
 func _cast_ability(is_q: bool):
-	var hud = get_tree().get_first_node_in_group("hud")
+	var hud := _get_hud()
 	if not hud:
 		return
 	var world_pos := _get_screen_center_world()
@@ -66,8 +75,8 @@ func _cast_ability(is_q: bool):
 		hud.try_e(world_pos)
 
 func _get_screen_center_world() -> Vector3:
-	var center = get_viewport().get_visible_rect().size / 2.0
-	var hit = _raycast(center)
+	var center := get_viewport().get_visible_rect().size / 2.0
+	var hit := _raycast(center)
 	return hit.position if hit else Vector3.ZERO
 
 func _select_unit(unit: Unit):
@@ -82,13 +91,14 @@ func _deselect_all():
 	selected_units.clear()
 
 func _notify_hud():
-	var hud = get_tree().get_first_node_in_group("hud")
-	if hud:
-		hud.update_selection(selected_units)
+	_get_hud().update_selection(selected_units)
+
+func _get_hud() -> Node:
+	return get_tree().get_first_node_in_group("hud")
 
 func _raycast(mouse_pos: Vector2) -> Dictionary:
-	var from = _camera.project_ray_origin(mouse_pos)
-	var to = from + _camera.project_ray_normal(mouse_pos) * 1000.0
-	var query = PhysicsRayQueryParameters3D.create(from, to)
+	var from := _camera.project_ray_origin(mouse_pos)
+	var to := from + _camera.project_ray_normal(mouse_pos) * 1000.0
+	var query := PhysicsRayQueryParameters3D.create(from, to)
 	query.collide_with_areas = false
 	return get_world_3d().direct_space_state.intersect_ray(query)

@@ -21,6 +21,7 @@ config/icon="res://icon.svg"
 
 [autoload]
 
+GameSession="*res://scripts/managers/game_session.gd"
 SupabaseManager="*res://scripts/managers/supabase_manager.gd"
 ResourceManager="*res://scripts/managers/resource_manager.gd"
 AbilityManager="*res://scripts/managers/ability_manager.gd"
