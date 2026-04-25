@@ -23,7 +23,7 @@ void fragment() {
     color -= scanline;
     
     // Gritty Contrast / Color Crushing
-    color = mix(color, floor(color * 8.0) / 8.0, 0.5); # Gritty palette
+    color = mix(color, floor(color * 8.0) / 8.0, 0.5); // Gritty palette
     
     COLOR = vec4(color, 1.0);
 }
