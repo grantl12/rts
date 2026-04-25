@@ -26,6 +26,8 @@ A satirical RTS built on Godot 4.4 and Supabase. The game blends the weighted sq
 ### 3. Interface (The UX)
 - **Executive Dashboard:** Boot sequence, satirical News Ticker, and navigation. "Terminal OS" aesthetic.
 - **ROE Control Slider:** Functional UI slider to shift Rules of Engagement.
+- **Glitch-Selection UI:** 16-bit flickering bracket shader with unique Hex IDs for every unit.
+- **Mission Control Ticker:** Marquee-style scrolling log for real-time mission updates.
 - **Jurisdiction Selection:** Faction choosing flow (Regency, Oligarchy, Frontline, Sovereign).
 - **RTS Camera:** Functional pan/zoom controller for the "Omniscient Auditor."
 

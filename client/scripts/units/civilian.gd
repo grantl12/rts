@@ -65,8 +65,10 @@ func _check_infamy_reactions():
 func become_insurgent():
 	current_state = CivilianState.INSURGENCY
 	_base_color = Color(1.0, 0.5, 0.0) # Orange/Rust for insurgents
-	_body_material.albedo_color = _base_color
+	if _body_material:
+		_body_material.albedo_color = _base_color
 	_status_label.text = "!!! INSURGENT !!!"
+	GameManager.log_message("CIVILIAN FLIPPED: INSURGENT DETECTED", Color(1.0, 0.2, 0.2))
 	# Logic to switch faction to Proxy/Sovereign
 
 func tether_to(leader: Unit):

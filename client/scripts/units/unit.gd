@@ -24,6 +24,7 @@ var _head_material: StandardMaterial3D
 var _base_color: Color
 var _health_label: Label3D
 var _sprite: Sprite3D
+var _selection_box: MeshInstance3D
 var _bars_dirty: bool = false
 
 func _ready():
@@ -46,6 +47,8 @@ func _build_visuals():
 		_build_sprite_visuals()
 	else:
 		_build_mesh_visuals()
+	
+	_build_selection_ui()
 
 	# Soul leader crown indicator
 	if is_soul_leader:
@@ -138,6 +141,34 @@ func _get_faction_color() -> Color:
 		"Sovereign": return Color(0.8, 0.3, 1.0)
 	return Color(0.6, 0.6, 0.6)
 
+func _build_selection_ui():
+	_selection_box = MeshInstance3D.new()
+	var quad = QuadMesh.new()
+	quad.size = Vector2(2.2, 2.2)
+	_selection_box.mesh = quad
+	
+	var mat = ShaderMaterial.new()
+	mat.shader = load("res://shaders/selection_glitch.gdshader")
+	mat.set_shader_parameter("color", Color(0.3, 1.0, 0.6))
+	_selection_box.material_override = mat
+	
+	_selection_box.position.y = 0.05
+	_selection_box.rotation_degrees.x = -90 # Flat on ground
+	_selection_box.visible = false
+	add_child(_selection_box)
+	
+	# System ID Label
+	var id_label = Label3D.new()
+	# Generate a fake Hex ID based on the node name or soul_id
+	var id_hex = str(get_instance_id()).sha1_text().substr(0, 4).to_upper()
+	id_label.text = "ID: #" + id_hex
+	id_label.font_size = 5
+	id_label.outline_size = 2
+	id_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	id_label.position = Vector3(0.8, 0, 0.8) # Relative to selection box
+	id_label.visible = false
+	_selection_box.add_child(id_label)
+
 func apply_soul_visuals():
 	if _sprite:
 		_sprite.modulate = Color(1.2, 1.1, 0.8) # Slight golden tint
@@ -147,6 +178,12 @@ func apply_soul_visuals():
 func set_selected(value: bool):
 	is_selected = value
 	
+	if _selection_box:
+		_selection_box.visible = value
+		for child in _selection_box.get_children():
+			if child is Label3D:
+				child.visible = value
+
 	if _sprite:
 		_sprite.modulate = Color(0.5, 1.5, 1.0) if value else Color(1, 1, 1)
 		if not value and is_soul_leader: apply_soul_visuals()

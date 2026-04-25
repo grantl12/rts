@@ -5,6 +5,7 @@ extends Node
 
 signal roe_level_changed(new_level: int)
 signal infamy_changed(new_score: float)
+signal message_logged(text: String, color: Color)
 
 enum ROELevel {
 	HEARTS_AND_MINDS = 1,
@@ -30,4 +31,6 @@ func _ready():
 
 func add_infamy(amount: float):
 	infamy_score += amount
-	# Logic for backend sync could be triggered here
+
+func log_message(text: String, color: Color = Color.WHITE):
+	message_logged.emit(text, color)

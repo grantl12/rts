@@ -1,6 +1,7 @@
 extends CanvasLayer
 
 ## THE DEEP STATE: In-Game HUD
+## Features a Mission Control Ticker and Terminal UI.
 
 const Q_COOLDOWN_MAX := 15.0
 const E_COOLDOWN_MAX := 30.0
@@ -16,19 +17,39 @@ var _e_label: Label
 var _selection_panel: Control
 var _selection_label: Label
 
+# Ticker variables
+var _ticker_label: Label
+var _ticker_text: String = "--- SYSTEM READY --- STANDBY FOR AUDIT ---"
+var _ticker_speed: float = 80.0 # Pixels per second
+
 func _ready():
 	add_to_group("hud")
 	_build_ui()
 	ResourceManager.resources_changed.connect(_on_resources_changed)
+	GameManager.message_logged.connect(_on_message_logged)
 
 func _build_ui():
 	var top = _panel(true)
 	add_child(top)
+	
 	_funds_label = Label.new()
 	_funds_label.position = Vector2(14, 8)
 	_funds_label.add_theme_color_override("font_color", Color(0.2, 0.5, 1.0))
 	_funds_label.text = "REGENCY // INTELLIGENCE BUDGET: $500"
 	top.add_child(_funds_label)
+
+	# Ticker setup inside top panel
+	var ticker_container = Control.new()
+	ticker_container.clip_contents = true
+	ticker_container.size = Vector2(600, 36)
+	ticker_container.position = Vector2(400, 0) # Middle-right of top bar
+	top.add_child(ticker_container)
+	
+	_ticker_label = Label.new()
+	_ticker_label.text = _ticker_text
+	_ticker_label.add_theme_color_override("font_color", Color(0.4, 0.9, 1.0))
+	_ticker_label.position = Vector2(600, 8) # Start off-screen right
+	ticker_container.add_child(_ticker_label)
 
 	var bot = _panel(false)
 	add_child(bot)
@@ -97,10 +118,26 @@ func _process(delta):
 		_e_label.text = "[E]\nCALL\nBACKUP"
 	if _selection_panel.visible and not _selected_units.is_empty():
 		_refresh_selection()
+	
+	_process_ticker(delta)
+
+func _process_ticker(delta):
+	if not _ticker_label: return
+	_ticker_label.position.x -= _ticker_speed * delta
+	if _ticker_label.position.x < -_ticker_label.size.x:
+		_ticker_label.position.x = 600 # Wrap around
+
+func _on_message_logged(text: String, color: Color):
+	_ticker_text = "--- " + text.to_upper() + " --- STANDBY --- " + _ticker_text
+	_ticker_label.text = _ticker_text
+	_ticker_label.add_theme_color_override("font_color", color)
+	# Reset position for priority read
+	_ticker_label.position.x = 600
 
 func _on_resources_changed(faction: String, amount: int):
 	if faction == player_faction:
 		_funds_label.text = faction.to_upper() + " // INTELLIGENCE BUDGET: $" + str(amount)
+		GameManager.log_message("BUDGET UPDATED: $" + str(amount), Color(0.2, 0.5, 1.0))
 
 func update_selection(units: Array):
 	_selected_units = units.filter(func(u): return is_instance_valid(u))
