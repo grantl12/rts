@@ -14,7 +14,10 @@ func _input(event: InputEvent):
 	if event is InputEventMouseButton and event.pressed:
 		match event.button_index:
 			MOUSE_BUTTON_LEFT:
-				_handle_select(event.position, event.shift_pressed)
+				if event.is_pressed():
+					_start_marquee_select(event.position)
+				elif event.is_released():
+					_end_marquee_select(event.position, event.shift_pressed)
 				get_viewport().set_input_as_handled()
 			MOUSE_BUTTON_RIGHT:
 				_handle_order(event.position)
@@ -32,63 +35,24 @@ func _handle_select(mouse_pos: Vector2, additive: bool):
 		_select_unit(hit.collider)
 	_notify_hud()
 
-func _handle_order(mouse_pos: Vector2):
-	selected_units = selected_units.filter(func(u): return is_instance_valid(u))
-	if selected_units.is_empty():
-		return
-	var hit = _raycast(mouse_pos)
-	if not hit:
-		return
-	if hit.collider is Unit:
-		var target = hit.collider as Unit
-		if target.data.faction != selected_units[0].data.faction:
-			for unit in selected_units:
-				unit.target_unit = target
-	else:
-		var dest = hit.position
-		for i in selected_units.size():
-			var col: int = i % 3
-			var row: int = i / 3
-			var offset = Vector3((col - 1) * 2.0, 0, row * 2.0)
-			selected_units[i].target_unit = null
-			selected_units[i].target_position = dest + offset
+func _start_marquee_select(start_pos: Vector2):
+	# Store the starting position for marquee selection
+	pass # Logic will be in _end_marquee_select
 
-func _cast_ability(is_q: bool):
-	var hud = get_tree().get_first_node_in_group("hud")
-	if not hud:
-		return
-	var world_pos := _get_screen_center_world()
-	if world_pos == Vector3.ZERO:
-		return
-	if is_q:
-		hud.try_q(world_pos)
-	else:
-		hud.try_e(world_pos)
-
-func _get_screen_center_world() -> Vector3:
-	var center = get_viewport().get_visible_rect().size / 2.0
-	var hit = _raycast(center)
-	return hit.position if hit else Vector3.ZERO
-
-func _select_unit(unit: Unit):
-	if unit not in selected_units:
-		selected_units.append(unit)
-		unit.set_selected(true)
-
-func _deselect_all():
-	for unit in selected_units:
-		if is_instance_valid(unit):
-			unit.set_selected(false)
-	selected_units.clear()
-
-func _notify_hud():
-	var hud = get_tree().get_first_node_in_group("hud")
-	if hud:
-		hud.update_selection(selected_units)
-
-func _raycast(mouse_pos: Vector2) -> Dictionary:
-	var from = _camera.project_ray_origin(mouse_pos)
-	var to = from + _camera.project_ray_normal(mouse_pos) * 1000.0
-	var query = PhysicsRayQueryParameters3D.create(from, to)
-	query.collide_with_areas = false
-	return get_world_3d().direct_space_state.intersect_ray(query)
+func _end_marquee_select(end_pos: Vector2, additive: bool):
+	var selection_rect = Rect2(start_pos.min_v(end_pos), (start_pos - end_pos).abs())
+	
+	# Deselect existing units if not additive
+	if not additive:
+		_deselect_all()
+		
+	# Get all units in the scene and check if they are within the selection rect
+	var all_units = get_tree().get_nodes_in_group("units") # Assuming units are in a group
+	for unit_node in all_units:
+		if unit_node is Unit:
+			var unit = unit_node as Unit
+			# Convert unit's screen position to viewport coordinates
+			var screen_pos = _camera.unproject_position(unit.global_position)
+			if selection_rect.has_point(screen_pos):
+				_select_unit(unit)
+	_notify_hud()
