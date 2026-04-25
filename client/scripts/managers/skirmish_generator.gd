@@ -85,12 +85,13 @@ func spawn_audit_point(pos: Vector3, ap_name: String):
 	get_tree().current_scene.add_child.call_deferred(ap)
 
 func spawn_civilian_cluster(pos: Vector3):
+	var civ_res = load("res://resources/units/civilian.tres")
 	for i in range(civilians_per_cluster):
 		var civ_pos = pos + Vector3(randf_range(-3, 3), 0, randf_range(-3, 3))
-		var civ_scene = load("res://scenes/units/civilian_base.tscn")
-		# Script fallback
-		var civ = CharacterBody3D.new()
+		var civ_scene = load("res://scenes/units/unit_base.tscn") # Use unit_base
+		var civ = civ_scene.instantiate()
 		civ.set_script(load("res://scripts/units/civilian.gd"))
+		civ.data = civ_res
 		civ.position = civ_pos
 		get_tree().current_scene.add_child.call_deferred(civ)
 

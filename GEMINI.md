@@ -17,7 +17,7 @@ A satirical RTS built on Godot 4.4 and Supabase. The game blends the weighted sq
 - **Global Conflict Manager:** Meta-manager tracking theater control and updating satirical news headlines.
 
 ### 2. Theaters & Maps (The World)
-- **Theater 1 (The Quad):** Fully visual-complete. Includes grass lawns, concrete paths, large-scale university buildings (Library, Sciences, etc.), and the central **Audit Tent** (Auditor's desk, chair, and tarp).
+- **Theater 1 (The Quad):** Expanded and stylized to resemble a "Post-Truth University Campus." Features increased building density with varied sizes and shapes (academic wings, library, union, faculty offices), connected by concrete pathways. Enhanced "brutalist concrete" building materials with emissive window effects. Includes grass lawns, stylized lo-fi trees, and the central **Audit Tent**.
 - **Procedural Skirmish System:** Functional `SkirmishGenerator.gd` and `skirmish_map.tscn`. Can procedurally generate maps with random Base, Audit Point, and Civilian Cluster placement.
 - **Theater 2 (The Wall):** Functional "Audit Station" logic and **Analog Zone** shader for anti-grid areas.
 - **Theater 3 (The Ziggurat):** "Server Migration" mechanic (units physically carrying Data Cores).

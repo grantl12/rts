@@ -42,10 +42,22 @@ func _generate_audit_tent():
 func _generate_external_buildings():
 	# Surrounding University Buildings (Huge lo-fi boxes)
 	var buildings = [
-		{"pos": Vector3(-50, 10, 0), "size": Vector3(30, 20, 80), "name": "Liberal Arts"},
-		{"pos": Vector3(50, 10, 0), "size": Vector3(30, 20, 80), "name": "Sciences"},
-		{"pos": Vector3(0, 10, -50), "size": Vector3(80, 20, 30), "name": "Library"},
-		{"pos": Vector3(0, 10, 50), "size": Vector3(80, 20, 30), "name": "Admissions"}
+		{"pos": Vector3(-50, 10, 0), "size": Vector3(30, 20, 80), "name": "Liberal Arts Wing"},
+		{"pos": Vector3(50, 10, 0), "size": Vector3(30, 20, 80), "name": "Sciences Block"},
+		{"pos": Vector3(0, 10, -50), "size": Vector3(80, 20, 30), "name": "Central Library"},
+		{"pos": Vector3(0, 10, 50), "size": Vector3(80, 20, 30), "name": "Admissions Hall"},
+		
+		# Additional buildings for density and campus feel
+		{"pos": Vector3(-80, 8, 30), "size": Vector3(40, 16, 40), "name": "Engineering Annex"},
+		{"pos": Vector3(-80, 8, -30), "size": Vector3(40, 16, 40), "name": "Research Lab"},
+		{"pos": Vector3(80, 8, 30), "size": Vector3(40, 16, 40), "name": "Student Union"},
+		{"pos": Vector3(80, 8, -30), "size": Vector3(40, 16, 40), "name": "Administration Tower"},
+		
+		# Some smaller structures / variations
+		{"pos": Vector3(-30, 5, 50), "size": Vector3(20, 10, 20), "name": "Campus Ministry"},
+		{"pos": Vector3(30, 5, 50), "size": Vector3(20, 10, 20), "name": "Student Services"},
+		{"pos": Vector3(-70, 6, 70), "size": Vector3(15, 12, 15), "name": "Faculty Offices"},
+		{"pos": Vector3(70, 6, 70), "size": Vector3(15, 12, 15), "name": "Faculty Offices"}
 	]
 	
 	for b in buildings:
@@ -54,18 +66,22 @@ func _generate_external_buildings():
 		box.position = b.pos
 		var mat = StandardMaterial3D.new()
 		mat.albedo_color = Color(0.3, 0.3, 0.35) # Brutalist concrete
+		mat.roughness = 0.8
 		box.material = mat
 		add_child(box)
 		
 		# Add a simple window grid effect (emissive)
-		for y in range(3):
+		# This creates emissive blocks simulating lit windows
+		for y_offset in range(3):
 			var windows = CSGBox3D.new()
-			windows.size = Vector3(b.size.x + 0.2, 1, b.size.z + 0.2)
-			windows.position = b.pos + Vector3(0, -5 + (y * 5), 0)
+			windows.size = Vector3(b.size.x + 0.2, 1.2, b.size.z + 0.2) # Slightly larger to wrap edges
+			# Position windows along the height of the building, adjusted for building size
+			windows.position = b.pos + Vector3(0, -b.size.y/2.0 + 2.0 + (float(y_offset) * (b.size.y / 3.0)), 0)
 			var w_mat = StandardMaterial3D.new()
 			w_mat.albedo_color = Color(0, 0, 0)
 			w_mat.emission_enabled = true
 			w_mat.emission = Color(0.1, 0.4, 0.3) # "Internal System" glow
+			w_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 			windows.material = w_mat
 			add_child(windows)
 

@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="UnitResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/unit_resource.gd" id="1_res"]
+
+[resource]
+script = ExtResource("1_res")
+unit_name = "Civilian"
+unit_type = "Civilian"
+faction = "Neutral"
+max_vitality = 50.0
+max_bureaucracy = 100.0
+max_supplies = 0.0
+damage = 0.0
+attack_range = 0.0
+attack_speed = 0.0
+accuracy = 0.0
+soul_id = ""
+veterancy_rank = 1
+map_cap_reached = false
+metadata = {}
+sprite_scale = 1.0
