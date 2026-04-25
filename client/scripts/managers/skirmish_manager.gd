@@ -97,16 +97,27 @@ func _ai_issue_orders():
 	var enemy := GameSession.enemy_faction
 	var enemy_units: Array = get_tree().get_nodes_in_group("units").filter(
 		func(u): return is_instance_valid(u) and u is Unit \
-			and u.data.faction == enemy and u.target_unit == null
+			and u.data.faction == enemy and u.target_unit == null \
+			and u.target_building == null
 	)
 	if enemy_units.is_empty():
 		return
 
-	# Target the highest-priority uncaptured or player-held point
 	var points: Array = get_tree().get_nodes_in_group("audit_points")
-	if points.is_empty():
+
+	# Once all points belong to the enemy, storm the player HQ
+	var uncaptured: Array = points.filter(
+		func(p): return p is AuditPoint and p.controlling_faction != enemy
+	)
+	if uncaptured.is_empty() and is_instance_valid(player_hq):
+		for unit in enemy_units:
+			unit.target_building = player_hq
+			unit.target_unit = null
 		return
 
+	# Otherwise push toward the most valuable uncaptured point
+	if points.is_empty():
+		return
 	var target_point: AuditPoint = null
 	for pt in points:
 		if pt is AuditPoint and pt.controlling_faction != enemy:

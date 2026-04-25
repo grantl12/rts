@@ -1,24 +1,44 @@
 extends Node3D
 
 ## THE DEEP STATE: Player Input Controller
-## Left-click to select units/buildings, right-click to move/attack.
+## Left-click / drag to select, right-click to move/attack buildings+units.
 ## Q = Fact Check, E = Call Backup.
 
 var selected_units: Array[Unit] = []
 var _camera: Camera3D
 
+var _drag_start: Vector2 = Vector2.ZERO
+var _is_dragging: bool = false
+const DRAG_THRESHOLD := 6.0
+
 func _ready():
 	_camera = get_parent().get_node("RTSCamera/Camera3D")
 
 func _input(event: InputEvent):
-	if event is InputEventMouseButton and event.pressed:
+	if event is InputEventMouseButton:
 		match event.button_index:
 			MOUSE_BUTTON_LEFT:
-				_handle_select(event.position, event.shift_pressed)
+				if event.pressed:
+					_drag_start = event.position
+					_is_dragging = false
+				else:
+					if _is_dragging:
+						_handle_box_select(event.position)
+						_get_hud().hide_drag_box()
+						_is_dragging = false
+					else:
+						_handle_select(event.position, event.shift_pressed)
 				get_viewport().set_input_as_handled()
 			MOUSE_BUTTON_RIGHT:
-				_handle_order(event.position)
-				get_viewport().set_input_as_handled()
+				if event.pressed:
+					_handle_order(event.position)
+					get_viewport().set_input_as_handled()
+	elif event is InputEventMouseMotion:
+		if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+			if not _is_dragging and event.position.distance_to(_drag_start) > DRAG_THRESHOLD:
+				_is_dragging = true
+			if _is_dragging:
+				_get_hud().update_drag_box(_drag_start, event.position)
 	elif event is InputEventKey and event.pressed and not event.echo:
 		match event.keycode:
 			KEY_Q: _cast_ability(true)
@@ -41,6 +61,20 @@ func _handle_select(mouse_pos: Vector2, additive: bool):
 		return
 	_notify_hud()
 
+func _handle_box_select(mouse_end: Vector2):
+	var select_rect := Rect2(_drag_start, mouse_end - _drag_start).abs()
+	_deselect_all()
+	_get_hud().deselect_building()
+	for node in get_tree().get_nodes_in_group("units"):
+		if not (node is Unit) or not is_instance_valid(node):
+			continue
+		if node.data.faction != GameSession.player_faction:
+			continue
+		var screen_pos := _camera.unproject_position(node.global_position)
+		if select_rect.has_point(screen_pos):
+			_select_unit(node)
+	_notify_hud()
+
 func _handle_order(mouse_pos: Vector2):
 	selected_units = selected_units.filter(func(u): return is_instance_valid(u))
 	if selected_units.is_empty():
@@ -53,6 +87,13 @@ func _handle_order(mouse_pos: Vector2):
 		if target.data.faction != selected_units[0].data.faction:
 			for unit in selected_units:
 				unit.target_unit = target
+				unit.target_building = null
+	elif hit.collider is Building:
+		var building := hit.collider as Building
+		if building.faction != selected_units[0].data.faction:
+			for unit in selected_units:
+				unit.target_building = building
+				unit.target_unit = null
 	else:
 		var dest := hit.position
 		for i in selected_units.size():
@@ -60,6 +101,7 @@ func _handle_order(mouse_pos: Vector2):
 			var row: int = i / 3
 			var offset := Vector3((col - 1) * 2.0, 0, row * 2.0)
 			selected_units[i].target_unit = null
+			selected_units[i].target_building = null
 			selected_units[i].target_position = dest + offset
 
 func _cast_ability(is_q: bool):

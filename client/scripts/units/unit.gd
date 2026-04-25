@@ -12,6 +12,7 @@ class_name Unit
 
 var target_position: Vector3
 var target_unit: Unit = null
+var target_building: Building = null
 var is_selected: bool = false
 var current_vitality: float
 var current_bureaucracy: float
@@ -151,7 +152,9 @@ func _physics_process(delta):
 		_update_bars()
 		_bars_dirty = false
 
-	if target_unit and is_instance_valid(target_unit):
+	if target_building and is_instance_valid(target_building):
+		handle_building_combat(delta)
+	elif target_unit and is_instance_valid(target_unit):
 		handle_combat(delta)
 	elif global_position.distance_to(target_position) > 0.5:
 		move_to_target(delta)
@@ -165,6 +168,23 @@ func handle_combat(_delta):
 	else:
 		target_position = target_unit.global_position
 		move_to_target(_delta)
+
+func handle_building_combat(_delta):
+	var dist = global_position.distance_to(target_building.global_position)
+	if dist <= data.attack_range:
+		velocity = Vector3.ZERO
+		if attack_cooldown <= 0:
+			_shoot_building()
+	else:
+		target_position = target_building.global_position
+		move_to_target(_delta)
+
+func _shoot_building():
+	if current_supplies <= 0 or is_suppressed:
+		return
+	attack_cooldown = 1.0 / data.attack_speed
+	current_supplies -= 1.0
+	target_building.take_damage(data.damage * 0.75)
 
 func shoot():
 	if current_supplies <= 0 or is_suppressed:

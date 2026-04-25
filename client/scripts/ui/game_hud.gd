@@ -2,6 +2,21 @@ extends CanvasLayer
 
 ## THE DEEP STATE: In-Game HUD
 
+# Drag-selection box drawn on top of all other HUD elements.
+class _SelectionBox extends Control:
+	var _from := Vector2.ZERO
+	var _to   := Vector2.ZERO
+
+	func set_rect(from: Vector2, to: Vector2) -> void:
+		_from = from
+		_to   = to
+		queue_redraw()
+
+	func _draw() -> void:
+		var r := Rect2(_from, _to - _from).abs()
+		draw_rect(r, Color(0.35, 0.75, 1.0, 0.10), true)
+		draw_rect(r, Color(0.35, 0.75, 1.0, 0.80), false, 1.5)
+
 const Q_COOLDOWN_MAX := 15.0
 const E_COOLDOWN_MAX := 30.0
 
@@ -19,6 +34,7 @@ var _building_panel: Control
 var _building_label: Label
 var _produce_btn: Button
 var _game_over_panel: Control
+var _sel_box: _SelectionBox
 
 func _ready():
 	add_to_group("hud")
@@ -119,6 +135,20 @@ func _build_ui():
 		get_tree().change_scene_to_file("res://scenes/ui/main_menu.tscn")
 	)
 	_game_over_panel.add_child(back_btn)
+
+	# Drag-selection box — added last so it draws over everything else
+	_sel_box = _SelectionBox.new()
+	_sel_box.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_sel_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sel_box.visible = false
+	add_child(_sel_box)
+
+func update_drag_box(from: Vector2, to: Vector2) -> void:
+	_sel_box.visible = true
+	_sel_box.set_rect(from, to)
+
+func hide_drag_box() -> void:
+	_sel_box.visible = false
 
 func _panel(top: bool) -> ColorRect:
 	var r := ColorRect.new()
