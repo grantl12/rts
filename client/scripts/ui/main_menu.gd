@@ -7,7 +7,7 @@ extends Control
 @onready var ticker = $TickerBackground/NewsTicker
 @onready var background = $Background
 @onready var header = $Header
-@onready var bgm = $BGM
+@onready var bgm = $BGM # Added reference to the AudioStreamPlayer
 
 var _glitch_timer: float = 2.0
 
@@ -16,6 +16,7 @@ func _ready():
 	_apply_grid_shader()
 	animate_boot_sequence()
 	
+	# Ensure BGM loops
 	if bgm:
 		bgm.finished.connect(func(): bgm.play())
 
