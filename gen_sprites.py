@@ -376,12 +376,79 @@ def make_civilian():
         f = new(); civilian_base(f, phone=True, recording=not blink); frames.append(f)
     return sheet(frames)
 
+# ── ICE AGENT ─────────────────────────────────────────────────────────────────
+# Dark navy tactical uniform, ballistic cap w/ visor, ICE chest patch,
+# flex-cuffs / tether device in R hand.  Shares Regency blue/grey palette
+# but pushed darker – deliberate contrast against the Ranger's tan hat.
+IN  = (32,  52,  88,  255)   # ICE navy
+IND = (18,  30,  58,  255)   # dark navy (shadow, boots)
+ING = (55,  72,  100, 255)   # mid navy (vest highlight)
+IW  = (235, 235, 235, 255)   # ICE white lettering
+ICF = (200, 195, 190, 255)   # flex-cuff silver
+ICFD= (150, 145, 140, 255)   # cuff shadow
+
+def ice_cap(img, hy=0):
+    r(img, 12, 5+hy, 8, 4, IN)          # cap body
+    r(img, 18, 7+hy, 6, 2, IND)         # visor
+    p(img, 19, 8+hy, ING)               # visor highlight
+
+def ice_base(img, hy=0, ey=11, lo=0, ro=0, arm_dy=0, panic_dx=0):
+    ox = panic_dx
+    ice_cap(img, hy)
+    # head
+    r(img, 12, 9+hy, 8, 5, SKIN)
+    p(img, 14, 11+hy, EYE)
+    p(img, 17, 11+hy, EYE)
+    # balaclava / neck cover (dark)
+    r(img, 12, 13+hy, 8, 1, IND)
+    # tactical vest over torso
+    r(img, 11, 14, 10, 7, IN)
+    r(img, 11, 14, 10, 2, ING)          # vest shoulder yoke highlight
+    # ICE chest patch: 3×2 white pixels
+    r(img, 14, 16, 4, 2, IW)
+    p(img, 14, 16, IND); p(img, 17, 16, IND)  # "I·C·E" pixel letters
+    p(img, 15, 16, IW);  p(img, 16, 16, IW)
+    # utility belt
+    r(img, 11, 20, 10, 1, IND)
+    p(img, 12, 20, ICF); p(img, 14, 20, ICF); p(img, 17, 20, ICF)
+    # arms (heavy sleeves)
+    r(img, 8,  14, 3, 6, IN)
+    r(img, 21, 14, 3, 6, IN)
+    p(img, 8,  14, ING); p(img, 8, 15, ING)   # shoulder seam
+    p(img, 23, 14, ING); p(img, 23, 15, ING)
+    # flex-cuffs in R hand
+    r(img, 21+ox, 14+arm_dy, 4, 3, ICF)
+    r(img, 22+ox, 15+arm_dy, 2, 2, ICFD)      # cuff loop shadow
+    p(img, 21+ox, 16+arm_dy, ICF)
+    p(img, 24+ox, 16+arm_dy, ICF)
+    # dark tactical pants
+    r(img, 11, 21, 4, 6, IND)
+    r(img, 16, 21, 4, 6, IND)
+    p(img, 11, 21, IN); p(img, 19, 21, IN)    # seam highlight
+    # boots
+    r(img, 10, 26+lo, 5, 2, IND)
+    r(img, 15, 26+ro, 5, 2, IND)
+
+def make_ice_agent():
+    frames = []
+    for hd in [0, 1, 0, -1]:
+        f = new(); ice_base(f, hy=hd, ey=11+hd); frames.append(f)
+    leg_cycle = [(0,2),(1,2),(2,0),(2,0),(2,1),(2,0)]
+    for lo, ro in leg_cycle:
+        f = new(); ice_base(f, lo=lo, ro=ro); frames.append(f)
+    for ad in [-3, -5, -3, -1]:
+        f = new(); ice_base(f, arm_dy=ad); frames.append(f)
+    for dx in [-1, 1]:
+        f = new(); ice_base(f, panic_dx=dx); frames.append(f)
+    return sheet(frames)
+
 # ── MAIN ──────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
 
     units = {
         "park_ranger":  make_ranger,
+        "ice_agent":    make_ice_agent,
         "maga_patriot": make_maga,
         "proxy":        make_proxy,
         "contractor":   make_contractor,
