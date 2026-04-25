@@ -52,10 +52,10 @@ func _handle_select(mouse_pos: Vector2, additive: bool):
 		_get_hud().deselect_building()
 		_notify_hud()
 		return
-	if hit.collider is Unit:
+	if hit.collider is Unit and hit.collider.visible:
 		_get_hud().deselect_building()
 		_select_unit(hit.collider)
-	elif hit.collider is Building:
+	elif hit.collider is Building and hit.collider.visible:
 		_deselect_all()
 		_get_hud().select_building(hit.collider as Building)
 		return
@@ -82,13 +82,13 @@ func _handle_order(mouse_pos: Vector2):
 	var hit := _raycast(mouse_pos)
 	if not hit:
 		return
-	if hit.collider is Unit:
+	if hit.collider is Unit and hit.collider.visible:
 		var target := hit.collider as Unit
 		if target.data.faction != selected_units[0].data.faction:
 			for unit in selected_units:
 				unit.target_unit = target
 				unit.target_building = null
-	elif hit.collider is Building:
+	elif hit.collider is Building and hit.collider.visible:
 		var building := hit.collider as Building
 		if building.faction != selected_units[0].data.faction:
 			for unit in selected_units:

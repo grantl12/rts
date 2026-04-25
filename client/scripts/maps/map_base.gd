@@ -14,6 +14,11 @@ func _ready():
 	print("Loading Map: " + map_name)
 	setup_neon_grid()
 	call_deferred("_setup_navmesh")
+	_setup_fog()
+
+func _setup_fog() -> void:
+	var fog := preload("res://scripts/managers/fog_of_war_manager.gd").new()
+	add_child(fog)
 
 func setup_neon_grid():
 	pass
