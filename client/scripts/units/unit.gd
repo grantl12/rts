@@ -23,6 +23,7 @@ var _body_material: StandardMaterial3D
 var _head_material: StandardMaterial3D
 var _base_color: Color
 var _health_label: Label3D
+var _sprite: Sprite3D
 var _bars_dirty: bool = false
 
 func _ready():
@@ -40,7 +41,67 @@ func _ready():
 
 func _build_visuals():
 	_base_color = _get_faction_color()
+	
+	if data and data.sprite_texture:
+		_build_sprite_visuals()
+	else:
+		_build_mesh_visuals()
 
+	# Soul leader crown indicator
+	if is_soul_leader:
+		var crown = MeshInstance3D.new()
+		var crown_mesh = CylinderMesh.new()
+		crown_mesh.top_radius = 0.0
+		crown_mesh.bottom_radius = 0.18
+		crown_mesh.height = 0.28
+		var crown_mat = StandardMaterial3D.new()
+		crown_mat.albedo_color = Color(1.0, 0.85, 0.1)
+		crown_mat.emission_enabled = true
+		crown_mat.emission = Color(1.0, 0.75, 0.0) * 1.2
+		crown_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		crown.mesh = crown_mesh
+		crown.material_override = crown_mat
+		crown.position.y = 2.0 if _sprite else 1.78
+		add_child(crown)
+
+	# Base ring
+	if has_node("Shadow"):
+		var ring_mat = StandardMaterial3D.new()
+		ring_mat.albedo_color = Color(_base_color.r, _base_color.g, _base_color.b, 0.6)
+		ring_mat.emission_enabled = true
+		ring_mat.emission = _base_color * 0.7
+		ring_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		$Shadow.material = ring_mat
+
+	# Name label
+	var name_label = Label3D.new()
+	name_label.text = data.unit_name
+	name_label.font_size = 6
+	name_label.outline_size = 3
+	name_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	name_label.modulate = _base_color
+	name_label.position = Vector3(0, 2.6, 0)
+	add_child(name_label)
+
+	# Health bars label (above head, below status)
+	_health_label = Label3D.new()
+	_health_label.font_size = 7
+	_health_label.outline_size = 2
+	_health_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_health_label.position = Vector3(0, 2.2 if _sprite else 1.95, 0)
+	add_child(_health_label)
+	_update_bars()
+
+func _build_sprite_visuals():
+	_sprite = Sprite3D.new()
+	_sprite.texture = data.sprite_texture
+	_sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_sprite.pixel_size = 0.01 * data.sprite_scale
+	_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST # Keep it pixelated
+	_sprite.position.y = 1.0 # Lift off ground
+	add_child(_sprite)
+
+func _build_mesh_visuals():
 	# Body — slim capsule, faction colored
 	var body = MeshInstance3D.new()
 	var capsule = CapsuleMesh.new()
@@ -69,51 +130,6 @@ func _build_visuals():
 	head.position.y = 1.5
 	add_child(head)
 
-	# Soul leader crown indicator
-	if is_soul_leader:
-		var crown = MeshInstance3D.new()
-		var crown_mesh = CylinderMesh.new()
-		crown_mesh.top_radius = 0.0
-		crown_mesh.bottom_radius = 0.18
-		crown_mesh.height = 0.28
-		var crown_mat = StandardMaterial3D.new()
-		crown_mat.albedo_color = Color(1.0, 0.85, 0.1)
-		crown_mat.emission_enabled = true
-		crown_mat.emission = Color(1.0, 0.75, 0.0) * 1.2
-		crown_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		crown.mesh = crown_mesh
-		crown.material_override = crown_mat
-		crown.position.y = 1.78
-		add_child(crown)
-
-	# Base ring
-	if has_node("Shadow"):
-		var ring_mat = StandardMaterial3D.new()
-		ring_mat.albedo_color = Color(_base_color.r, _base_color.g, _base_color.b, 0.6)
-		ring_mat.emission_enabled = true
-		ring_mat.emission = _base_color * 0.7
-		ring_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		$Shadow.material = ring_mat
-
-	# Name label
-	var name_label = Label3D.new()
-	name_label.text = data.unit_name
-	name_label.font_size = 6
-	name_label.outline_size = 3
-	name_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	name_label.modulate = _base_color
-	name_label.position = Vector3(0, 2.6, 0)
-	add_child(name_label)
-
-	# Health bars label (above head, below status)
-	_health_label = Label3D.new()
-	_health_label.font_size = 7
-	_health_label.outline_size = 2
-	_health_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_health_label.position = Vector3(0, 1.95, 0)
-	add_child(_health_label)
-	_update_bars()
-
 func _get_faction_color() -> Color:
 	match data.faction:
 		"Regency":  return Color(0.2, 0.5, 1.0)
@@ -123,11 +139,19 @@ func _get_faction_color() -> Color:
 	return Color(0.6, 0.6, 0.6)
 
 func apply_soul_visuals():
-	if _body_material:
+	if _sprite:
+		_sprite.modulate = Color(1.2, 1.1, 0.8) # Slight golden tint
+	elif _body_material:
 		_body_material.emission = Color(1.0, 0.85, 0.2) * 0.9
 
 func set_selected(value: bool):
 	is_selected = value
+	
+	if _sprite:
+		_sprite.modulate = Color(0.5, 1.5, 1.0) if value else Color(1, 1, 1)
+		if not value and is_soul_leader: apply_soul_visuals()
+		return
+
 	if not _body_material:
 		return
 	if value:
@@ -214,13 +238,23 @@ func apply_suppression():
 	is_suppressed = true
 	_status_label.text = "█ RED TAPE █"
 	_status_label.modulate = Color(1.0, 0.15, 0.15)
+	
+	if _sprite:
+		_sprite.modulate = Color(0.4, 0.4, 0.4)
+	
 	if _body_material:
 		_body_material.albedo_color = Color(0.35, 0.35, 0.35)
 	if _head_material:
 		_head_material.albedo_color = Color(0.35, 0.35, 0.35)
+		
 	await get_tree().create_timer(3.0).timeout
 	is_suppressed = false
 	_status_label.text = ""
+	
+	if _sprite:
+		_sprite.modulate = Color(1, 1, 1)
+		if is_soul_leader: apply_soul_visuals()
+		
 	if _body_material:
 		_body_material.albedo_color = _base_color
 	if _head_material:

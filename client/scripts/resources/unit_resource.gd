@@ -8,6 +8,8 @@ class_name UnitResource
 @export var unit_name: String = "Unknown Unit"
 @export var unit_type: String = "Infantry"
 @export var faction: String = "Neutral"
+@export var sprite_texture: Texture2D
+@export var sprite_scale: float = 1.0
 
 @export_group("Vitality & Bureaucracy")
 @export var max_vitality: float = 100.0
