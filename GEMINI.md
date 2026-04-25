@@ -10,26 +10,30 @@ A satirical RTS built on Godot 4.4 and Supabase. The game blends the weighted sq
 ### 1. Core Systems (The Logic)
 - **Unit "Soul" System:** Persistence logic for veteran units, tracking Vitality, Bureaucracy (Morale), and Supplies (Ammo/Resources).
 - **Combat & Suppression:** Directional damage and "Red Tape" suppression mechanics that disable unit fire.
+- **Audit & Roundup:** Functional `Civilian.gd` and `ProcessingCenter.gd`. Units can "Vet" and "Tether" civilians and deliver them to Processing Centers for rewards and Infamy reduction.
+- **Dynamic ROE (Rules of Engagement):** Global ROE system (Level 1-5) integrated via `GameManager.gd` and `roe_slider.gd`. 
 - **Audit Points:** A "Strength of Numbers" capture system that shifts the map's narrative and global color.
 - **Ability Manager:** Functional "Superweapons" including the **Meat Grinder** (Oligarchy mob spawn) and **Fact Check** (AOE suppression clear).
 - **Global Conflict Manager:** Meta-manager tracking theater control and updating satirical news headlines.
 
 ### 2. Theaters & Maps (The World)
-- **Theater 1 (The Quad):** Greyboxed "Incident" site with a central Memorial Audit point.
+- **Theater 1 (The Quad):** Greyboxed "Incident" site with a central Memorial Audit point. Background for Live Satellite Feed in main menu.
 - **Theater 2 (The Wall):** Functional "Audit Station" logic and **Analog Zone** shader for anti-grid areas.
 - **Theater 3 (The Ziggurat):** "Server Migration" mechanic (units physically carrying Data Cores).
 - **Theater 4 (The Suburbs):** "Property Value" aura logic for building-based buffs/debuffs.
 
 ### 3. Interface (The UX)
-- **Executive Dashboard:** Boot sequence, satirical News Ticker, and navigation.
+- **Executive Dashboard:** Boot sequence, satirical News Ticker, and navigation. "Terminal OS" aesthetic.
+- **ROE Control Slider:** Functional UI slider to shift Rules of Engagement.
 - **Jurisdiction Selection:** Faction choosing flow (Regency, Oligarchy, Frontline, Sovereign).
 - **RTS Camera:** Functional pan/zoom controller for the "Omniscient Auditor."
 
 ---
 
 ## 🛰️ Integration Status
-- **Supabase Bridge:** `SupabaseManager.gd` is set up for REST API calls.
-- **Local Persistence:** `ArchiveManager.gd` handles local "Audit Log" saves.
+- **Game Manager:** Global state tracking for ROE and Infamy Score.
+- **Supabase Bridge:** `SupabaseManager.gd` is set up for REST API calls. Tracks `infamy_score`, `global_reputation`, and `veteran_roster`.
+- **Local Persistence:** `ArchiveManager.gd` handles local "Audit Log" saves and "Legacy Flags".
 - **Shader Library:** `neon_grid.gdshader` (World overlay) and `analog_zone.gdshader` (Dead zones).
 
 ---
@@ -40,9 +44,11 @@ A satirical RTS built on Godot 4.4 and Supabase. The game blends the weighted sq
 - [ ] **Selection UI:** Implement the 16-bit glitch boxes for selecting squads.
 - [ ] **Unit Visuals:** Create unique sprites for the 4 core factions (Park Ranger vs. Conscript).
 - [ ] **Statue Shader:** A mesh-deformation shader for the "Martyr's Statue" that glitches based on narrative control.
+- [ ] **Sonic Identity:** Integrate Faction-specific themes (`maga_rally.wav`, `proxy_iran.wav`).
 
 ### Phase 2: Strategic Depth
 - [ ] **Executive Board:** The meta-progression screen to spend "Legacy Points" on global buffs.
+- [ ] **Infamy Impact:** Implement civilian behavior shifts (Panic/Insurgency) based on the Infamy Score.
 - [ ] **Suppression UI:** Visual "Red Tape" bars above suppressed units.
 - [ ] **Fog of War:** A "Data Blackout" fog system that only clears in areas with high grid control.
 
@@ -58,5 +64,6 @@ A satirical RTS built on Godot 4.4 and Supabase. The game blends the weighted sq
 
 ## 📝 Developer Notes
 - **Tone Mandate:** Keep it detached, corporate, and absurdly bureaucratic.
+- **Design Manifesto:** See `docs/DEEP_STATE_MANIFESTO.md` for core pillars and ROE details.
 - **Asset Strategy:** Lo-fi 3D with 2D billboards. Priority is systems and "vibes" over high-fidelity meshes.
 - **The "Mirror" Loop:** Every map must be playable and narratively distinct from at least two opposing sides.

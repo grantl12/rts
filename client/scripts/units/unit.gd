@@ -17,6 +17,7 @@ var current_bureaucracy: float
 var current_supplies: float
 var attack_cooldown: float = 0.0
 var is_suppressed: bool = false
+var tethered_units: Array[Unit] = []
 
 var _body_material: StandardMaterial3D
 var _head_material: StandardMaterial3D
@@ -226,6 +227,11 @@ func apply_suppression():
 		_head_material.albedo_color = _base_color.lightened(0.25)
 
 func die():
+	for t in tethered_units:
+		if is_instance_valid(t) and t.has_method("untether"):
+			t.untether()
+	tethered_units.clear()
+	
 	if is_soul_leader:
 		var hero_data = {
 			"unit_type": data.unit_name,
@@ -234,3 +240,23 @@ func die():
 		}
 		SupabaseManager.save_hero_to_cloud(hero_data)
 	queue_free()
+
+func tether_civilians(radius: float = 5.0):
+	if not is_soul_leader: return # Only squad leaders can tether
+	
+	var space_state = get_world_3d().direct_space_state
+	var query = PhysicsShapeQueryParameters3D.new()
+	var sphere = SphereShape3D.new()
+	sphere.radius = radius
+	query.shape = sphere
+	query.transform = global_transform
+	
+	var results = space_state.intersect_shape(query)
+	for res in results:
+		var obj = res.collider
+		if obj is Civilian and obj.current_state == Civilian.CivilianState.IDLE:
+			obj.tether_to(self)
+			tethered_units.append(obj)
+			# Infamy spike if ROE is high during "forced" tethering
+			if GameManager.current_roe >= GameManager.ROELevel.HIGH_SUPPRESSION:
+				GameManager.add_infamy(0.5)
