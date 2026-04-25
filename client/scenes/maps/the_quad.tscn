@@ -1,23 +1,25 @@
-[gd_scene load_steps=8 format=3 uid="uid://c8y5j2w1u6k5b"]
+[gd_scene load_steps=9 format=3 uid="uid://c8y5j2w1u6k5b"]
 
 [ext_resource type="Script" path="res://scripts/maps/map_base.gd" id="1_map"]
 [ext_resource type="Material" path="res://materials/neon_grid_mat.tres" id="2_mat"]
 [ext_resource type="Script" path="res://scripts/camera_controller.gd" id="3_cam"]
-[ext_resource type="Script" path="res://scripts/managers/skirmish_manager.gd" id="4_skirmish"]
+[ext_resource type="Script" path="res://scripts/managers/skirmish_generator.gd" id="4_gen"]
 [ext_resource type="Script" path="res://scripts/input_controller.gd" id="5_input"]
 [ext_resource type="Script" path="res://scripts/ui/game_hud.gd" id="6_hud"]
-[ext_resource type="Script" path="res://scripts/maps/audit_point.gd" id="7_ap"]
+[ext_resource type="Script" path="res://scripts/maps/the_quad_visuals.gd" id="7_vis"]
 [ext_resource type="Shader" path="res://shaders/post_process_pixelation.gdshader" id="8_pixel"]
-[ext_resource type="PackedScene" path="res://scenes/maps/the_quad_visuals.tscn" id="9_vis"]
+[ext_resource type="Script" path="res://scripts/maps/pixelation_controller.gd" id="9_ctrl"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_pixel"]
 shader = ExtResource("8_pixel")
-shader_parameter/pixel_size = 4
+shader_parameter/pixel_size = 3
+shader_parameter/scanline_intensity = 0.15
+shader_parameter/color_bleed = 0.001
 
 [node name="TheQuad" type="Node3D"]
 script = ExtResource("1_map")
 
-[node name="TheQuadVisuals" parent="." instance=ExtResource("9_vis")]
+[node name="TheQuadVisuals" parent="." instance=ExtResource("7_vis")]
 
 [node name="PostProcess" type="CanvasLayer" parent="."]
 
@@ -29,12 +31,32 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+script = ExtResource("9_ctrl")
 
-[node name="SkirmishManager" type="Node" parent="."]
-script = ExtResource("4_skirmish")
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -0.707107, 0.707107, 0, -0.707107, -0.707107, 0, 20, 0)
+light_energy = 0.6
+
+[node name="Ground" type="CSGBox3D" parent="."]
+use_collision = true
+size = Vector3(500, 1, 500)
+material = ExtResource("2_mat")
+
+[node name="CentralPlaza" type="CSGCylinder3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+use_collision = true
+radius = 15.0
+height = 0.1
+material_override = ExtResource("2_mat")
+
+[node name="SkirmishGenerator" type="Node" parent="."]
+script = ExtResource("4_gen")
+map_size = 300.0
+audit_point_count = 6
+civilian_cluster_count = 5
 
 [node name="RTSCamera" type="CharacterBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 20, 20)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 25, 25)
 script = ExtResource("3_cam")
 
 [node name="Camera3D" type="Camera3D" parent="RTSCamera"]
@@ -46,44 +68,4 @@ script = ExtResource("5_input")
 [node name="GameHUD" type="CanvasLayer" parent="."]
 script = ExtResource("6_hud")
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
-
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, -0.707107, 0.707107, 0, -0.707107, -0.707107, 0, 10, 0)
-light_energy = 0.5
-
-[node name="Ground" type="CSGBox3D" parent="."]
-use_collision = true
-size = Vector3(500, 1, 500)
-material = ExtResource("2_mat")
-
-[node name="CentralPlaza" type="CSGCylinder3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
-use_collision = true
-radius = 10.0
-height = 0.5
-
-[node name="WestWing" type="CSGBox3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 5, 0)
-use_collision = true
-size = Vector3(20, 10, 40)
-
-[node name="EastParking" type="CSGBox3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 3, 0)
-use_collision = true
-size = Vector3(20, 6, 40)
-
-[node name="AP_Center" type="Area3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
-script = ExtResource("7_ap")
-point_name = "THE QUAD"
-
-[node name="AP_North" type="Area3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -28)
-script = ExtResource("7_ap")
-point_name = "NORTH PLAZA"
-
-[node name="AP_South" type="Area3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 28)
-script = ExtResource("7_ap")
-point_name = "SOUTH STEPS"
+[connection signal="captured" from="." to="SkirmishGenerator" method="_on_capture_point_captured"]

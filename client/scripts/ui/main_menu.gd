@@ -7,7 +7,9 @@ extends Control
 @onready var ticker = $TickerBackground/NewsTicker
 @onready var background = $Background
 @onready var header = $Header
-@onready var bgm = $BGM # Added reference to the AudioStreamPlayer
+@onready var bgm = $BGM
+
+@onready var pixelation_rect: ColorRect = $PostProcess/Pixelation # Reference to the shader layer
 
 var _glitch_timer: float = 2.0
 
@@ -46,6 +48,10 @@ func _process(delta):
 	if _glitch_timer <= 0:
 		_glitch_timer = randf_range(3.0, 7.0)
 		_trigger_glitch()
+
+	# Update CRT shader visibility based on GameManager setting
+	if pixelation_rect:
+		pixelation_rect.visible = GameManager.use_crt_shader
 
 func _trigger_glitch():
 	var original_text = header.text

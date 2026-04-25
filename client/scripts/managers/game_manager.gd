@@ -1,12 +1,18 @@
 extends Node
 
 ## THE DEEP STATE: Global Game Manager
-## Tracks ROE levels, Infamy, and global mission state.
+## Tracks ROE levels, Infamy, Infamy, Infamy, and global mission state.
 
 signal roe_level_changed(new_level: int)
 signal infamy_changed(new_score: float)
 signal message_logged(text: String, color: Color)
 signal mission_finished(success: bool)
+
+# Visual settings
+var use_crt_shader: bool = true
+var pixel_size: int = 3
+var scanline_intensity: float = 0.15
+var color_bleed: float = 0.001
 
 enum ROELevel {
 	HEARTS_AND_MINDS = 1,
