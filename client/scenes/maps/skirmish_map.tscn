@@ -1,0 +1,56 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://scripts/maps/map_base.gd" id="1_map"]
+[ext_resource type="Material" path="res://materials/neon_grid_mat.tres" id="2_mat"]
+[ext_resource type="Script" path="res://scripts/camera_controller.gd" id="3_cam"]
+[ext_resource type="Script" path="res://scripts/managers/skirmish_generator.gd" id="4_gen"]
+[ext_resource type="Script" path="res://scripts/input_controller.gd" id="5_input"]
+[ext_resource type="Script" path="res://scripts/ui/game_hud.gd" id="6_hud"]
+[ext_resource type="Shader" path="res://shaders/post_process_pixelation.gdshader" id="8_pixel"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_pixel"]
+shader = ExtResource("8_pixel")
+shader_parameter/pixel_size = 4
+
+[node name="SkirmishMap" type="Node3D"]
+script = ExtResource("1_map")
+map_name = "PROCEDURAL AUDIT ZONE"
+
+[node name="SkirmishGenerator" type="Node" parent="."]
+script = ExtResource("4_gen")
+map_size = 300.0
+audit_point_count = 6
+civilian_cluster_count = 5
+
+[node name="RTSCamera" type="CharacterBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 25, 25)
+script = ExtResource("3_cam")
+
+[node name="Camera3D" type="Camera3D" parent="RTSCamera"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866025, 0, -0.866025, 0.5, 0, 0, 0)
+
+[node name="InputController" type="Node3D" parent="."]
+script = ExtResource("5_input")
+
+[node name="GameHUD" type="CanvasLayer" parent="."]
+script = ExtResource("6_hud")
+
+[node name="PostProcess" type="CanvasLayer" parent="."]
+
+[node name="Pixelation" type="ColorRect" parent="PostProcess"]
+material = SubResource("ShaderMaterial_pixel")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -0.707107, 0.707107, 0, -0.707107, -0.707107, 0, 20, 0)
+light_energy = 0.6
+
+[node name="Ground" type="CSGBox3D" parent="."]
+use_collision = true
+size = Vector3(1000, 1, 1000)
+material = ExtResource("2_mat")
