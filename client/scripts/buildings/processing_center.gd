@@ -53,7 +53,7 @@ func _process_civilian(civ: Civilian):
 	
 	# Reward logic
 	var credit_reward = 50
-	ResourceManager.add_resource("AuditCredits", credit_reward)
+	ResourceManager.add_funds(faction, credit_reward)
 	GameManager.log_message("CITIZEN VETTED: +50 CREDITS", Color(0.2, 1.0, 0.4))
 	
 	# ROE Impact

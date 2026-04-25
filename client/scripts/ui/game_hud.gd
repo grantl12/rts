@@ -29,9 +29,11 @@ var _finish_label: Label
 func _ready():
 	add_to_group("hud")
 	_build_ui()
-	ResourceManager.resources_changed.connect(_on_resources_changed)
-	GameManager.message_logged.connect(_on_message_logged)
-	GameManager.mission_finished.connect(_on_mission_finished)
+	if ResourceManager:
+		ResourceManager.resources_changed.connect(_on_resources_changed)
+	if GameManager:
+		GameManager.message_logged.connect(_on_message_logged)
+		GameManager.mission_finished.connect(_on_mission_finished)
 
 func _build_ui():
 	var top = _panel(true)
@@ -70,7 +72,7 @@ func _build_ui():
 	_e_label.add_theme_color_override("font_color", Color(1.0, 0.55, 0.2))
 
 	_selection_panel = ColorRect.new()
-	(_selection_panel as ColorRect).color = Color(0.02, 0.02, 0.08, 0.88)
+	_selection_panel.color = Color(0.02, 0.02, 0.08, 0.88)
 	_selection_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	_selection_panel.position = Vector2(8, 44)
 	_selection_panel.custom_minimum_size = Vector2(210, 0)
@@ -148,7 +150,6 @@ func _on_message_logged(text: String, color: Color):
 	_ticker_text = "--- " + text.to_upper() + " --- STANDBY --- " + _ticker_text
 	_ticker_label.text = _ticker_text
 	_ticker_label.add_theme_color_override("font_color", color)
-	# Reset position for priority read
 	_ticker_label.position.x = 600
 
 func _on_mission_finished(success: bool):
@@ -163,7 +164,8 @@ func _on_mission_finished(success: bool):
 func _on_resources_changed(faction: String, amount: int):
 	if faction == player_faction:
 		_funds_label.text = faction.to_upper() + " // INTELLIGENCE BUDGET: $" + str(amount)
-		GameManager.log_message("BUDGET UPDATED: $" + str(amount), Color(0.2, 0.5, 1.0))
+		if GameManager:
+			GameManager.log_message("BUDGET UPDATED: $" + str(amount), Color(0.2, 0.5, 1.0))
 
 func update_selection(units: Array):
 	_selected_units = units.filter(func(u): return is_instance_valid(u))
@@ -176,30 +178,36 @@ func _refresh_selection():
 		_selection_panel.visible = false
 		return
 	if _selected_units.size() == 1:
-		var u = _selected_units[0]
-		_selection_label.text = (
-			"[ " + u.data.unit_name.to_upper() + " ]\n" +
-			"VIT  " + _bar(u.current_vitality / u.data.max_vitality) + "\n" +
-			"MORL " + _bar(u.current_bureaucracy / u.data.max_bureaucracy) +
-			("\n!! RED TAPE ACTIVE !!" if u.is_suppressed else "")
-		)
+		var u = _selected_units[0] as Unit
+		if u:
+			var txt = "[ " + u.data.unit_name.to_upper() + " ]\n"
+			txt += "VIT  " + _bar(u.current_vitality / u.data.max_vitality) + "\n"
+			txt += "MORL " + _bar(u.current_bureaucracy / u.data.max_bureaucracy)
+			if u.is_suppressed:
+				txt += "\n!! RED TAPE ACTIVE !!"
+			_selection_label.text = txt
 	else:
 		_selection_label.text = "[ " + str(_selected_units.size()) + " UNITS SELECTED ]"
 
 func _bar(pct: float) -> String:
 	var n := int(round(clampf(pct, 0.0, 1.0) * 8))
-	return "█".repeat(n) + "░".repeat(8 - n)
+	var s = ""
+	for i in range(n): s += "█"
+	for i in range(8-n): s += "░"
+	return s
 
 func try_q(world_pos: Vector3) -> bool:
 	if _q_cooldown > 0:
 		return false
 	_q_cooldown = Q_COOLDOWN_MAX
-	AbilityManager.cast_fact_check(world_pos)
+	if AbilityManager:
+		AbilityManager.cast_fact_check(world_pos)
 	return true
 
 func try_e(world_pos: Vector3) -> bool:
 	if _e_cooldown > 0:
 		return false
 	_e_cooldown = E_COOLDOWN_MAX
-	AbilityManager.spawn_reinforcements(world_pos, player_faction)
+	if AbilityManager:
+		AbilityManager.spawn_reinforcements(world_pos, player_faction)
 	return true

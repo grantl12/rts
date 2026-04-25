@@ -68,10 +68,13 @@ func _process_audit(delta):
 
 	var strengths := {"Regency": 0, "Oligarchy": 0, "Frontline": 0, "Sovereign": 0, "Insurgent": 0}
 	for body in units_in_area:
-		if body is Civilian and body.current_state == Civilian.CivilianState.INSURGENCY:
-			strengths["Insurgent"] += 2
+		if body is Civilian:
+			var civ = body as Civilian
+			if civ.current_state == Civilian.CivilianState.INSURGENCY:
+				strengths["Insurgent"] += 2
 		elif body is Unit:
-			strengths[body.data.faction] += 1
+			var u = body as Unit
+			strengths[u.data.faction] += 1
 
 	# Sabotage Logic
 	if controlling_faction != "Neutral":
