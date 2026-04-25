@@ -35,12 +35,15 @@ var _building_label: Label
 var _produce_btn: Button
 var _game_over_panel: Control
 var _sel_box: _SelectionBox
+var _advisor_label: Label
+var _advisor_tween: Tween = null
 
 func _ready():
 	add_to_group("hud")
 	process_mode = PROCESS_MODE_ALWAYS
 	_build_ui()
 	ResourceManager.resources_changed.connect(_on_resources_changed)
+	AdvisorManager.advisor_spoke.connect(_show_advisor_line)
 	_sync_faction_label()
 
 func _sync_faction_label():
@@ -135,6 +138,18 @@ func _build_ui():
 		get_tree().change_scene_to_file("res://scenes/ui/main_menu.tscn")
 	)
 	_game_over_panel.add_child(back_btn)
+
+	# Advisor ticker — above ability bar, below drag box
+	_advisor_label = Label.new()
+	_advisor_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	_advisor_label.offset_top = -100
+	_advisor_label.offset_bottom = -60
+	_advisor_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_advisor_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_advisor_label.add_theme_font_size_override("font_size", 11)
+	_advisor_label.add_theme_color_override("font_color", Color(0.75, 0.92, 1.0))
+	_advisor_label.modulate.a = 0.0
+	add_child(_advisor_label)
 
 	# Drag-selection box — added last so it draws over everything else
 	_sel_box = _SelectionBox.new()
@@ -261,6 +276,7 @@ func _bar(pct: float) -> String:
 	return "█".repeat(n) + "░".repeat(8 - n)
 
 func show_game_over(won: bool):
+	AdvisorManager.speak("victory" if won else "defeat")
 	_game_over_panel.visible = true
 	var lbl := _game_over_panel.get_node("ResultLabel") as Label
 	if won:
@@ -270,6 +286,16 @@ func show_game_over(won: bool):
 		lbl.text = "JURISDICTION LOST\n\nThe opposition prevailed."
 		lbl.add_theme_color_override("font_color", Color(1.0, 0.2, 0.2))
 	get_tree().paused = true
+
+func _show_advisor_line(text: String) -> void:
+	if _advisor_tween:
+		_advisor_tween.kill()
+	_advisor_label.text = "[ THE AUDITOR ]  " + text
+	_advisor_label.modulate.a = 0.0
+	_advisor_tween = create_tween()
+	_advisor_tween.tween_property(_advisor_label, "modulate:a", 1.0, 0.25)
+	_advisor_tween.tween_interval(5.0)
+	_advisor_tween.tween_property(_advisor_label, "modulate:a", 0.0, 0.6)
 
 func try_q(world_pos: Vector3) -> bool:
 	if _q_cooldown > 0:

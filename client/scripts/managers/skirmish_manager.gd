@@ -27,6 +27,11 @@ func setup_skirmish():
 	_spawn_squad(Vector3(0, 1,  28), enemy,  GameSession.default_unit_path(enemy))
 
 	call_deferred("_connect_audit_points")
+	# Briefing plays one frame after scene is ready so the HUD exists
+	call_deferred("_play_briefing")
+
+func _play_briefing() -> void:
+	AdvisorManager.speak("briefing")
 
 func _connect_audit_points():
 	var map = get_parent()

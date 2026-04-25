@@ -17,6 +17,7 @@ const UNIT_PRODUCTION_COST := 50
 var current_health: float
 var is_constructed: bool = false
 var _is_producing: bool = false
+var _hq_warned: bool = false
 
 func _ready():
 	current_health = max_health
@@ -85,6 +86,9 @@ func apply_grid_influence():
 
 func take_damage(amount: float):
 	current_health -= amount
+	if not _hq_warned and current_health < max_health * 0.5 and faction == GameSession.player_faction:
+		_hq_warned = true
+		AdvisorManager.speak("hq_attack")
 	if current_health <= 0:
 		explode()
 

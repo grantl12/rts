@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://hoh_v1_deepstate"]
+
+[ext_resource type="Script" path="res://scripts/ui/hall_of_heroes.gd" id="1_hoh"]
+
+[node name="HallOfHeroes" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_hoh")

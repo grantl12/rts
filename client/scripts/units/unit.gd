@@ -248,6 +248,8 @@ func apply_suppression():
 	if is_suppressed:
 		return
 	is_suppressed = true
+	if data.faction == GameSession.player_faction:
+		AdvisorManager.speak("suppressed")
 	_status_label.text = "█ RED TAPE █"
 	_status_label.modulate = Color(1.0, 0.15, 0.15)
 	if _body_material:
@@ -264,8 +266,9 @@ func apply_suppression():
 
 func die():
 	if is_soul_leader:
-		var hero_data = {
+		var hero_data := {
 			"unit_type": data.unit_name,
+			"faction": data.faction,
 			"veterancy_rank": data.veterancy_rank,
 			"status": "REDACTED"
 		}
