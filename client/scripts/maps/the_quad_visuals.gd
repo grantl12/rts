@@ -122,7 +122,7 @@ func _generate_billboard_trees():
 	for spot in tree_spots:
 		var tree = Sprite3D.new()
 		tree.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-		tree.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		tree.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 		# In a real setup, we'd load a lo-fi tree sprite. 
 		# For now, we'll use a placeholder or stylized mesh.
 		_create_stylized_tree(spot)

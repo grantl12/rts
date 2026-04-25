@@ -100,7 +100,7 @@ func _build_sprite_visuals():
 	_sprite.texture = data.sprite_texture
 	_sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	_sprite.pixel_size = 0.01 * data.sprite_scale
-	_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST # Keep it pixelated
+	_sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST # Fixed enum
 	_sprite.position.y = 1.0 # Lift off ground
 	add_child(_sprite)
 
