@@ -17,7 +17,7 @@ A satirical RTS built on Godot 4.4 and Supabase. The game blends the weighted sq
 - **Global Conflict Manager:** Meta-manager tracking theater control and updating satirical news headlines.
 
 ### 2. Theaters & Maps (The World)
-- **Theater 1 (The Quad):** Greyboxed "Incident" site with a central Memorial Audit point. Background for Live Satellite Feed in main menu.
+- **Theater 1 (The Quad):** Fully visual-complete. Includes grass lawns, concrete paths, large-scale university buildings (Library, Sciences, etc.), and the central **Audit Tent** (Auditor's desk, chair, and tarp).
 - **Theater 2 (The Wall):** Functional "Audit Station" logic and **Analog Zone** shader for anti-grid areas.
 - **Theater 3 (The Ziggurat):** "Server Migration" mechanic (units physically carrying Data Cores).
 - **Theater 4 (The Suburbs):** "Property Value" aura logic for building-based buffs/debuffs.
