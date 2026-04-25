@@ -76,15 +76,15 @@ func _build_ui():
 	_selection_panel = ColorRect.new()
 	(_selection_panel as ColorRect).color = Color(0.02, 0.02, 0.08, 0.88)
 	_selection_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	_selection_panel.position = Vector2(8, -150)
-	_selection_panel.custom_minimum_size = Vector2(210, 90)
-	_selection_panel.size = Vector2(210, 90)
+	_selection_panel.position = Vector2(8, -185)
+	_selection_panel.custom_minimum_size = Vector2(220, 125)
+	_selection_panel.size = Vector2(220, 125)
 	_selection_panel.visible = false
 	add_child(_selection_panel)
 
 	_selection_label = Label.new()
 	_selection_label.position = Vector2(10, 8)
-	_selection_label.size = Vector2(190, 74)
+	_selection_label.size = Vector2(200, 110)
 	_selection_label.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85))
 	_selection_panel.add_child(_selection_label)
 
@@ -261,11 +261,19 @@ func _refresh_selection():
 		_selection_panel.visible = false
 		return
 	if _selected_units.size() == 1:
-		var u = _selected_units[0]
+		var u := _selected_units[0]
+		var vit_pct  := u.current_vitality / (u.data.max_vitality * u._health_mult)
+		var bur_pct  := u.current_bureaucracy / u.data.max_bureaucracy
+		var xp_prev  := Unit.RANK_XP[u.current_rank - 1]
+		var xp_next  := Unit.RANK_XP[u.current_rank]   # INF when maxed
+		var xp_pct   := 1.0 if u.current_rank >= 5 else \
+						clampf((u.current_xp - xp_prev) / (xp_next - xp_prev), 0.0, 1.0)
 		_selection_label.text = (
 			"[ " + u.data.unit_name.to_upper() + " ]\n" +
-			"VIT  " + _bar(u.current_vitality / u.data.max_vitality) + "\n" +
-			"MORL " + _bar(u.current_bureaucracy / u.data.max_bureaucracy) +
+			"VIT  " + _bar(vit_pct) + "\n" +
+			"MORL " + _bar(bur_pct) + "\n" +
+			"RANK " + Unit.RANK_NAMES[u.current_rank - 1] + "\n" +
+			"XP   " + _bar(xp_pct) +
 			("\n!! RED TAPE ACTIVE !!" if u.is_suppressed else "")
 		)
 	else:
