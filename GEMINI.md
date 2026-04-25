@@ -47,7 +47,7 @@ A satirical RTS built on Godot 4.4 and Supabase. The game blends the weighted sq
 - [ ] **Selection UI:** Implement the 16-bit glitch boxes for selecting squads.
 - [ ] **Unit Visuals:** Create unique sprites for the 4 core factions (Park Ranger vs. Conscript).
 - [ ] **Statue Shader:** A mesh-deformation shader for the "Martyr's Statue" that glitches based on narrative control.
-- [ ] **Sonic Identity:** Integrate Faction-specific themes (`maga_rally.wav`, `proxy_iran.wav`).
+- [x] **Sonic Identity:** Integrated "Unblinking Guard" as Main Menu BGM. Assets organized in `assets/audio/music/`.
 
 ### Phase 2: Strategic Depth
 - [ ] **Executive Board:** The meta-progression screen to spend "Legacy Points" on global buffs.

@@ -7,6 +7,7 @@ extends Control
 @onready var ticker = $TickerBackground/NewsTicker
 @onready var background = $Background
 @onready var header = $Header
+@onready var bgm = $BGM
 
 var _glitch_timer: float = 2.0
 
@@ -14,6 +15,9 @@ func _ready():
 	version_label.text = "Build: v0.4.4-REDACTED"
 	_apply_grid_shader()
 	animate_boot_sequence()
+	
+	if bgm:
+		bgm.finished.connect(func(): bgm.play())
 
 func _apply_grid_shader():
 	var shader = load("res://shaders/neon_grid_2d.gdshader")
