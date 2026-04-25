@@ -1,17 +1,18 @@
 extends Area3D
 class_name AuditPoint
 
-## THE DEEP STATE: Capture Point
+## THE DEEP STATE: Capture Point & Sabotage Target
 
 signal captured(faction_name)
 
 @export var point_name: String = "Central Plaza"
 @export var capture_speed: float = 10.0
+@export var sabotage_speed: float = 5.0
 @export var total_audit_required: float = 100.0
 
 var current_audit_value: float = 0.0
 var controlling_faction: String = "Neutral"
-var units_in_area: Array[Unit] = []
+var units_in_area: Array[Node3D] = []
 
 var _ring_material: StandardMaterial3D
 var _point_label: Label3D
@@ -24,13 +25,6 @@ func _ready():
 	_update_visual()
 
 func _build_visuals():
-	var col = CollisionShape3D.new()
-	var shape = CylinderShape3D.new()
-	shape.radius = 8.0
-	shape.height = 6.0
-	col.shape = shape
-	add_child(col)
-
 	# Ground ring
 	_ring_material = StandardMaterial3D.new()
 	_ring_material.albedo_color = Color(0.5, 0.5, 0.5, 0.35)
@@ -49,17 +43,6 @@ func _build_visuals():
 	ring.material_override = _ring_material
 	ring.position.y = -0.45
 	add_child(ring)
-
-	# Flag pillar
-	var pillar = MeshInstance3D.new()
-	var pillar_mesh = CylinderMesh.new()
-	pillar_mesh.top_radius = 0.08
-	pillar_mesh.bottom_radius = 0.08
-	pillar_mesh.height = 2.5
-	pillar.mesh = pillar_mesh
-	pillar.material_override = _ring_material
-	pillar.position.y = 0.8
-	add_child(pillar)
 
 	_point_label = Label3D.new()
 	_point_label.text = point_name.to_upper() + "\n[ NEUTRAL ]"
@@ -83,20 +66,40 @@ func _process(delta):
 func _process_audit(delta):
 	units_in_area = units_in_area.filter(func(u): return is_instance_valid(u))
 
-	var strengths := {"Regency": 0, "Oligarchy": 0, "Frontline": 0, "Sovereign": 0}
-	for unit in units_in_area:
-		strengths[unit.data.faction] += 1
+	var strengths := {"Regency": 0, "Oligarchy": 0, "Frontline": 0, "Sovereign": 0, "Insurgent": 0}
+	for body in units_in_area:
+		if body is Civilian and body.current_state == Civilian.CivilianState.INSURGENCY:
+			strengths["Insurgent"] += 2
+		elif body is Unit:
+			strengths[body.data.faction] += 1
+
+	# Sabotage Logic
+	if controlling_faction != "Neutral":
+		var enemy_strength = 0
+		for f in strengths:
+			if f != controlling_faction and strengths[f] > 0:
+				enemy_strength += strengths[f]
+		
+		if enemy_strength > 0:
+			current_audit_value -= sabotage_speed * enemy_strength * delta
+			if current_audit_value <= 0:
+				GameManager.log_message("ZONE LOST: " + point_name.to_upper() + " SABOTAGED", Color(1, 0.4, 0))
+				controlling_faction = "Neutral"
+				current_audit_value = 0
+				_point_label.text = point_name.to_upper() + "\n[ NEUTRAL ]"
+			_update_visual()
+			return
 
 	var strongest := ""
 	var max_str := 0
 	for faction in strengths:
-		if strengths[faction] > max_str:
+		if faction != "Insurgent" and strengths[faction] > max_str:
 			max_str = strengths[faction]
 			strongest = faction
 
 	var contested := false
 	for faction in strengths:
-		if faction != strongest and strengths[faction] > 0:
+		if faction != "Insurgent" and faction != strongest and strengths[faction] > 0:
 			contested = true
 			break
 
@@ -107,9 +110,9 @@ func _process_audit(delta):
 			controlling_faction = strongest
 			current_audit_value = total_audit_required
 			captured.emit(controlling_faction)
-			ResourceManager.add_funds(controlling_faction, 75)
 			_point_label.text = point_name.to_upper() + "\n[ " + controlling_faction.to_upper() + " ]"
 			_point_label.modulate = _faction_color(controlling_faction)
+			GameManager.log_message("ZONE AUDITED: " + point_name.to_upper(), _faction_color(controlling_faction))
 	elif strongest == controlling_faction and current_audit_value < total_audit_required:
 		current_audit_value += capture_speed * delta
 
@@ -133,9 +136,9 @@ func _faction_color(faction: String) -> Color:
 	return Color(0.5, 0.5, 0.5)
 
 func _on_body_entered(body: Node3D):
-	if body is Unit:
-		units_in_area.append(body as Unit)
+	if body is Unit or body is Civilian:
+		units_in_area.append(body)
 
 func _on_body_exited(body: Node3D):
-	if body is Unit:
-		units_in_area.erase(body as Unit)
+	if body is Unit or body is Civilian:
+		units_in_area.erase(body)

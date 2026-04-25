@@ -22,11 +22,16 @@ var _ticker_label: Label
 var _ticker_text: String = "--- SYSTEM READY --- STANDBY FOR AUDIT ---"
 var _ticker_speed: float = 80.0 # Pixels per second
 
+# Win/Loss Overlay
+var _finish_panel: ColorRect
+var _finish_label: Label
+
 func _ready():
 	add_to_group("hud")
 	_build_ui()
 	ResourceManager.resources_changed.connect(_on_resources_changed)
 	GameManager.message_logged.connect(_on_message_logged)
+	GameManager.mission_finished.connect(_on_mission_finished)
 
 func _build_ui():
 	var top = _panel(true)
@@ -78,6 +83,18 @@ func _build_ui():
 	_selection_label.size = Vector2(190, 74)
 	_selection_label.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85))
 	_selection_panel.add_child(_selection_label)
+
+	# Build Finish Panel (Initially Hidden)
+	_finish_panel = ColorRect.new()
+	_finish_panel.color = Color(0, 0, 0, 0.95)
+	_finish_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_finish_panel.visible = false
+	add_child(_finish_panel)
+	
+	_finish_label = Label.new()
+	_finish_label.set_anchors_preset(Control.PRESET_CENTER)
+	_finish_label.add_theme_font_size_override("font_size", 32)
+	_finish_panel.add_child(_finish_label)
 
 func _panel(top: bool) -> ColorRect:
 	var r = ColorRect.new()
@@ -133,6 +150,15 @@ func _on_message_logged(text: String, color: Color):
 	_ticker_label.add_theme_color_override("font_color", color)
 	# Reset position for priority read
 	_ticker_label.position.x = 600
+
+func _on_mission_finished(success: bool):
+	_finish_panel.visible = true
+	if success:
+		_finish_label.text = "█ AUDIT COMPLETE █\nCITIZEN QUOTA MET"
+		_finish_label.add_theme_color_override("font_color", Color(0.2, 1.0, 0.4))
+	else:
+		_finish_label.text = "█ ADMINISTRATIVE SHUTDOWN █\nINFAMY LIMIT EXCEEDED"
+		_finish_label.add_theme_color_override("font_color", Color(1.0, 0.2, 0.2))
 
 func _on_resources_changed(faction: String, amount: int):
 	if faction == player_faction:

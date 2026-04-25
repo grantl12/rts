@@ -49,6 +49,7 @@ func _process_civilian(civ: Civilian):
 	
 	civ.current_state = Civilian.CivilianState.PROCESSED
 	processed_count += 1
+	GameManager.processed_civilians += 1
 	
 	# Reward logic
 	var credit_reward = 50
