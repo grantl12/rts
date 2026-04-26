@@ -24,12 +24,20 @@ func _setup_fog() -> void:
 
 func setup_neon_grid() -> void:
 	_setup_environment()
+	_add_void_plane()
 	_apply_building_materials()
 	_add_pathways()
 	_add_fountain()
 	_add_trees()
 	_add_lamps()
 	_add_cover_props()
+
+func _add_void_plane() -> void:
+	# Large flat plane surrounding the 100×100 grid, at the same surface height.
+	# Its colour matches the grid ALBEDO and the sky background so the faded
+	# grid boundary dissolves into it invisibly.
+	var mat := _make_mat(Color(0.04, 0.04, 0.08))
+	_add_mesh_box(Vector3(0, 0.501, 0), Vector3(800, 0.002, 800), mat)
 
 func _setup_environment() -> void:
 	var env := Environment.new()
