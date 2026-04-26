@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="BuildingResource" load_steps=2 format=3 uid="uid://bbs6c8d4e5f9g"]
+
+[ext_resource type="Script" path="res://scripts/resources/building_resource.gd" id="1_br"]
+
+[resource]
+script = ExtResource("1_br")
+building_name = "Black Site"
+description = "Produces elite Gravy Seal operatives"
+extra_group = ""
+cost = 250
+passive_income = 0
+max_health = 300.0
+produces_units = true
+producible_unit_path_override = "res://resources/units/gravy_seal.tres"
+produce_time = 7.0
+effect_type = ""
+effect_radius = 0.0
+effect_interval = 0.0

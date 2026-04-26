@@ -74,10 +74,17 @@ class _SelectionBox extends Control:
 const Q_COOLDOWN_MAX := 15.0
 const E_COOLDOWN_MAX := 30.0
 
-const BARRACKS_RES      := "res://resources/buildings/barracks.tres"
-const WATCHTOWER_RES    := "res://resources/buildings/watchtower.tres"
-const SUPPLY_DEPOT_RES  := "res://resources/buildings/supply_depot.tres"
-const RELAY_STATION_RES := "res://resources/buildings/relay_station.tres"
+# Building catalog — add a row here and a matching .tres to add a new structure.
+const _BUILD_CATALOG: Array = [
+	["BARRACKS — $150",         "Unit production (4s)",               "res://resources/buildings/barracks.tres"],
+	["WATCHTOWER — $100",       "+20 vision radius",                  "res://resources/buildings/watchtower.tres"],
+	["SUPPLY DEPOT — $200",     "+8 income / 3s",                     "res://resources/buildings/supply_depot.tres"],
+	["RELAY STATION — $175",    "+8 Fact Check AoE per station",      "res://resources/buildings/relay_station.tres"],
+	["PROPAGANDA TOWER — $125", "Suppresses nearby enemies (8s CD)",  "res://resources/buildings/propaganda_tower.tres"],
+	["FIELD HOSPITAL — $175",   "Heals nearby allies every 4s",       "res://resources/buildings/field_hospital.tres"],
+	["BLACK SITE — $250",       "Produces elite Gravy Seal (7s)",     "res://resources/buildings/black_site.tres"],
+	["FORTIFICATION — $60",     "Deployable cover obstacle",          "res://resources/buildings/fortification.tres"],
+]
 
 var _q_cooldown: float = 0.0
 var _e_cooldown: float = 0.0
@@ -172,32 +179,41 @@ func _build_ui():
 	_produce_btn.pressed.connect(_on_produce_pressed)
 	_building_panel.add_child(_produce_btn)
 
-	# Build menu (bottom-right, beside building panel) — taller for 4 entries
+	# Build menu — generated from _BUILD_CATALOG, grows automatically with new entries.
+	const BTN_H    := 30
+	const BTN_GAP  := 4
+	const PADDING  := 10
+	const TITLE_H  := 22
+	const CANCEL_H := 24
+	var catalog_count := _BUILD_CATALOG.size()
+	var menu_h := TITLE_H + catalog_count * (BTN_H + BTN_GAP) + BTN_GAP + CANCEL_H + PADDING
+
 	_build_menu = ColorRect.new()
 	(_build_menu as ColorRect).color = Color(0.02, 0.02, 0.06, 0.92)
 	_build_menu.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	_build_menu.position = Vector2(-230, -258)
-	_build_menu.custom_minimum_size = Vector2(218, 198)
-	_build_menu.size = Vector2(218, 198)
+	_build_menu.position = Vector2(-238, -(menu_h + 58))  # 58 = ability bar height
+	_build_menu.custom_minimum_size = Vector2(226, menu_h)
+	_build_menu.size = Vector2(226, menu_h)
 	_build_menu.visible = false
 	add_child(_build_menu)
 
 	var bm_title := Label.new()
-	bm_title.text = "[ CONSTRUCT ]"
+	bm_title.text = "[ CONSTRUCT ]  (B/ESC to close)"
 	bm_title.add_theme_font_size_override("font_size", 9)
 	bm_title.add_theme_color_override("font_color", Color(0.5, 0.8, 0.5))
-	bm_title.position = Vector2(10, 6)
+	bm_title.position = Vector2(PADDING, 5)
 	_build_menu.add_child(bm_title)
 
-	_add_build_btn("BARRACKS — $150\nUnit production (4s)",   BARRACKS_RES,     26)
-	_add_build_btn("WATCHTOWER — $100\n+20 vision radius",    WATCHTOWER_RES,   70)
-	_add_build_btn("SUPPLY DEPOT — $200\n+8 income / 3s",     SUPPLY_DEPOT_RES, 114)
-	_add_build_btn("RELAY STATION — $175\n+8 Fact Check AoE", RELAY_STATION_RES,158)
+	for i in catalog_count:
+		var entry  := _BUILD_CATALOG[i] as Array
+		var y_pos  := TITLE_H + i * (BTN_H + BTN_GAP)
+		_add_build_btn(entry[0] + "\n" + entry[1], entry[2], y_pos, BTN_H)
 
+	var cancel_y := TITLE_H + catalog_count * (BTN_H + BTN_GAP) + BTN_GAP
 	var cancel_btn := Button.new()
-	cancel_btn.text = "[ CANCEL ]  (B / ESC)"
-	cancel_btn.position = Vector2(10, 168)
-	cancel_btn.size = Vector2(198, 24)
+	cancel_btn.text = "[ CANCEL ]"
+	cancel_btn.position = Vector2(PADDING, cancel_y)
+	cancel_btn.size = Vector2(206, CANCEL_H)
 	cancel_btn.pressed.connect(func(): hide_build_menu())
 	_build_menu.add_child(cancel_btn)
 
@@ -270,11 +286,11 @@ func _build_ui():
 	_sel_box.visible = false
 	add_child(_sel_box)
 
-func _add_build_btn(label: String, res_path: String, y: int) -> void:
+func _add_build_btn(label: String, res_path: String, y: int, h: int = 36) -> void:
 	var btn := Button.new()
 	btn.text = label
 	btn.position = Vector2(10, y)
-	btn.size = Vector2(198, 36)
+	btn.size = Vector2(206, h)
 	btn.pressed.connect(func(): _on_build_selected(res_path))
 	_build_menu.add_child(btn)
 

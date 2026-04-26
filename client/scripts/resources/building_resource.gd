@@ -15,4 +15,10 @@ class_name BuildingResource
 
 @export_group("Production")
 @export var produces_units: bool = false
+@export var producible_unit_path_override: String = ""
 @export var produce_time: float = 5.0
+
+@export_group("Area Effect")
+@export var effect_type: String = ""
+@export var effect_radius: float = 0.0
+@export var effect_interval: float = 0.0

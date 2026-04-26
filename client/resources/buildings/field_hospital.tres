@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="BuildingResource" load_steps=2 format=3 uid="uid://bfh5b7c3d4e8f"]
+
+[ext_resource type="Script" path="res://scripts/resources/building_resource.gd" id="1_br"]
+
+[resource]
+script = ExtResource("1_br")
+building_name = "Field Hospital"
+description = "Heals nearby allied units every 4 seconds"
+extra_group = ""
+cost = 175
+passive_income = 0
+max_health = 200.0
+produces_units = false
+producible_unit_path_override = ""
+produce_time = 5.0
+effect_type = "heal_allies"
+effect_radius = 14.0
+effect_interval = 4.0

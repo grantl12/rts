@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="BuildingResource" load_steps=2 format=3 uid="uid://bpt4a6b2c3d7e"]
+
+[ext_resource type="Script" path="res://scripts/resources/building_resource.gd" id="1_br"]
+
+[resource]
+script = ExtResource("1_br")
+building_name = "Propaganda Tower"
+description = "Suppresses nearby enemies on an 8s pulse"
+extra_group = ""
+cost = 125
+passive_income = 0
+max_health = 175.0
+produces_units = false
+producible_unit_path_override = ""
+produce_time = 5.0
+effect_type = "suppress_enemies"
+effect_radius = 12.0
+effect_interval = 8.0

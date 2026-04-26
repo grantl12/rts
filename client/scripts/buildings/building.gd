@@ -2,7 +2,6 @@ extends StaticBody3D
 class_name Building
 
 ## THE DEEP STATE: Base Building
-## Handles health, production, passive income, and destruction signalling.
 
 signal building_destroyed(building_name: String, faction: String)
 
@@ -14,6 +13,9 @@ signal building_destroyed(building_name: String, faction: String)
 @export var produce_time: float = 5.0
 @export var extra_group: String = ""
 @export var passive_income: int = 0
+@export var effect_type: String = ""
+@export var effect_radius: float = 0.0
+@export var effect_interval: float = 0.0
 
 const UNIT_PRODUCTION_COST := 50
 
@@ -32,18 +34,44 @@ func _ready():
 	if is_constructed:
 		apply_grid_influence()
 		if passive_income > 0:
-			_start_income_timer()
+			_start_timer(3.0, _on_income_tick)
+		if effect_interval > 0.0 and effect_type != "":
+			_start_timer(effect_interval, _on_effect_tick)
 
 func _process(delta: float) -> void:
 	if _is_producing and _produce_time_remaining > 0.0:
 		_produce_time_remaining -= delta
 
-func _start_income_timer() -> void:
+func _start_timer(interval: float, callback: Callable) -> void:
 	var t := Timer.new()
-	t.wait_time = 3.0
+	t.wait_time = interval
 	t.autostart = true
-	t.timeout.connect(func(): ResourceManager.add_funds(faction, passive_income))
+	t.timeout.connect(callback)
 	add_child(t)
+
+func _on_income_tick() -> void:
+	ResourceManager.add_funds(faction, passive_income)
+
+func _on_effect_tick() -> void:
+	match effect_type:
+		"heal_allies":
+			for node in get_tree().get_nodes_in_group("units"):
+				if not (node is Unit) or not is_instance_valid(node):
+					continue
+				if node.data.faction != faction:
+					continue
+				if global_position.distance_to(node.global_position) <= effect_radius:
+					var cap := node.data.max_vitality * node._health_mult
+					node.current_vitality = minf(node.current_vitality + 15.0, cap)
+					node._bars_dirty = true
+		"suppress_enemies":
+			for node in get_tree().get_nodes_in_group("units"):
+				if not (node is Unit) or not is_instance_valid(node):
+					continue
+				if node.data.faction == faction:
+					continue
+				if global_position.distance_to(node.global_position) <= effect_radius:
+					node.apply_suppression()
 
 func _apply_faction_visuals():
 	var col := _faction_color()
@@ -99,7 +127,10 @@ func produce_unit(unit_data: UnitResource):
 
 func spawn_unit(unit_data: UnitResource):
 	var unit: Unit = (load("res://scenes/units/unit_base.tscn") as PackedScene).instantiate()
-	unit.data = unit_data
+	# Duplicate so we can set faction without touching the shared resource.
+	var data := unit_data.duplicate() as UnitResource
+	data.faction = faction
+	unit.data = data
 	get_tree().current_scene.add_child(unit)
 	unit.global_position = global_position + Vector3(randf_range(-3.0, 3.0), 0.0, 5.0)
 
