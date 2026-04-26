@@ -106,6 +106,7 @@ var _q_cooldown: float = 0.0
 var _e_cooldown: float = 0.0
 var _selected_units: Array = []
 var _selected_building: Building = null
+var _selected_civ: CivBuilding = null
 
 var _funds_label: Label
 var _q_label: Label
@@ -115,6 +116,8 @@ var _selection_label: Label
 var _building_panel: Control
 var _building_label: Label
 var _produce_btn: Button
+var _civ_panel: Control
+var _civ_label: Label
 var _build_menu: Control
 var _game_over_panel: Control
 var _sel_box: _SelectionBox
@@ -194,6 +197,22 @@ func _build_ui():
 	_produce_btn.size = Vector2(200, 26)
 	_produce_btn.pressed.connect(_on_produce_pressed)
 	_building_panel.add_child(_produce_btn)
+
+	# Civilian / neutral building info panel (same slot as building panel, mutually exclusive)
+	_civ_panel = ColorRect.new()
+	(_civ_panel as ColorRect).color = Color(0.04, 0.03, 0.02, 0.92)
+	_civ_panel.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	_civ_panel.position = Vector2(-460, -175)
+	_civ_panel.custom_minimum_size = Vector2(220, 90)
+	_civ_panel.size = Vector2(220, 90)
+	_civ_panel.visible = false
+	add_child(_civ_panel)
+
+	_civ_label = Label.new()
+	_civ_label.position = Vector2(10, 8)
+	_civ_label.size = Vector2(200, 74)
+	_civ_label.add_theme_color_override("font_color", Color(0.9, 0.85, 0.7))
+	_civ_panel.add_child(_civ_label)
 
 	# Build menu — generated from _BUILD_CATALOG, grows automatically with new entries.
 	const BTN_H    := 30
@@ -368,6 +387,8 @@ func _process(delta: float):
 		_refresh_selection()
 	if _building_panel.visible and is_instance_valid(_selected_building):
 		_refresh_building_panel()
+	if _civ_panel.visible and is_instance_valid(_selected_civ):
+		_refresh_civ_panel()
 
 func _on_resources_changed(faction: String, amount: int):
 	if faction == GameSession.player_faction:
@@ -379,10 +400,14 @@ func update_selection(units: Array):
 	if not _selected_units.is_empty():
 		_selected_building = null
 		_building_panel.visible = false
+		_selected_civ = null
+		_civ_panel.visible = false
 	_refresh_selection()
 
 func select_building(building: Building):
 	_selected_building = building
+	_selected_civ = null
+	_civ_panel.visible = false
 	_selected_units.clear()
 	_selection_panel.visible = false
 	_building_panel.visible = true
@@ -391,6 +416,30 @@ func select_building(building: Building):
 func deselect_building():
 	_selected_building = null
 	_building_panel.visible = false
+	_selected_civ = null
+	_civ_panel.visible = false
+
+func select_civ_building(cb: CivBuilding) -> void:
+	_selected_civ = cb
+	_selected_building = null
+	_building_panel.visible = false
+	_selected_units.clear()
+	_selection_panel.visible = false
+	_civ_panel.visible = true
+	_refresh_civ_panel()
+
+func _refresh_civ_panel() -> void:
+	if not is_instance_valid(_selected_civ):
+		_civ_panel.visible = false
+		return
+	var cb := _selected_civ
+	var hp_pct := clampf(cb.current_health / cb.max_health, 0.0, 1.0)
+	_civ_label.text = (
+		"[ " + cb.building_name.to_upper() + " ]\n" +
+		"HELD BY   " + cb.faction.to_upper() + "\n" +
+		"BUFF      " + cb.buff_type.to_upper() + "\n" +
+		"INTEGRITY " + _bar(hp_pct)
+	)
 
 func _refresh_building_panel():
 	if not is_instance_valid(_selected_building):

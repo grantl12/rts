@@ -17,7 +17,7 @@ const RANK_STAT_BONUS := 0.08
 
 var target_position: Vector3
 var target_unit: Unit = null
-var target_building: Building = null
+var target_building = null
 var is_selected: bool = false
 var current_vitality: float
 var current_bureaucracy: float

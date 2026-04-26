@@ -69,15 +69,58 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0.5, 0)
 script = ExtResource("8_civ")
 building_name = "Campus Café"
 buff_type = "income"
+max_health = 250.0
 
 [node name="StudentLibrary" type="StaticBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0.5, -20)
 script = ExtResource("8_civ")
 building_name = "Student Library"
 buff_type = "xp"
+max_health = 250.0
 
 [node name="MedicalCenter" type="StaticBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0.5, 20)
 script = ExtResource("8_civ")
 building_name = "Medical Center"
 buff_type = "supply"
+max_health = 250.0
+
+[node name="DeltaHouse" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 0.5, -12)
+script = ExtResource("8_civ")
+building_name = "Δ Delta House"
+buff_type = "morale"
+building_size = Vector3(5, 4, 5)
+mesh_color = Color(0.65, 0.32, 0.22)
+label_color = Color(1.0, 0.85, 0.25)
+max_health = 300.0
+
+[node name="PhiHouse" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 0.5, -12)
+script = ExtResource("8_civ")
+building_name = "Φ Phi House"
+buff_type = "xp"
+building_size = Vector3(5, 4, 5)
+mesh_color = Color(0.65, 0.32, 0.22)
+label_color = Color(1.0, 0.85, 0.25)
+max_health = 300.0
+
+[node name="BetaHouse" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 0.5, 12)
+script = ExtResource("8_civ")
+building_name = "Β Beta House"
+buff_type = "income"
+building_size = Vector3(5, 4, 5)
+mesh_color = Color(0.65, 0.32, 0.22)
+label_color = Color(1.0, 0.85, 0.25)
+max_health = 300.0
+
+[node name="SigmaHouse" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 0.5, 12)
+script = ExtResource("8_civ")
+building_name = "Σ Sigma House"
+buff_type = "supply"
+building_size = Vector3(5, 4, 5)
+mesh_color = Color(0.65, 0.32, 0.22)
+label_color = Color(1.0, 0.85, 0.25)
+max_health = 300.0
