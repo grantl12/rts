@@ -113,3 +113,41 @@ Imagine playing the Russia campaign and seeing a specific burned-out **Complianc
  * **The Load:** When the Russia campaign starts a mission on that map, it pulls those coordinates and spawns "Wreckage" meshes in those exact spots.
 **This makes the game feel like a living history book.** You aren't just playing levels; you're witnessing the fall of a superpower from three different angles.
 **How does the idea of "Salvaging your own Wrecks" feel for the Russia campaign?** It turns the persistence into a direct resource loop!
+
+This is the "Holy Grail" of mission design—**Asynchronous Persistence**. If you build it this way, you aren't just making a game; you're making a **Geopolitical Sandbox**.
+Because you are using the same core maps (The Quad, the Bridge, the Metro), the "Why" and the "When" change depending on which campaign the player picks first.
+## 🏛️ The "Three-Sided" Story Architecture
+Instead of one long story, imagine three "Time-Shifted" perspectives. Each campaign represents a different "Layer" of the conflict.
+### **1. The Regency Campaign: "The Administration" (Phase 1 Focus)**
+ * **The Vibe:** You are the **First Responders**.
+ * **The Maps:** You see the maps at their cleanest. The Quad is green; the Bridge is open.
+ * **The Persistence:** Your choices create the **"Original Scars."** If you use ROE 5 on the Quad in Mission 1, you are literally "terraforming" the map for the other campaigns.
+ * **The "Russia Callback":** If a player plays this first, when they eventually start the Russia campaign, they will see the burnt-out buses they destroyed as the Regency.
+### **2. The Ukraine Campaign: "The Information War" (Phase 2 Focus)**
+ * **The Vibe:** You are the **Insurgents/Observers**.
+ * **The Maps:** You arrive after the Regency has already messed things up. The Quad has some "Redaction" tarps; the Bridge has some "Audit" checkpoints.
+ * **The Persistence:** If you play this first, the Regency's "Scars" are **Randomized** or **Preset** by the AI. You are reacting to a "Default Fail State" of the US government.
+ * **The "Regency Callback":** If you already played the Regency, your specific "Infamy" score from that run determines how many hostile Regency AI patrols are on the map.
+### **3. The Russia Campaign: "The Salvage Operation" (Phase 3 Focus)**
+ * **The Vibe:** You are the **Vultures**.
+ * **The Maps:** You see the maps at their absolute worst. The "Visual Scarring" is maxed out. The Quad is a "Black Site"; the Bridge is a graveyard of persistent vehicles.
+ * **The Persistence:** You "Clean" the maps. Your gameplay involves dismantling the Regency's checkpoints for scrap.
+ * **The Callback:** You are literally picking through the wreckage of the player's previous two campaigns.
+## 🔁 How the "Non-Linear" Callbacks Work
+To handle the "What if I start with Russia?" problem, you need a **"World State Seed."**
+ * **If you play Regency First:** The game saves your World_State_01. When you start Russia, it loads your exact map wreckage.
+ * **If you play Russia First:** The game generates a Random_Chaos_Seed. The map is already messy, and you have to piecing together what happened.
+ * **The Hook:** This encourages replaying. After playing Russia and seeing the Quad in ruins, the player will think: *"I want to go back and play the Regency campaign to see how it looked before I scavenged it."*
+## 📋 The "Callback" Matrix: A Sample Loop
+| Map | Regency POV (Early) | Ukraine POV (Mid) | Russia POV (Late) |
+|---|---|---|---|
+| **University Quad** | Secure the podium; "Audit" the students. | Record the Regency "Audits" to get viral funding. | Scavenge the "Redaction" tech and server racks. |
+| **Toll Bridge** | Set up ALPR checkpoints to find a BOLO vehicle. | Hack the ALPR to let "Liberal Tactical" units through. | Plow the bridge clear and sell the car wrecks for scrap. |
+| **Grain Elevator** | Guard the grain to prevent a regional riot. | "Liberate" the grain for the civilian resistance. | Fortify the elevators and sell the grain back to the Regency. |
+## 🛠️ The "Big Brain" Strategy: "Ghost of the Player"
+Imagine playing the Russia campaign and seeing a specific burned-out **Compliance Bus** in the exact spot *you* parked it during your Regency run three weeks ago.
+ * **Godot/Supabase Implementation:** When a mission ends, you save the Vector3 coordinates and Asset_ID of every destroyed unit to Supabase.
+ * **The Load:** When the Russia campaign starts a mission on that map, it pulls those coordinates and spawns "Wreckage" meshes in those exact spots.
+**This makes the game feel like a living history book.** You aren't just playing levels; you're witnessing the fall of a superpower from three different angles.
+**How does the idea of "Salvaging your own Wrecks" feel for the Russia campaign?** It turns the persistence into a direct resource loop!
+
