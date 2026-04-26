@@ -2,7 +2,7 @@ extends StaticBody3D
 class_name Building
 
 ## THE DEEP STATE: Base Building
-## Handles health, production, grid influence, and destruction signalling.
+## Handles health, production, passive income, and destruction signalling.
 
 signal building_destroyed(building_name: String, faction: String)
 
@@ -12,6 +12,8 @@ signal building_destroyed(building_name: String, faction: String)
 @export var max_health: float = 500.0
 @export var producible_unit_path: String = ""
 @export var produce_time: float = 5.0
+@export var extra_group: String = ""
+@export var passive_income: int = 0
 
 const UNIT_PRODUCTION_COST := 50
 
@@ -24,13 +26,24 @@ var _hq_warned: bool = false
 func _ready():
 	add_to_group("buildings")
 	current_health = max_health
+	if extra_group != "":
+		add_to_group(extra_group)
 	_apply_faction_visuals()
 	if is_constructed:
 		apply_grid_influence()
+		if passive_income > 0:
+			_start_income_timer()
 
 func _process(delta: float) -> void:
 	if _is_producing and _produce_time_remaining > 0.0:
 		_produce_time_remaining -= delta
+
+func _start_income_timer() -> void:
+	var t := Timer.new()
+	t.wait_time = 3.0
+	t.autostart = true
+	t.timeout.connect(func(): ResourceManager.add_funds(faction, passive_income))
+	add_child(t)
 
 func _apply_faction_visuals():
 	var col := _faction_color()

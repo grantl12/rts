@@ -5,8 +5,10 @@
 [resource]
 script = ExtResource("1_br")
 building_name = "Barracks"
-description = "Trains units\nin 4 seconds"
+description = "Trains units in 4 seconds"
+extra_group = ""
 cost = 150
-build_time = 0.0
+passive_income = 0
 max_health = 250.0
+produces_units = true
 produce_time = 4.0

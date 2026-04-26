@@ -214,12 +214,15 @@ func _confirm_placement(mouse_pos: Vector2) -> void:
 		return
 
 	var building: Building = (load("res://scenes/buildings/building_base.tscn") as PackedScene).instantiate()
-	building.building_name = bres.building_name
-	building.faction       = faction
-	building.max_health    = bres.max_health
-	building.produce_time  = bres.produce_time
-	building.is_constructed = true
-	building.producible_unit_path = GameSession.default_unit_path(faction)
+	building.building_name        = bres.building_name
+	building.faction              = faction
+	building.max_health           = bres.max_health
+	building.produce_time         = bres.produce_time
+	building.extra_group          = bres.extra_group
+	building.passive_income       = bres.passive_income
+	building.is_constructed       = true
+	if bres.produces_units:
+		building.producible_unit_path = GameSession.default_unit_path(faction)
 	building.position = place_pos
 	get_tree().current_scene.add_child(building)
 

@@ -74,7 +74,10 @@ class _SelectionBox extends Control:
 const Q_COOLDOWN_MAX := 15.0
 const E_COOLDOWN_MAX := 30.0
 
-const BARRACKS_RES := "res://resources/buildings/barracks.tres"
+const BARRACKS_RES      := "res://resources/buildings/barracks.tres"
+const WATCHTOWER_RES    := "res://resources/buildings/watchtower.tres"
+const SUPPLY_DEPOT_RES  := "res://resources/buildings/supply_depot.tres"
+const RELAY_STATION_RES := "res://resources/buildings/relay_station.tres"
 
 var _q_cooldown: float = 0.0
 var _e_cooldown: float = 0.0
@@ -169,13 +172,13 @@ func _build_ui():
 	_produce_btn.pressed.connect(_on_produce_pressed)
 	_building_panel.add_child(_produce_btn)
 
-	# Build menu (bottom-right, beside building panel)
+	# Build menu (bottom-right, beside building panel) — taller for 4 entries
 	_build_menu = ColorRect.new()
 	(_build_menu as ColorRect).color = Color(0.02, 0.02, 0.06, 0.92)
 	_build_menu.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	_build_menu.position = Vector2(-230, -175)
-	_build_menu.custom_minimum_size = Vector2(218, 115)
-	_build_menu.size = Vector2(218, 115)
+	_build_menu.position = Vector2(-230, -258)
+	_build_menu.custom_minimum_size = Vector2(218, 198)
+	_build_menu.size = Vector2(218, 198)
 	_build_menu.visible = false
 	add_child(_build_menu)
 
@@ -186,17 +189,15 @@ func _build_ui():
 	bm_title.position = Vector2(10, 6)
 	_build_menu.add_child(bm_title)
 
-	var barracks_btn := Button.new()
-	barracks_btn.text = "BARRACKS — $150\nProduces units (4s)"
-	barracks_btn.position = Vector2(10, 26)
-	barracks_btn.size = Vector2(198, 36)
-	barracks_btn.pressed.connect(func(): _on_build_selected(BARRACKS_RES))
-	_build_menu.add_child(barracks_btn)
+	_add_build_btn("BARRACKS — $150\nUnit production (4s)",   BARRACKS_RES,     26)
+	_add_build_btn("WATCHTOWER — $100\n+20 vision radius",    WATCHTOWER_RES,   70)
+	_add_build_btn("SUPPLY DEPOT — $200\n+8 income / 3s",     SUPPLY_DEPOT_RES, 114)
+	_add_build_btn("RELAY STATION — $175\n+8 Fact Check AoE", RELAY_STATION_RES,158)
 
 	var cancel_btn := Button.new()
-	cancel_btn.text = "[ CANCEL ]"
-	cancel_btn.position = Vector2(10, 70)
-	cancel_btn.size = Vector2(198, 26)
+	cancel_btn.text = "[ CANCEL ]  (B / ESC)"
+	cancel_btn.position = Vector2(10, 168)
+	cancel_btn.size = Vector2(198, 24)
 	cancel_btn.pressed.connect(func(): hide_build_menu())
 	_build_menu.add_child(cancel_btn)
 
@@ -268,6 +269,14 @@ func _build_ui():
 	_sel_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_sel_box.visible = false
 	add_child(_sel_box)
+
+func _add_build_btn(label: String, res_path: String, y: int) -> void:
+	var btn := Button.new()
+	btn.text = label
+	btn.position = Vector2(10, y)
+	btn.size = Vector2(198, 36)
+	btn.pressed.connect(func(): _on_build_selected(res_path))
+	_build_menu.add_child(btn)
 
 func update_drag_box(from: Vector2, to: Vector2) -> void:
 	_sel_box.visible = true

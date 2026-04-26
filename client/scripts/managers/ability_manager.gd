@@ -12,22 +12,26 @@ const REINFORCE_DURATION := 28.0
 
 func cast_fact_check(pos: Vector3) -> void:
 	SoundManager.play("fact_check")
-	_spawn_fact_check_vfx(pos)
 	var player := GameSession.player_faction
+	var radius := FACT_CHECK_RADIUS
+	for b in get_tree().get_nodes_in_group("relay_station"):
+		if is_instance_valid(b) and b.get("faction") == player:
+			radius += 8.0
+	_spawn_fact_check_vfx(pos, radius)
 	for node in get_tree().get_nodes_in_group("units"):
 		if not (node is Unit) or not is_instance_valid(node):
 			continue
 		if node.data.faction == player:
 			continue
-		if node.global_position.distance_to(pos) <= FACT_CHECK_RADIUS:
+		if node.global_position.distance_to(pos) <= radius:
 			node.apply_suppression()
 
-func _spawn_fact_check_vfx(pos: Vector3) -> void:
+func _spawn_fact_check_vfx(pos: Vector3, radius: float) -> void:
 	var root := get_tree().current_scene
 	var ring := MeshInstance3D.new()
 	var mesh := CylinderMesh.new()
-	mesh.top_radius      = FACT_CHECK_RADIUS
-	mesh.bottom_radius   = FACT_CHECK_RADIUS
+	mesh.top_radius      = radius
+	mesh.bottom_radius   = radius
 	mesh.height          = 0.07
 	mesh.radial_segments = 40
 	ring.mesh = mesh

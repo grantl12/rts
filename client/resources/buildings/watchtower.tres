@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="BuildingResource" load_steps=2 format=3 uid="uid://bwt1x3y8v2m4c"]
+
+[ext_resource type="Script" path="res://scripts/resources/building_resource.gd" id="1_br"]
+
+[resource]
+script = ExtResource("1_br")
+building_name = "Watchtower"
+description = "Reveals 48-unit radius through fog"
+extra_group = "vision_tower"
+cost = 100
+passive_income = 0
+max_health = 150.0
+produces_units = false
+produce_time = 5.0
