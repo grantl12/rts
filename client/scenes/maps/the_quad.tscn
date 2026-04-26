@@ -30,28 +30,23 @@ script = ExtResource("6_hud")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, -0.707107, 0.707107, 0, -0.707107, -0.707107, 0, 10, 0)
-light_energy = 0.5
+light_energy = 0.7
+shadow_enabled = true
 
 [node name="Ground" type="CSGBox3D" parent="."]
 use_collision = true
 size = Vector3(100, 1, 100)
 material = ExtResource("2_mat")
 
-[node name="CentralPlaza" type="CSGCylinder3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
-use_collision = true
-radius = 10.0
-height = 0.5
-
 [node name="WestWing" type="CSGBox3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -38, 5, 0)
 use_collision = true
-size = Vector3(20, 10, 40)
+size = Vector3(12, 10, 42)
 
-[node name="EastParking" type="CSGBox3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 3, 0)
+[node name="EastWing" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 38, 5, 0)
 use_collision = true
-size = Vector3(20, 6, 40)
+size = Vector3(12, 10, 42)
 
 [node name="AP_Center" type="Area3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
