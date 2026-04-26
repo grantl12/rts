@@ -20,6 +20,7 @@ var _is_producing: bool = false
 var _hq_warned: bool = false
 
 func _ready():
+	add_to_group("buildings")
 	current_health = max_health
 	_apply_faction_visuals()
 	if is_constructed:
@@ -89,6 +90,7 @@ func take_damage(amount: float):
 	if not _hq_warned and current_health < max_health * 0.5 and faction == GameSession.player_faction:
 		_hq_warned = true
 		AdvisorManager.speak("hq_attack")
+		SoundManager.play("hq_alert")
 	if current_health <= 0:
 		explode()
 

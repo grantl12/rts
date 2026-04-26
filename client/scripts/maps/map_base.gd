@@ -229,6 +229,7 @@ func _setup_navmesh() -> void:
 func on_point_captured(point_name: String, faction: String):
 	print("Point " + point_name + " AUDITED by " + faction)
 	if faction == GameSession.player_faction:
+		SoundManager.play("capture")
 		AdvisorManager.speak("capture")
 	if faction in faction_control:
 		faction_control[faction] = minf(faction_control[faction] + 10.0, 100.0)

@@ -2,6 +2,60 @@ extends CanvasLayer
 
 ## THE DEEP STATE: In-Game HUD
 
+# Top-right tactical minimap.
+class _Minimap extends Control:
+	const _WORLD := 100.0
+
+	func _draw() -> void:
+		var sz := size
+		draw_rect(Rect2(Vector2.ZERO, sz), Color(0.03, 0.04, 0.08))
+
+		for body in get_tree().get_nodes_in_group("cover"):
+			if not is_instance_valid(body): continue
+			var p := _w2m(body.global_position, sz)
+			draw_rect(Rect2(p - Vector2(3, 1), Vector2(6, 2)), Color(0.30, 0.28, 0.26))
+
+		for ap in get_tree().get_nodes_in_group("audit_points"):
+			if not is_instance_valid(ap): continue
+			var p   := _w2m(ap.global_position, sz)
+			var col := _fc(ap.controlling_faction)
+			draw_circle(p, 5.0, col.darkened(0.4))
+			draw_arc(p, 5.5, 0.0, TAU, 22, col, 1.5)
+
+		for b in get_tree().get_nodes_in_group("buildings"):
+			if not is_instance_valid(b): continue
+			var p := _w2m(b.global_position, sz)
+			draw_rect(Rect2(p - Vector2(4, 4), Vector2(8, 8)), _fc(b.faction))
+
+		for u in get_tree().get_nodes_in_group("units"):
+			if not is_instance_valid(u) or not u.visible: continue
+			if not u.get("data"): continue
+			var p := _w2m(u.global_position, sz)
+			draw_circle(p, 2.0, _fc(u.data.faction))
+
+		var cams := get_tree().get_nodes_in_group("rts_camera")
+		if cams.size() > 0:
+			var p := _w2m(cams[0].global_position, sz)
+			var r := Rect2(p - Vector2(13, 9), Vector2(26, 18))
+			draw_rect(r, Color(1, 1, 1, 0.10), true)
+			draw_rect(r, Color(1, 1, 1, 0.40), false, 1.0)
+
+		draw_rect(Rect2(Vector2.ZERO, sz), Color(0.22, 0.25, 0.32), false, 1.5)
+
+	func _w2m(world: Vector3, sz: Vector2) -> Vector2:
+		return Vector2(
+			(world.x + _WORLD * 0.5) / _WORLD * sz.x,
+			(world.z + _WORLD * 0.5) / _WORLD * sz.y
+		)
+
+	func _fc(faction: String) -> Color:
+		match faction:
+			"Regency":   return Color(0.2, 0.5, 1.0)
+			"Oligarchy": return Color(1.0, 0.2, 0.2)
+			"Frontline": return Color(0.3, 1.0, 0.35)
+			"Sovereign": return Color(0.8, 0.3, 1.0)
+		return Color(0.5, 0.5, 0.5)
+
 # Drag-selection box drawn on top of all other HUD elements.
 class _SelectionBox extends Control:
 	var _from := Vector2.ZERO
@@ -37,6 +91,7 @@ var _game_over_panel: Control
 var _sel_box: _SelectionBox
 var _advisor_label: Label
 var _advisor_tween: Tween = null
+var _minimap: _Minimap = null
 
 func _ready():
 	add_to_group("hud")
@@ -151,6 +206,28 @@ func _build_ui():
 	_advisor_label.modulate.a = 0.0
 	add_child(_advisor_label)
 
+	# Minimap — top-right corner, below the top bar
+	var mm_bg := ColorRect.new()
+	mm_bg.color = Color(0.02, 0.02, 0.06, 0.90)
+	mm_bg.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	mm_bg.position = Vector2(-158, 40)
+	mm_bg.size     = Vector2(152, 158)
+	add_child(mm_bg)
+
+	var mm_lbl := Label.new()
+	mm_lbl.text = "[ SURVEILLANCE ]"
+	mm_lbl.add_theme_font_size_override("font_size", 7)
+	mm_lbl.add_theme_color_override("font_color", Color(0.4, 0.6, 0.8))
+	mm_lbl.position = Vector2(4, 2)
+	mm_bg.add_child(mm_lbl)
+
+	_minimap = _Minimap.new()
+	_minimap.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_minimap.position = Vector2(-155, 53)
+	_minimap.size     = Vector2(146, 140)
+	_minimap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_minimap)
+
 	# Drag-selection box — added last so it draws over everything else
 	_sel_box = _SelectionBox.new()
 	_sel_box.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -210,6 +287,8 @@ func _process(delta: float):
 		_e_label.text = "[E] CALL\nBACKUP\n%.0fs" % _e_cooldown
 	else:
 		_e_label.text = "[E]\nCALL\nBACKUP"
+	if _minimap:
+		_minimap.queue_redraw()
 	if _selection_panel.visible and not _selected_units.is_empty():
 		_refresh_selection()
 

@@ -398,6 +398,8 @@ func shoot():
 		return
 	attack_cooldown = 1.0 / data.attack_speed
 	current_supplies -= 1.0
+	if data.faction == GameSession.player_faction:
+		SoundManager.play_shoot()
 	target_unit.take_damage(data.damage * _damage_mult * 0.5, "Bureaucracy", global_position)
 	if randf() <= data.accuracy:
 		target_unit.take_damage(data.damage * _damage_mult, "Vitality", global_position)
@@ -433,6 +435,7 @@ func _show_promotion_effect() -> void:
 		_sprite.modulate = Color(3.0, 2.5, 0.5)
 	_status_label.text     = "▲ " + RANK_NAMES[current_rank - 1]
 	_status_label.modulate = Color(1.0, 0.9, 0.2)
+	SoundManager.play("promotion")
 	AdvisorManager.speak("promotion")
 	var tw := create_tween()
 	tw.tween_interval(2.2)
@@ -510,6 +513,8 @@ func apply_suppression():
 		AdvisorManager.speak("suppressed")
 	_status_label.text     = "█ RED TAPE █"
 	_status_label.modulate = Color(1.0, 0.15, 0.15)
+	if data.faction == GameSession.player_faction:
+		SoundManager.play("suppressed")
 	if _sprite:
 		_sprite.modulate = Color(0.4, 0.4, 0.4)
 	await get_tree().create_timer(3.0).timeout
