@@ -24,8 +24,24 @@ class _Minimap extends Control:
 
 		for b in get_tree().get_nodes_in_group("buildings"):
 			if not is_instance_valid(b): continue
+			if b.is_in_group("civ_buildings"): continue  # drawn separately below
 			var p := _w2m(b.global_position, sz)
 			draw_rect(Rect2(p - Vector2(4, 4), Vector2(8, 8)), _fc(b.faction))
+
+		for cb in get_tree().get_nodes_in_group("civ_buildings"):
+			if not is_instance_valid(cb): continue
+			var p   := _w2m(cb.global_position, sz)
+			var col := _fc(cb.faction)
+			# Diamond shape marks civilian buildings
+			draw_colored_polygon(PackedVector2Array([
+				p + Vector2(0, -5), p + Vector2(5, 0),
+				p + Vector2(0,  5), p + Vector2(-5, 0)
+			]), col.darkened(0.3))
+			draw_polyline(PackedVector2Array([
+				p + Vector2(0, -5), p + Vector2(5, 0),
+				p + Vector2(0,  5), p + Vector2(-5, 0),
+				p + Vector2(0, -5)
+			]), col, 1.2)
 
 		for u in get_tree().get_nodes_in_group("units"):
 			if not is_instance_valid(u) or not u.visible: continue

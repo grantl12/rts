@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://c8y5j2w1u6k5b"]
+[gd_scene load_steps=9 format=3 uid="uid://c8y5j2w1u6k5b"]
 
 [ext_resource type="Script" path="res://scripts/maps/map_base.gd" id="1_map"]
 [ext_resource type="Material" path="res://materials/neon_grid_mat.tres" id="2_mat"]
@@ -7,6 +7,7 @@
 [ext_resource type="Script" path="res://scripts/input_controller.gd" id="5_input"]
 [ext_resource type="Script" path="res://scripts/ui/game_hud.gd" id="6_hud"]
 [ext_resource type="Script" path="res://scripts/maps/audit_point.gd" id="7_ap"]
+[ext_resource type="Script" path="res://scripts/buildings/civ_building.gd" id="8_civ"]
 
 [node name="TheQuad" type="Node3D"]
 script = ExtResource("1_map")
@@ -62,3 +63,21 @@ point_name = "NORTH PLAZA"
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 28)
 script = ExtResource("7_ap")
 point_name = "SOUTH STEPS"
+
+[node name="CampusCafe" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0.5, 0)
+script = ExtResource("8_civ")
+building_name = "Campus Café"
+buff_type = "income"
+
+[node name="StudentLibrary" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0.5, -20)
+script = ExtResource("8_civ")
+building_name = "Student Library"
+buff_type = "xp"
+
+[node name="MedicalCenter" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0.5, 20)
+script = ExtResource("8_civ")
+building_name = "Medical Center"
+buff_type = "supply"
