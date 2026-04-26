@@ -11,12 +11,14 @@ signal building_destroyed(building_name: String, faction: String)
 @export var cost: int = 100
 @export var max_health: float = 500.0
 @export var producible_unit_path: String = ""
+@export var produce_time: float = 5.0
 
 const UNIT_PRODUCTION_COST := 50
 
 var current_health: float
 var is_constructed: bool = false
 var _is_producing: bool = false
+var _produce_time_remaining: float = 0.0
 var _hq_warned: bool = false
 
 func _ready():
@@ -25,6 +27,10 @@ func _ready():
 	_apply_faction_visuals()
 	if is_constructed:
 		apply_grid_influence()
+
+func _process(delta: float) -> void:
+	if _is_producing and _produce_time_remaining > 0.0:
+		_produce_time_remaining -= delta
 
 func _apply_faction_visuals():
 	var col := _faction_color()
@@ -72,7 +78,9 @@ func request_produce() -> bool:
 func produce_unit(unit_data: UnitResource):
 	_is_producing = true
 	print(building_name, " is producing: ", unit_data.unit_name)
-	await get_tree().create_timer(5.0).timeout
+	_produce_time_remaining = produce_time
+	await get_tree().create_timer(produce_time).timeout
+	_produce_time_remaining = 0.0
 	spawn_unit(unit_data)
 	_is_producing = false
 

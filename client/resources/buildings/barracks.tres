@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="BuildingResource" load_steps=2 format=3 uid="uid://brc4x2w7u9k1a"]
+
+[ext_resource type="Script" path="res://scripts/resources/building_resource.gd" id="1_br"]
+
+[resource]
+script = ExtResource("1_br")
+building_name = "Barracks"
+description = "Trains units\nin 4 seconds"
+cost = 150
+build_time = 0.0
+max_health = 250.0
+produce_time = 4.0

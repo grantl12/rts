@@ -74,6 +74,8 @@ class _SelectionBox extends Control:
 const Q_COOLDOWN_MAX := 15.0
 const E_COOLDOWN_MAX := 30.0
 
+const BARRACKS_RES := "res://resources/buildings/barracks.tres"
+
 var _q_cooldown: float = 0.0
 var _e_cooldown: float = 0.0
 var _selected_units: Array = []
@@ -87,6 +89,7 @@ var _selection_label: Label
 var _building_panel: Control
 var _building_label: Label
 var _produce_btn: Button
+var _build_menu: Control
 var _game_over_panel: Control
 var _sel_box: _SelectionBox
 var _advisor_label: Label
@@ -143,28 +146,59 @@ func _build_ui():
 	_selection_label.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85))
 	_selection_panel.add_child(_selection_label)
 
-	# Building selection panel (bottom-right)
+	# Building selection panel (bottom-right of center)
 	_building_panel = ColorRect.new()
 	(_building_panel as ColorRect).color = Color(0.02, 0.04, 0.02, 0.9)
 	_building_panel.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	_building_panel.position = Vector2(-230, -160)
-	_building_panel.custom_minimum_size = Vector2(220, 100)
-	_building_panel.size = Vector2(220, 100)
+	_building_panel.position = Vector2(-460, -175)
+	_building_panel.custom_minimum_size = Vector2(220, 115)
+	_building_panel.size = Vector2(220, 115)
 	_building_panel.visible = false
 	add_child(_building_panel)
 
 	_building_label = Label.new()
 	_building_label.position = Vector2(10, 8)
-	_building_label.size = Vector2(200, 52)
+	_building_label.size = Vector2(200, 64)
 	_building_label.add_theme_color_override("font_color", Color(0.8, 0.9, 0.8))
 	_building_panel.add_child(_building_label)
 
 	_produce_btn = Button.new()
 	_produce_btn.text = "[ PRODUCE UNIT — $50 ]"
-	_produce_btn.position = Vector2(10, 66)
+	_produce_btn.position = Vector2(10, 80)
 	_produce_btn.size = Vector2(200, 26)
 	_produce_btn.pressed.connect(_on_produce_pressed)
 	_building_panel.add_child(_produce_btn)
+
+	# Build menu (bottom-right, beside building panel)
+	_build_menu = ColorRect.new()
+	(_build_menu as ColorRect).color = Color(0.02, 0.02, 0.06, 0.92)
+	_build_menu.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	_build_menu.position = Vector2(-230, -175)
+	_build_menu.custom_minimum_size = Vector2(218, 115)
+	_build_menu.size = Vector2(218, 115)
+	_build_menu.visible = false
+	add_child(_build_menu)
+
+	var bm_title := Label.new()
+	bm_title.text = "[ CONSTRUCT ]"
+	bm_title.add_theme_font_size_override("font_size", 9)
+	bm_title.add_theme_color_override("font_color", Color(0.5, 0.8, 0.5))
+	bm_title.position = Vector2(10, 6)
+	_build_menu.add_child(bm_title)
+
+	var barracks_btn := Button.new()
+	barracks_btn.text = "BARRACKS — $150\nProduces units (4s)"
+	barracks_btn.position = Vector2(10, 26)
+	barracks_btn.size = Vector2(198, 36)
+	barracks_btn.pressed.connect(func(): _on_build_selected(BARRACKS_RES))
+	_build_menu.add_child(barracks_btn)
+
+	var cancel_btn := Button.new()
+	cancel_btn.text = "[ CANCEL ]"
+	cancel_btn.position = Vector2(10, 70)
+	cancel_btn.size = Vector2(198, 26)
+	cancel_btn.pressed.connect(func(): hide_build_menu())
+	_build_menu.add_child(cancel_btn)
 
 	# Game-over overlay (full screen, always on top)
 	_game_over_panel = ColorRect.new()
@@ -194,7 +228,7 @@ func _build_ui():
 	)
 	_game_over_panel.add_child(back_btn)
 
-	# Advisor ticker — above ability bar, below drag box
+	# Advisor ticker — above ability bar
 	_advisor_label = Label.new()
 	_advisor_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	_advisor_label.offset_top = -100
@@ -228,7 +262,7 @@ func _build_ui():
 	_minimap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_minimap)
 
-	# Drag-selection box — added last so it draws over everything else
+	# Drag-selection box — drawn last so it's always on top
 	_sel_box = _SelectionBox.new()
 	_sel_box.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_sel_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -291,6 +325,8 @@ func _process(delta: float):
 		_minimap.queue_redraw()
 	if _selection_panel.visible and not _selected_units.is_empty():
 		_refresh_selection()
+	if _building_panel.visible and is_instance_valid(_selected_building):
+		_refresh_building_panel()
 
 func _on_resources_changed(faction: String, amount: int):
 	if faction == GameSession.player_faction:
@@ -321,12 +357,19 @@ func _refresh_building_panel():
 		return
 	var b := _selected_building
 	var hp_pct := clampf(b.current_health / b.max_health, 0.0, 1.0)
+
+	var status_line: String
+	if b._is_producing:
+		status_line = "PRODUCING... %.0fs" % maxf(b._produce_time_remaining, 0.0)
+	else:
+		status_line = "STANDBY"
+
 	_building_label.text = (
 		"[ " + b.building_name.to_upper() + " ]\n" +
 		"INTEGRITY  " + _bar(hp_pct) + "\n" +
-		("PRODUCING..." if b._is_producing else "STANDBY")
+		status_line
 	)
-	_produce_btn.visible = (b.faction == GameSession.player_faction)
+	_produce_btn.visible = (b.faction == GameSession.player_faction and not b.producible_unit_path.is_empty())
 	_produce_btn.disabled = b._is_producing
 
 func _on_produce_pressed():
@@ -344,7 +387,7 @@ func _refresh_selection():
 		var vit_pct  := u.current_vitality / (u.data.max_vitality * u._health_mult)
 		var bur_pct  := u.current_bureaucracy / u.data.max_bureaucracy
 		var xp_prev  := Unit.RANK_XP[u.current_rank - 1]
-		var xp_next  := Unit.RANK_XP[u.current_rank]   # INF when maxed
+		var xp_next  := Unit.RANK_XP[u.current_rank]
 		var xp_pct   := 1.0 if u.current_rank >= 5 else \
 						clampf((u.current_xp - xp_prev) / (xp_next - xp_prev), 0.0, 1.0)
 		_selection_label.text = (
@@ -361,6 +404,21 @@ func _refresh_selection():
 func _bar(pct: float) -> String:
 	var n := int(round(clampf(pct, 0.0, 1.0) * 8))
 	return "█".repeat(n) + "░".repeat(8 - n)
+
+func show_build_menu() -> void:
+	_build_menu.visible = true
+
+func hide_build_menu() -> void:
+	_build_menu.visible = false
+	var ic := get_tree().get_first_node_in_group("input_controller")
+	if ic and ic.has_method("cancel_placement"):
+		ic.cancel_placement()
+
+func _on_build_selected(res_path: String) -> void:
+	hide_build_menu()
+	var ic := get_tree().get_first_node_in_group("input_controller")
+	if ic and ic.has_method("start_placement"):
+		ic.start_placement(res_path)
 
 func show_game_over(won: bool):
 	AdvisorManager.speak("victory" if won else "defeat")

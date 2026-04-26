@@ -20,18 +20,21 @@ func setup_skirmish():
 	var player := GameSession.player_faction
 	var enemy  := GameSession.enemy_faction
 
-	player_hq = _spawn_base(Vector3(0, 1, -40), player)
-	enemy_hq  = _spawn_base(Vector3(0, 1,  40), enemy)
+	player_hq = _spawn_base(Vector3(0, 0.5, -40), player)
+	enemy_hq  = _spawn_base(Vector3(0, 0.5,  40), enemy)
 
 	_spawn_squad(Vector3(0, 1, -28), player, GameSession.default_unit_path(player))
 	_spawn_squad(Vector3(0, 1,  28), enemy,  GameSession.default_unit_path(enemy))
 
 	call_deferred("_connect_audit_points")
-	# Briefing plays one frame after scene is ready so the HUD exists
 	call_deferred("_play_briefing")
 
 func _play_briefing() -> void:
 	AdvisorManager.speak("briefing")
+	if is_instance_valid(player_hq):
+		var hud := get_tree().get_first_node_in_group("hud")
+		if hud:
+			hud.select_building(player_hq)
 
 func _connect_audit_points():
 	var map = get_parent()

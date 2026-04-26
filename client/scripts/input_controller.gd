@@ -2,7 +2,7 @@ extends Node3D
 
 ## THE DEEP STATE: Player Input Controller
 ## Left-click / drag to select, right-click to move/attack buildings+units.
-## Q = Fact Check, E = Call Backup.
+## Q = Fact Check, E = Call Backup, B = Build menu.
 
 var selected_units: Array[Unit] = []
 var _camera: Camera3D
@@ -11,7 +11,13 @@ var _drag_start: Vector2 = Vector2.ZERO
 var _is_dragging: bool = false
 const DRAG_THRESHOLD := 6.0
 
+# Build placement state
+var _placing: bool = false
+var _place_res_path: String = ""
+var _ghost: MeshInstance3D = null
+
 func _ready():
+	add_to_group("input_controller")
 	_camera = get_parent().get_node("RTSCamera/Camera3D")
 
 func _input(event: InputEvent):
@@ -19,22 +25,32 @@ func _input(event: InputEvent):
 		match event.button_index:
 			MOUSE_BUTTON_LEFT:
 				if event.pressed:
-					_drag_start = event.position
-					_is_dragging = false
-				else:
-					if _is_dragging:
-						_handle_box_select(event.position)
-						_get_hud().hide_drag_box()
-						_is_dragging = false
+					if _placing:
+						_confirm_placement(event.position)
+						get_viewport().set_input_as_handled()
 					else:
-						_handle_select(event.position, event.shift_pressed)
-				get_viewport().set_input_as_handled()
+						_drag_start = event.position
+						_is_dragging = false
+				else:
+					if not _placing:
+						if _is_dragging:
+							_handle_box_select(event.position)
+							_get_hud().hide_drag_box()
+							_is_dragging = false
+						else:
+							_handle_select(event.position, event.shift_pressed)
+					get_viewport().set_input_as_handled()
 			MOUSE_BUTTON_RIGHT:
 				if event.pressed:
-					_handle_order(event.position)
+					if _placing:
+						cancel_placement()
+					else:
+						_handle_order(event.position)
 					get_viewport().set_input_as_handled()
 	elif event is InputEventMouseMotion:
-		if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		if _placing:
+			_update_ghost(event.position)
+		elif Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
 			if not _is_dragging and event.position.distance_to(_drag_start) > DRAG_THRESHOLD:
 				_is_dragging = true
 			if _is_dragging:
@@ -43,6 +59,16 @@ func _input(event: InputEvent):
 		match event.keycode:
 			KEY_Q: _cast_ability(true)
 			KEY_E: _cast_ability(false)
+			KEY_B:
+				if _placing:
+					cancel_placement()
+				else:
+					_get_hud().show_build_menu()
+			KEY_ESCAPE:
+				if _placing:
+					cancel_placement()
+				else:
+					_get_hud().hide_build_menu()
 
 func _handle_select(mouse_pos: Vector2, additive: bool):
 	var hit := _raycast(mouse_pos)
@@ -144,3 +170,80 @@ func _raycast(mouse_pos: Vector2) -> Dictionary:
 	var query := PhysicsRayQueryParameters3D.create(from, to)
 	query.collide_with_areas = false
 	return get_world_3d().direct_space_state.intersect_ray(query)
+
+# ── Build Placement ────────────────────────────────────────────────────────────
+
+func start_placement(res_path: String) -> void:
+	cancel_placement()
+	_place_res_path = res_path
+	_placing = true
+	_ghost = _make_ghost()
+	get_tree().current_scene.add_child(_ghost)
+
+func cancel_placement() -> void:
+	_placing = false
+	_place_res_path = ""
+	if is_instance_valid(_ghost):
+		_ghost.queue_free()
+	_ghost = null
+
+func _update_ghost(mouse_pos: Vector2) -> void:
+	if not is_instance_valid(_ghost):
+		return
+	var hit := _raycast(mouse_pos)
+	if hit:
+		_ghost.global_position = Vector3(hit.position.x, 3.0, hit.position.z)
+		_ghost.visible = true
+	else:
+		_ghost.visible = false
+
+func _confirm_placement(mouse_pos: Vector2) -> void:
+	var hit := _raycast(mouse_pos)
+	if not hit:
+		return
+	var place_pos := Vector3(hit.position.x, 0.5, hit.position.z)
+
+	var bres: BuildingResource = load(_place_res_path) as BuildingResource
+	if not bres:
+		cancel_placement()
+		return
+
+	var faction := GameSession.player_faction
+	if not ResourceManager.spend_funds(faction, bres.cost):
+		AdvisorManager.speak("insufficient_funds")
+		return
+
+	var building: Building = (load("res://scenes/buildings/building_base.tscn") as PackedScene).instantiate()
+	building.building_name = bres.building_name
+	building.faction       = faction
+	building.max_health    = bres.max_health
+	building.produce_time  = bres.produce_time
+	building.is_constructed = true
+	building.producible_unit_path = GameSession.default_unit_path(faction)
+	building.position = place_pos
+	get_tree().current_scene.add_child(building)
+
+	cancel_placement()
+
+func _make_ghost() -> MeshInstance3D:
+	var mi   := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(8, 5, 8)
+	mi.mesh   = mesh
+	var mat := StandardMaterial3D.new()
+	var col := _player_faction_color()
+	mat.albedo_color = Color(col.r, col.g, col.b, 0.35)
+	mat.emission_enabled = true
+	mat.emission = col * 0.3
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mi.material_override = mat
+	return mi
+
+func _player_faction_color() -> Color:
+	match GameSession.player_faction:
+		"Regency":   return Color(0.2, 0.5, 1.0)
+		"Oligarchy": return Color(1.0, 0.2, 0.2)
+		"Frontline": return Color(0.3, 1.0, 0.35)
+		"Sovereign": return Color(0.8, 0.3, 1.0)
+	return Color(0.6, 0.6, 0.6)
