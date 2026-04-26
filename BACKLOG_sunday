@@ -1,4 +1,4 @@
-Wha it do, Grant. That "Holding Pen" idea is the perfect pivot to take the **Deep State** from a generic security force to a full-blown bureaucratic nightmare.
+ Wha it do, Grant. That "Holding Pen" idea is the perfect pivot to take the **Deep State** from a generic security force to a full-blown bureaucratic nightmare.
 Let’s noodle on the mechanics and how this translates to the other factions. If we’re going heavy on the satire, these shouldn't just be "buildings"—they are **"Temporary Compliance Habitats"** or **"Data-Harvesting Enclosures."**
 ## 🏗️ The Compliance Pen Mechanic
 ### **For The Regency (ICE Agents)**
@@ -217,3 +217,96 @@ When the map generates, it should sprinkle the world with "Flavor Props" that af
 ### **The "Meta" Feature: "Export to Press"**
 When you finish architecting a map, the game generates a **"Classified Briefing"** (a one-page PDF or image) that you can send to "your computer" or friends. It looks like a real government document with the map layout, the ROE constraints, and the "Redacted" signatures at the bottom.
 **How do you feel about the "Redaction Brush"?** Imagine creating a map where the central objective is completely blacked out, and you have to fight for it "blind" while the satellites are jammed. That sounds like a high-impact skirmish to me.
+
+
+map evolution 
+Wha it do, Grant. This is the design pivot that turns the game into a true **Geopolitical Epic**. By focusing on map evolution and the "Triple Threat" mission structure, we aren't just making levels—we’re telling a story through physical geography and the lingering consequences of the player's choices.
+Here are the master notes to drop into your DOCS/MAP_EVOLUTION.md or append to your GitHub GEMINI.md.
+# 🗺️ ARCHITECTURAL BRIEF: THE EVOLVING WORLD
+**Project:** *The Deep State* **Core Philosophy:** "Shared-World Evolution" (Map Reuse & Persistence)
+## 🏗️ 1. THE MAP EVOLUTION SYSTEM (Visual Scarring)
+Each map is visited 2–3 times throughout the campaign. Instead of resetting, the environment tracks your **Infamy** and **ROE** across sessions.
+### **Phase 1: The Incident (Pristine)**
+ * **Visuals:** Green grass, functional infrastructure, high civilian traffic.
+ * **Atmosphere:** Sunny, "Administrative" vibes.
+ * **Gameplay:** Focus on "Auditing" and stealthy extractions.
+### **Phase 2: The Occupation (Scarred)**
+ * **Visuals:** Concrete barricades, scorched earth, persistent vehicle wrecks.
+ * **Atmosphere:** Overcast, floodlights, "Managed Chaos."
+ * **Gameplay:** High-intensity riot suppression and "Compliance Pen" defense.
+### **Phase 3: The Redaction (Shattered)**
+ * **Visuals:** Ruined buildings, massive black "Censor" tarps over landmarks.
+ * **Atmosphere:** Night-time, glitching UI, heavy "Redaction Fog."
+ * **Gameplay:** Survival/Bunker defense with 60% of the map blacked out by "Classified" zones.
+## 📍 2. THE "TRIPLE THREAT" MISSION ARCHITECTURE
+Every deployment has three distinct layers of objectives to maximize replayability.
+| Layer | Type | Objective Example | Reward |
+|---|---|---|---|
+| **Primary** | **Directive** | "Secure the Campus Server Farm." | Unlocks next map/story progression. |
+| **Secondary A** | **The Harvest** | "Extract 20 High-Value Assets (Civs)." | Primary source of **Administrative Credits**. |
+| **Secondary B** | **The Satire** | "Redact the Student Newspaper Archive." | Buffs **Public Trust** or grants Hero Units. |
+## 🩸 3. RESIDUE & TRAUMA LOGIC
+The map physically remembers where you messed up.
+ * **Mass Casualty Zones:** Sites where ROE 5 was used are marked with **Dried Blood** and **Discarded Caution Tape** on subsequent visits.
+ * **Site Auras:**
+   * **Trauma Zone:** Enemy units gain a "Vengeance" buff; Regency units get a "Guilt" debuff.
+   * **Compliance Zone:** Regency units heal faster; Civilians are easier to tether.
+ * **Navigation Decay:** Persistent debris (burned buses, rubble) permanently alters the AI's pathfinding, turning simple roads into tactical "Kill Boxes" by Visit 3.
+## 🚗 4. VEHICLE PERSISTENCE & IPAWS INTEGRATION
+ * **The Scar Tissue:** Destroyed civilian cars do not vanish; they become permanent cover or "IED Traps" in later missions.
+ * **Amber’s Angels Mechanic:** Every map has one **Amber Alert Target Vehicle** (FEMA Feed).
+   * *Objective:* Audit the specific plate before it leaves the map.
+   * *Satire:* Auditing the wrong car triggers a "Lawsuit" funding freeze.
+## 🎤 5. THE POST-OP LOOP (META-GAME)
+After every visit, the player must face:
+ 1. **The Allocation Screen:** Assigning harvested civilians to "Silos" (Labor, PR, or Research).
+ 2. **The Press Briefing:** Choosing a "Spin" (Gaslight, Double Down, or Redact) to manage the Infamy generated during the mission.
+### **Action Items for the Architect:**
+ * [ ] **[ART]** Create three "State" variants for the **University Quad** (Clean, Occupied, Redacted).
+ * [ ] **[DESIGN]** Draft the "Triple Threat" objectives for the **Toll Bridge** across two different visits.
+ * [ ] **[CODE]** Prototype the Residual_Aura.gd that reads the casualty_map and applies buffs/debuffs to units.
+**This is the gold standard for "Environmental Storytelling."** We’re making the player's own past actions their biggest tactical hurdle.
+**Ready to name some of the specific "Harvest" targets or should we look at the UI for the "Post-Op Spin"?**
+
+
+vehicle mechs civilians 
+Got you. Since civilian vehicles are the "connective tissue" of the map and a key part of your real-world background with ALPR/public safety, we need to treat them as more than just scenery. They are mobile cover, economic assets, and tactical traps.
+Here are the master notes for the **Civilian Vehicle System** to drop into your DOCS/VEHICLE_LOGIC.md.
+# 🚗 TECHNICAL BRIEF: CIVILIAN VEHICLE SYSTEMS
+**Project:** *The Deep State* **Core Function:** Tactical Obstacles, Economic Nodes, and "Visual Scarring"
+## 🏗️ 1. THE "GRIDLOCK" ARCHITECTURE
+Maps are populated with randomized civilian vehicles (Sedans, SUVs, Buses, Vans).
+ * **Dynamic Pathfinding:** Vehicles are not static; they create a "Navigation Maze."
+ * **The Audit Requirement:** For the **Regency**, vehicles act as roadblocks. You must "Audit" a car to make it pull over or move, slowing down your advance.
+ * **The "Plow" Mechanic:** Heavy units (**Oligarchy** or **Merkava-adj** tanks) can shove or crush cars to clear paths, but this spikes **Property Damage** penalties and Infamy.
+## 🚔 2. ALPR & THE "AMBER'S ANGELS" LOOP
+Leveraging your specific expertise in vehicle identification.
+ * **The IPAWS Feed:** Every mission features a "High-Value Target" vehicle (e.g., a specific Silver Sedan).
+ * **The Scan:** Regency **ALPR Scouts** scan plates in real-time.
+ * **The Objective:** Correctly identifying and "Auditing" the target vehicle grants a massive **Political Capital** boost.
+ * **The Satire:** Auditing the *wrong* civilian vehicle triggers a "False Arrest" cooldown, freezing your administrative budget for 30 seconds.
+## 💣 3. THE "SLEEPER" VEHICLE (Proxy Tactics)
+Civilian cars are the primary weapon of the **Sovereign Union**.
+ * **VBIED Potential:** Any civilian vehicle can be a "Sleeper." If the Proxy player "hacks" a car, it becomes a **Vehicle-Borne IED**.
+ * **The Paranoia:** The Regency player never knows if the SUV in the Toll Bridge gridlock is just a "Commuter" or a "Kamikaze" until it starts moving toward their units.
+## 📈 4. VEHICLE PERSISTENCE (Visual Scarring)
+Vehicles are the primary indicator of how "hot" a zone has become over multiple visits.
+ * **Persistence State:** While functional cars may despawn, **Destroyed Wrecks** are permanent.
+ * **The Catwalk of Carnage:** By Visit 3 of the **University Quad**, the main roads should be impassable due to the scorched remains of cars from Visit 1.
+ * **Cover Utility:** Wrecks provide **75% Cover** but can be "Salvaged" by the **Oligarchy** for scrap metal, physically removing the cover from the map to deny it to the enemy.
+## 🚌 5. THE "COMPLIANCE BUS" (Mobile Harvest)
+Vehicles act as the "Transport Layer" for your civilian extraction.
+ * **The Bus:** A high-capacity unit that holds up to 30 civilians.
+ * **The Escort:** Players must protect the bus as it moves toward the **Extraction Zone**.
+ * **The Multiplier:** Successfully extracting a bus provides a **3x Bonus** to "Administrative Credits" compared to walking civilians out on foot.
+## 🛠️ ENGINEERING TO-DO LIST
+ 1. **[CODE]** Implement Vehicle_Base.gd with states: Idle, Audited, Moving, Wrecked.
+ 2. **[ALPR]** Create a UI overlay for the "Amber Alert" target (Plate #, Make, Model).
+ 3. **[FX]** Design the "Crush" animation/mesh-swap for when tanks drive over sedans.
+ 4. **[NAV]** Ensure the **NavigationServer3D** updates dynamically as vehicles are destroyed or moved.
+### **The "Noodle" on Vehicle Satire:**
+ * **Vehicle Flavor Text:** When you click a car, it shows the "Commuter's Reason for Travel."
+   * *Example:* "Going to buy overpriced lattes."
+   * *Example:* "Late for a meeting about 'Synergy'."
+ * **The "Redacted" Plate:** In high-Infamy zones, some cars have black bars over their license plates, making them invisible to ALPR scans.
+**Does this capture the "paranoia and bureaucracy" vibe you’re looking for?** Having the ALPR scan be a core part of the mission feels like a great nod to your real-world work.
