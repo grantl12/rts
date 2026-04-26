@@ -217,6 +217,9 @@ func take_damage(amount: float) -> void:
 func _collapse() -> void:
 	if is_instance_valid(_buff_timer):
 		_buff_timer.queue_free()
+	InfamyManager.add_infamy(25, "civilian_structure_razed")
+	WorldStateManager.record_raze(name)
+	WorldStateManager.record_wreck("civ_building", global_position)
 	# Spawn simple debris
 	for i in 6:
 		var d    := MeshInstance3D.new()

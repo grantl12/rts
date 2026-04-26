@@ -107,8 +107,10 @@ var _e_cooldown: float = 0.0
 var _selected_units: Array = []
 var _selected_building: Building = null
 var _selected_civ: CivBuilding = null
+var _selected_pen: HoldingPen  = null
 
 var _funds_label: Label
+var _infamy_label: Label
 var _q_label: Label
 var _e_label: Label
 var _selection_panel: Control
@@ -131,7 +133,9 @@ func _ready():
 	_build_ui()
 	ResourceManager.resources_changed.connect(_on_resources_changed)
 	AdvisorManager.advisor_spoke.connect(_show_advisor_line)
+	InfamyManager.infamy_changed.connect(_on_infamy_changed)
 	_sync_faction_label()
+	_on_infamy_changed(InfamyManager.infamy)
 
 func _sync_faction_label():
 	var faction := GameSession.player_faction
@@ -145,6 +149,14 @@ func _build_ui():
 	_funds_label = Label.new()
 	_funds_label.position = Vector2(14, 8)
 	top.add_child(_funds_label)
+
+	_infamy_label = Label.new()
+	_infamy_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_infamy_label.position = Vector2(-380, 8)
+	_infamy_label.size = Vector2(366, 20)
+	_infamy_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_infamy_label.add_theme_font_size_override("font_size", 10)
+	add_child(_infamy_label)
 
 	var bot := _panel(false)
 	add_child(bot)
@@ -203,14 +215,14 @@ func _build_ui():
 	(_civ_panel as ColorRect).color = Color(0.04, 0.03, 0.02, 0.92)
 	_civ_panel.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	_civ_panel.position = Vector2(-460, -175)
-	_civ_panel.custom_minimum_size = Vector2(220, 90)
-	_civ_panel.size = Vector2(220, 90)
+	_civ_panel.custom_minimum_size = Vector2(240, 106)
+	_civ_panel.size = Vector2(240, 106)
 	_civ_panel.visible = false
 	add_child(_civ_panel)
 
 	_civ_label = Label.new()
 	_civ_label.position = Vector2(10, 8)
-	_civ_label.size = Vector2(200, 74)
+	_civ_label.size = Vector2(220, 90)
 	_civ_label.add_theme_color_override("font_color", Color(0.9, 0.85, 0.7))
 	_civ_panel.add_child(_civ_label)
 
@@ -394,6 +406,17 @@ func _on_resources_changed(faction: String, amount: int):
 	if faction == GameSession.player_faction:
 		_funds_label.text = faction.to_upper() + " // INTELLIGENCE BUDGET: $" + str(amount)
 
+func _on_infamy_changed(value: int) -> void:
+	var pct  := clampf(float(value) / InfamyManager.MAX_INFAMY, 0.0, 1.0)
+	var n    := int(round(pct * 10))
+	var heat := pct
+	_infamy_label.text = "INFAMY // " + "█".repeat(n) + "░".repeat(10 - n) + \
+		"  [ " + InfamyManager.get_tier() + " ]"
+	_infamy_label.add_theme_color_override(
+		"font_color",
+		Color(0.45 + heat * 0.55, 0.45 - heat * 0.35, 0.25 - heat * 0.20)
+	)
+
 func update_selection(units: Array):
 	_selected_units = units.filter(func(u): return is_instance_valid(u))
 	_selection_panel.visible = not _selected_units.is_empty()
@@ -401,12 +424,14 @@ func update_selection(units: Array):
 		_selected_building = null
 		_building_panel.visible = false
 		_selected_civ = null
+		_selected_pen = null
 		_civ_panel.visible = false
 	_refresh_selection()
 
 func select_building(building: Building):
 	_selected_building = building
 	_selected_civ = null
+	_selected_pen = null
 	_civ_panel.visible = false
 	_selected_units.clear()
 	_selection_panel.visible = false
@@ -417,10 +442,22 @@ func deselect_building():
 	_selected_building = null
 	_building_panel.visible = false
 	_selected_civ = null
+	_selected_pen = null
 	_civ_panel.visible = false
 
 func select_civ_building(cb: CivBuilding) -> void:
 	_selected_civ = cb
+	_selected_pen = null
+	_selected_building = null
+	_building_panel.visible = false
+	_selected_units.clear()
+	_selection_panel.visible = false
+	_civ_panel.visible = true
+	_refresh_civ_panel()
+
+func select_holding_pen(pen: HoldingPen) -> void:
+	_selected_pen = pen
+	_selected_civ = null
 	_selected_building = null
 	_building_panel.visible = false
 	_selected_units.clear()
@@ -429,17 +466,29 @@ func select_civ_building(cb: CivBuilding) -> void:
 	_refresh_civ_panel()
 
 func _refresh_civ_panel() -> void:
-	if not is_instance_valid(_selected_civ):
-		_civ_panel.visible = false
+	if is_instance_valid(_selected_pen):
+		var pen  := _selected_pen
+		var hp   := clampf(pen.current_health / pen.max_health, 0.0, 1.0)
+		var income_rate := int(pen.civs_held * pen.income_per_civ)
+		_civ_label.text = (
+			"[ " + pen.building_name.to_upper() + " ]\n" +
+			"HELD BY   " + pen.faction.to_upper() + "\n" +
+			"OCCUPANCY " + str(pen.civs_held) + " / " + str(pen.max_capacity) + "\n" +
+			"INCOME    $" + str(income_rate) + " / " + str(pen.income_interval) + "s\n" +
+			"INTEGRITY " + _bar(hp)
+		)
 		return
-	var cb := _selected_civ
-	var hp_pct := clampf(cb.current_health / cb.max_health, 0.0, 1.0)
-	_civ_label.text = (
-		"[ " + cb.building_name.to_upper() + " ]\n" +
-		"HELD BY   " + cb.faction.to_upper() + "\n" +
-		"BUFF      " + cb.buff_type.to_upper() + "\n" +
-		"INTEGRITY " + _bar(hp_pct)
-	)
+	if is_instance_valid(_selected_civ):
+		var cb     := _selected_civ
+		var hp_pct := clampf(cb.current_health / cb.max_health, 0.0, 1.0)
+		_civ_label.text = (
+			"[ " + cb.building_name.to_upper() + " ]\n" +
+			"HELD BY   " + cb.faction.to_upper() + "\n" +
+			"BUFF      " + cb.buff_type.to_upper() + "\n" +
+			"INTEGRITY " + _bar(hp_pct)
+		)
+		return
+	_civ_panel.visible = false
 
 func _refresh_building_panel():
 	if not is_instance_valid(_selected_building):

@@ -27,6 +27,8 @@ SupabaseManager="*res://scripts/managers/supabase_manager.gd"
 ResourceManager="*res://scripts/managers/resource_manager.gd"
 AbilityManager="*res://scripts/managers/ability_manager.gd"
 SoundManager="*res://scripts/managers/sound_manager.gd"
+InfamyManager="*res://scripts/managers/infamy_manager.gd"
+WorldStateManager="*res://scripts/managers/world_state_manager.gd"
 
 [display]
 

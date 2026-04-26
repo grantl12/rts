@@ -14,6 +14,7 @@ var _ai_produce_timer: float = AI_PRODUCE_INTERVAL
 var _ai_order_timer: float   = AI_ORDER_INTERVAL
 
 func _ready():
+	WorldStateManager.begin_mission("the_quad")
 	setup_skirmish()
 
 func setup_skirmish():

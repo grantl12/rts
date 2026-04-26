@@ -89,6 +89,10 @@ func _handle_select(mouse_pos: Vector2, additive: bool):
 		_deselect_all()
 		_get_hud().select_civ_building(hit.collider as CivBuilding)
 		return
+	elif hit.collider is HoldingPen and hit.collider.visible:
+		_deselect_all()
+		_get_hud().select_holding_pen(hit.collider as HoldingPen)
+		return
 	_notify_hud()
 
 func _handle_box_select(mouse_end: Vector2):
@@ -129,6 +133,12 @@ func _handle_order(mouse_pos: Vector2):
 		if cb.faction != selected_units[0].data.faction:
 			for unit in selected_units:
 				unit.target_building = cb
+				unit.target_unit = null
+	elif hit.collider is HoldingPen and hit.collider.visible:
+		var pen := hit.collider as HoldingPen
+		if pen.faction != selected_units[0].data.faction:
+			for unit in selected_units:
+				unit.target_building = pen
 				unit.target_unit = null
 	else:
 		var dest := hit.position
