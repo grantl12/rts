@@ -29,6 +29,7 @@ func setup_neon_grid() -> void:
 	_add_fountain()
 	_add_trees()
 	_add_lamps()
+	_add_cover_props()
 
 func _setup_environment() -> void:
 	var env := Environment.new()
@@ -152,6 +153,56 @@ func _add_lamp(pos: Vector3, pole_mat: Material, globe_mat: Material) -> void:
 	mi.material_override = globe_mat
 	mi.position          = pos + Vector3(0, 4.45, 0)
 	add_child(mi)
+
+# ── Cover Props ────────────────────────────────────────────────────────────────
+
+func _add_cover_props() -> void:
+	# Low concrete planters — StaticBody3D in "cover" group so raycasts detect them.
+	# Layout is symmetric on the Z axis so neither side has an advantage.
+	var mat := _make_mat(Color(0.28, 0.27, 0.25))
+
+	# Around AP_Center (z=0) — four approach walls outside the fountain
+	_add_cover_wall(Vector3(  0, 0,  11), Vector3(3.5, 0.7, 0.5), mat)  # south
+	_add_cover_wall(Vector3(  0, 0, -11), Vector3(3.5, 0.7, 0.5), mat)  # north
+	_add_cover_wall(Vector3( 11, 0,   0), Vector3(0.5, 0.7, 3.5), mat)  # east
+	_add_cover_wall(Vector3(-11, 0,   0), Vector3(0.5, 0.7, 3.5), mat)  # west
+
+	# Flanking AP_North (z=-28) — left/right of approach + one wall behind
+	_add_cover_wall(Vector3(-7, 0, -28), Vector3(0.5, 0.7, 3.0), mat)
+	_add_cover_wall(Vector3( 7, 0, -28), Vector3(0.5, 0.7, 3.0), mat)
+	_add_cover_wall(Vector3( 0, 0, -34), Vector3(4.0, 0.7, 0.5), mat)
+
+	# Symmetric for AP_South (z=28)
+	_add_cover_wall(Vector3(-7, 0,  28), Vector3(0.5, 0.7, 3.0), mat)
+	_add_cover_wall(Vector3( 7, 0,  28), Vector3(0.5, 0.7, 3.0), mat)
+	_add_cover_wall(Vector3( 0, 0,  34), Vector3(4.0, 0.7, 0.5), mat)
+
+	# Mid-field scatter at z=±14 — rewards flanking, breaks up long sightlines
+	_add_cover_wall(Vector3(-10, 0, -14), Vector3(3.0, 0.7, 0.5), mat)
+	_add_cover_wall(Vector3( 10, 0, -14), Vector3(3.0, 0.7, 0.5), mat)
+	_add_cover_wall(Vector3(-10, 0,  14), Vector3(3.0, 0.7, 0.5), mat)
+	_add_cover_wall(Vector3( 10, 0,  14), Vector3(3.0, 0.7, 0.5), mat)
+
+func _add_cover_wall(pos: Vector3, size: Vector3, mat: Material) -> void:
+	var body  := StaticBody3D.new()
+	body.add_to_group("cover")
+	# Sit flush on the ground surface (ground top = y 0.5)
+	body.position = Vector3(pos.x, 0.5 + size.y * 0.5, pos.z)
+
+	var mi   := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size            = size
+	mi.mesh              = mesh
+	mi.material_override = mat
+	body.add_child(mi)
+
+	var col   := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = size
+	col.shape  = shape
+	body.add_child(col)
+
+	add_child(body)
 
 # ── Navigation ─────────────────────────────────────────────────────────────────
 

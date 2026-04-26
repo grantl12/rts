@@ -398,9 +398,9 @@ func shoot():
 		return
 	attack_cooldown = 1.0 / data.attack_speed
 	current_supplies -= 1.0
-	target_unit.take_damage(data.damage * _damage_mult * 0.5, "Bureaucracy")
+	target_unit.take_damage(data.damage * _damage_mult * 0.5, "Bureaucracy", global_position)
 	if randf() <= data.accuracy:
-		target_unit.take_damage(data.damage * _damage_mult, "Vitality")
+		target_unit.take_damage(data.damage * _damage_mult, "Vitality", global_position)
 	if not is_instance_valid(target_unit):
 		_award_xp(25.0)
 
@@ -471,9 +471,9 @@ func move_to_target(_delta):
 
 # ── Damage & Status ────────────────────────────────────────────────────────────
 
-func take_damage(amount: float, type: String = "Vitality"):
-	var final_amount = amount
-	if type == "Vitality" and is_in_cover():
+func take_damage(amount: float, type: String = "Vitality", from_pos: Vector3 = Vector3.ZERO):
+	var final_amount := amount
+	if type == "Vitality" and from_pos != Vector3.ZERO and is_in_cover(from_pos):
 		final_amount *= 0.5
 	if type == "Vitality":
 		current_vitality -= final_amount
@@ -495,8 +495,12 @@ func _update_bars():
 	_health_label.text     = "█".repeat(vn) + "░".repeat(6 - vn) + "\n" + "█".repeat(bn) + "░".repeat(6 - bn)
 	_health_label.modulate = Color(0.3 + vit_pct * 0.7, 0.9 * vit_pct, 0.2)
 
-func is_in_cover() -> bool:
-	return false
+func is_in_cover(from_pos: Vector3) -> bool:
+	var space := get_world_3d().direct_space_state
+	var query := PhysicsRayQueryParameters3D.create(from_pos, global_position + Vector3(0, 0.8, 0))
+	query.collide_with_areas = false
+	var hit := space.intersect_ray(query)
+	return hit and (hit["collider"] as Node).is_in_group("cover")
 
 func apply_suppression():
 	if is_suppressed:
