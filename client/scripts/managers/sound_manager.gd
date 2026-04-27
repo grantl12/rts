@@ -53,7 +53,7 @@ func _make_wav(samples: PackedFloat32Array) -> AudioStreamWAV:
 		data[i * 2]     = s & 0xFF
 		data[i * 2 + 1] = (s >> 8) & 0xFF
 	var wav        := AudioStreamWAV.new()
-	wav.format     = AudioStreamWAV.FORMAT_16_BIT
+	wav.format     = AudioStreamWAV.FORMAT_16_BITS
 	wav.mix_rate   = RATE
 	wav.stereo     = false
 	wav.data       = data
@@ -145,7 +145,7 @@ func _gen_hq_alert() -> AudioStreamWAV:
 	var freqs := [440.0, 554.0]
 	for i in n:
 		var t   := float(i) / RATE
-		var f   := freqs[(i / seg) % 2]
+		var f   := freqs[(i / seg) % 2] as float
 		var env := 0.85 + 0.15 * sin(TAU * 7.0 * t)
 		s[i] = _sine(t, f) * env * 0.82
 	return _make_wav(s)
