@@ -145,7 +145,7 @@ func _handle_order(mouse_pos: Vector2):
 				unit.target_building = pen
 				unit.target_unit = null
 	else:
-		var dest := hit.position
+		var dest := hit.position as Vector3
 		for i in selected_units.size():
 			var col: int = i % 3
 			var row: int = i / 3
@@ -169,7 +169,7 @@ func _cast_ability(is_q: bool):
 func _get_screen_center_world() -> Vector3:
 	var center := get_viewport().get_visible_rect().size / 2.0
 	var hit := _raycast(center)
-	return hit.position if hit else Vector3.ZERO
+	return (hit.position as Vector3) if hit else Vector3.ZERO
 
 func _select_unit(unit: Unit):
 	if unit not in selected_units:
