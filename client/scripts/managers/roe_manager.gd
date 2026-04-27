@@ -76,6 +76,10 @@ func _activate_absolute_immunity() -> void:
 		if node is Civilian and is_instance_valid(node):
 			node.panic()
 
+	for node in get_tree().get_nodes_in_group("civilian_vehicles"):
+		if node is CivilianCar and is_instance_valid(node):
+			node.panic()
+
 	for node in get_tree().get_nodes_in_group("units"):
 		if not (node is Unit) or not is_instance_valid(node): continue
 		if node.data.faction != GameSession.player_faction:

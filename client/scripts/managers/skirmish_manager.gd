@@ -21,9 +21,18 @@ const RUNNER_AMBUSH_SQUAD_SIZE :=  4     # enemies per ambush
 
 # Three HVPs scatter immediately — each to a distinct corner of the map
 const _RUNNER_DEFS := [
-	{"codename": "SUBJECT ALPHA",   "dest": Vector3(-42.0, 0.5, -14.0)},
-	{"codename": "SUBJECT BRAVO",   "dest": Vector3( 42.0, 0.5,  12.0)},
-	{"codename": "SUBJECT CHARLIE", "dest": Vector3(  2.0, 0.5,  44.0)},
+	{"codename": "SUBJECT ALPHA",   "dest": Vector3(-42.0, 0.5, -14.0), "escape_dest": Vector3(-3.0,  0.5, -46.0)},
+	{"codename": "SUBJECT BRAVO",   "dest": Vector3( 42.0, 0.5,  12.0), "escape_dest": Vector3(-28.0, 0.5,   4.0)},
+	{"codename": "SUBJECT CHARLIE", "dest": Vector3(  2.0, 0.5,  44.0), "escape_dest": Vector3( 28.0, 0.5, -32.0)},
+]
+
+# Preset car routes that stay clear of all buildings.
+# WestWing blocks x∈[-44,-32] z∈[-21,21]; EastWing blocks x∈[32,44] same z.
+# CivBuildings cluster in x∈[-25,25] z∈[-25,25] — routes thread around them.
+const _CAR_ROUTES: Array = [
+	[Vector3(-30,0.5,-44), Vector3(30,0.5,-44), Vector3(30,0.5,-26), Vector3(-30,0.5,-26)],
+	[Vector3( 30,0.5, 44), Vector3(-30,0.5,44), Vector3(-30,0.5, 26), Vector3( 30,0.5, 26)],
+	[Vector3(-30,0.5,  6), Vector3(30,0.5,  6), Vector3( 30,0.5, -6), Vector3(-30,0.5, -6)],
 ]
 
 # ── State ──────────────────────────────────────────────────────────────────────
@@ -110,6 +119,17 @@ func _spawn_mission_civilians() -> void:
 		civ.position = center + Vector3(cos(angle) * dist, 0.0, sin(angle) * dist)
 		get_tree().current_scene.add_child(civ)
 	_spawn_runners(center)
+	_spawn_civilian_vehicles()
+
+func _spawn_civilian_vehicles() -> void:
+	# Two cars per route, each starting mid-route so they're spread around the map
+	for route_idx in _CAR_ROUTES.size():
+		var route: Array = _CAR_ROUTES[route_idx]
+		for offset in [0, 2]:
+			var car := CivilianCar.new()
+			car.waypoints = route.duplicate()
+			car._wp_idx   = offset % route.size()
+			get_tree().current_scene.add_child(car)
 
 func _spawn_runners(center: Vector3) -> void:
 	for def in _RUNNER_DEFS:
@@ -122,8 +142,11 @@ func _spawn_runners(center: Vector3) -> void:
 		_runners.append({
 			"codename":         def.codename,
 			"dest":             def.dest,
+			"escape_dest":      def.escape_dest,
 			"civ":              civ,
 			"ambush_triggered": false,
+			"in_vehicle":       false,
+			"vehicle_ref":      null,
 			"resolved":         false,
 		})
 
@@ -289,6 +312,11 @@ func _check_runners() -> void:
 	for r in _runners:
 		if r.resolved:
 			continue
+		# Detect dismount — car finished escaping or was wrecked
+		if r.in_vehicle and (not is_instance_valid(r.vehicle_ref) or not r.vehicle_ref._escaping):
+			r.in_vehicle  = false
+			r.vehicle_ref = null
+			state_changed = true
 		if not is_instance_valid(r.civ):
 			r.resolved = true
 			state_changed = true
@@ -315,15 +343,38 @@ func _trigger_runner_ambush(r: Dictionary) -> void:
 	var enemy := GameSession.enemy_faction
 	var dest: Vector3 = r.dest
 	AdvisorManager.speak("runner_ambush")
+
+	# Spawn enemy squad at the hot zone
 	var unit_res: UnitResource = load(GameSession.default_unit_path(enemy))
-	if not unit_res:
-		return
-	for i in RUNNER_AMBUSH_SQUAD_SIZE:
-		var unit: Unit = (load("res://scenes/units/unit_base.tscn") as PackedScene).instantiate()
-		unit.data = unit_res
-		var angle := float(i) / RUNNER_AMBUSH_SQUAD_SIZE * TAU
-		unit.position = dest + Vector3(cos(angle) * 3.5, 0.0, sin(angle) * 3.5)
-		get_tree().current_scene.add_child(unit)
+	if unit_res:
+		for i in RUNNER_AMBUSH_SQUAD_SIZE:
+			var unit: Unit = (load("res://scenes/units/unit_base.tscn") as PackedScene).instantiate()
+			unit.data  = unit_res
+			var angle  := float(i) / RUNNER_AMBUSH_SQUAD_SIZE * TAU
+			unit.position = dest + Vector3(cos(angle) * 3.5, 0.0, sin(angle) * 3.5)
+			get_tree().current_scene.add_child(unit)
+
+	# HVP boards the nearest available car and flees to a secondary locale
+	if is_instance_valid(r.civ):
+		var car := _find_nearest_car(r.civ.global_position if is_instance_valid(r.civ) else dest)
+		if car:
+			car.pick_up_runner(r.civ, r.escape_dest)
+			r.in_vehicle  = true
+			r.vehicle_ref = car
+
+func _find_nearest_car(from: Vector3) -> CivilianCar:
+	var best:      CivilianCar = null
+	var best_dist: float       = INF
+	for node in get_tree().get_nodes_in_group("civilian_vehicles"):
+		if not (node is CivilianCar) or not is_instance_valid(node):
+			continue
+		if node._wrecked or node._escaping:
+			continue
+		var d := node.global_position.distance_to(from)
+		if d < best_dist:
+			best_dist = d
+			best      = node
+	return best
 
 # ── Win / Loss ────────────────────────────────────────────────────────────────
 

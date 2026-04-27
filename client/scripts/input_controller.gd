@@ -93,6 +93,10 @@ func _handle_select(mouse_pos: Vector2, additive: bool):
 		_deselect_all()
 		_get_hud().select_holding_pen(hit.collider as HoldingPen)
 		return
+	elif hit.collider is CivilianCar and hit.collider.visible:
+		_deselect_all()
+		_get_hud().select_vehicle(hit.collider as CivilianCar)
+		return
 	_notify_hud()
 
 func _handle_box_select(mouse_end: Vector2):
