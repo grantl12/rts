@@ -106,9 +106,10 @@ const _BUILD_CATALOG: Array = [
 var _q_cooldown: float = 0.0
 var _e_cooldown: float = 0.0
 var _selected_units: Array = []
-var _selected_building: Building = null
-var _selected_civ: CivBuilding = null
-var _selected_pen: HoldingPen  = null
+var _selected_building: Building    = null
+var _selected_civ:      CivBuilding = null
+var _selected_pen:      HoldingPen  = null
+var _selected_vehicle:  CivilianCar = null
 
 var _funds_label: Label
 var _infamy_label: Label
@@ -525,7 +526,7 @@ func _process(delta: float):
 		_refresh_selection()
 	if _building_panel.visible and is_instance_valid(_selected_building):
 		_refresh_building_panel()
-	if _civ_panel.visible and is_instance_valid(_selected_civ):
+	if _civ_panel.visible and (is_instance_valid(_selected_civ) or is_instance_valid(_selected_pen) or is_instance_valid(_selected_vehicle)):
 		_refresh_civ_panel()
 
 func _on_resources_changed(faction: String, amount: int):
@@ -577,49 +578,76 @@ func update_selection(units: Array):
 	if not _selected_units.is_empty():
 		_selected_building = null
 		_building_panel.visible = false
-		_selected_civ = null
-		_selected_pen = null
+		_selected_civ     = null
+		_selected_pen     = null
+		_selected_vehicle = null
 		_civ_panel.visible = false
 	_refresh_selection()
 
 func select_building(building: Building):
 	_selected_building = building
-	_selected_civ = null
-	_selected_pen = null
+	_selected_civ      = null
+	_selected_pen      = null
+	_selected_vehicle  = null
 	_civ_panel.visible = false
 	_selected_units.clear()
 	_selection_panel.visible = false
-	_building_panel.visible = true
+	_building_panel.visible  = true
 	_refresh_building_panel()
 
 func deselect_building():
 	_selected_building = null
 	_building_panel.visible = false
-	_selected_civ = null
-	_selected_pen = null
+	_selected_civ      = null
+	_selected_pen      = null
+	_selected_vehicle  = null
 	_civ_panel.visible = false
 
 func select_civ_building(cb: CivBuilding) -> void:
-	_selected_civ = cb
-	_selected_pen = null
+	_selected_civ     = cb
+	_selected_pen     = null
+	_selected_vehicle = null
 	_selected_building = null
-	_building_panel.visible = false
+	_building_panel.visible  = false
 	_selected_units.clear()
 	_selection_panel.visible = false
-	_civ_panel.visible = true
+	_civ_panel.visible       = true
 	_refresh_civ_panel()
 
 func select_holding_pen(pen: HoldingPen) -> void:
-	_selected_pen = pen
-	_selected_civ = null
+	_selected_pen     = pen
+	_selected_civ     = null
+	_selected_vehicle = null
 	_selected_building = null
-	_building_panel.visible = false
+	_building_panel.visible  = false
 	_selected_units.clear()
 	_selection_panel.visible = false
-	_civ_panel.visible = true
+	_civ_panel.visible       = true
+	_refresh_civ_panel()
+
+func select_vehicle(car: CivilianCar) -> void:
+	_selected_vehicle  = car
+	_selected_civ      = null
+	_selected_pen      = null
+	_selected_building = null
+	_building_panel.visible  = false
+	_selected_units.clear()
+	_selection_panel.visible = false
+	_civ_panel.visible       = true
 	_refresh_civ_panel()
 
 func _refresh_civ_panel() -> void:
+	if is_instance_valid(_selected_vehicle):
+		var car    := _selected_vehicle
+		var status := "WRECKED" if car._wrecked else ("FLEEING" if car._escaping else ("PANICKING" if car._panicking else "IN TRANSIT"))
+		var hp_pct := clampf(car._health / car.WRECK_HEALTH, 0.0, 1.0)
+		_civ_label.text = (
+			"[ CIVILIAN VEHICLE ]\n" +
+			"STATUS    " + status + "\n" +
+			"INTEGRITY " + _bar(hp_pct) + "\n\n" +
+			"\"" + car.get_flavor() + "\""
+		)
+		return
 	if is_instance_valid(_selected_pen):
 		var pen  := _selected_pen
 		var hp   := clampf(pen.current_health / pen.max_health, 0.0, 1.0)
@@ -791,6 +819,9 @@ func update_runner_objectives(runners: Array) -> void:
 		var status: String
 		if r.resolved:
 			status = "SECURED"
+		elif r.get("in_vehicle", false):
+			status = "IN VEHICLE"
+			any_contact = true
 		elif r.ambush_triggered:
 			status = "!! CONTACT"
 			any_contact = true
