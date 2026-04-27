@@ -233,6 +233,14 @@ func _confirm_placement(mouse_pos: Vector2) -> void:
 		AdvisorManager.speak("insufficient_funds")
 		return
 
+	if bres.extra_group == "holding_pen":
+		var pen := HoldingPen.new()
+		pen.position = place_pos
+		get_tree().current_scene.add_child(pen)
+		pen.set_owned_by(faction)
+		cancel_placement()
+		return
+
 	var building: Building = (load("res://scenes/buildings/building_base.tscn") as PackedScene).instantiate()
 	building.building_name  = bres.building_name
 	building.faction        = faction

@@ -92,6 +92,7 @@ const E_COOLDOWN_MAX := 30.0
 
 # Building catalog — add a row here and a matching .tres to add a new structure.
 const _BUILD_CATALOG: Array = [
+	["COMPLIANCE PEN — $100",   "Detains civilians · earns income",   "res://resources/buildings/compliance_pen.tres"],
 	["BARRACKS — $150",         "Unit production (4s)",               "res://resources/buildings/barracks.tres"],
 	["WATCHTOWER — $100",       "+20 vision radius",                  "res://resources/buildings/watchtower.tres"],
 	["SUPPLY DEPOT — $200",     "+8 income / 3s",                     "res://resources/buildings/supply_depot.tres"],
@@ -111,6 +112,8 @@ var _selected_pen: HoldingPen  = null
 
 var _funds_label: Label
 var _infamy_label: Label
+var _objective_panel: Control
+var _objective_label: Label
 var _q_label: Label
 var _e_label: Label
 var _selection_panel: Control
@@ -157,6 +160,30 @@ func _build_ui():
 	_infamy_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_infamy_label.add_theme_font_size_override("font_size", 10)
 	add_child(_infamy_label)
+
+	# Mission objective panel — centered just below the top bar
+	_objective_panel = ColorRect.new()
+	(_objective_panel as ColorRect).color = Color(0.02, 0.03, 0.07, 0.88)
+	_objective_panel.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_objective_panel.offset_top    = 38
+	_objective_panel.offset_bottom = 92
+	_objective_panel.offset_left   = 340
+	_objective_panel.offset_right  = -340
+	_objective_panel.visible = true
+	add_child(_objective_panel)
+
+	_objective_label = Label.new()
+	_objective_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_objective_label.offset_left   = 8
+	_objective_label.offset_top    = 4
+	_objective_label.offset_right  = -8
+	_objective_label.offset_bottom = -4
+	_objective_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_objective_label.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
+	_objective_label.add_theme_font_size_override("font_size", 10)
+	_objective_label.add_theme_color_override("font_color", Color(0.82, 0.82, 0.82))
+	_objective_label.text = "DIRECTIVE: DETENTION QUOTA\nSECURE COMPLIANCE PENS AND DETAIN 50 SUBJECTS"
+	_objective_panel.add_child(_objective_label)
 
 	var bot := _panel(false)
 	add_child(bot)
@@ -416,6 +443,34 @@ func _on_infamy_changed(value: int) -> void:
 		"font_color",
 		Color(0.45 + heat * 0.55, 0.45 - heat * 0.35, 0.25 - heat * 0.20)
 	)
+
+func update_objective(detained: int, quota: int, time_until_dispersal: float, stage: int) -> void:
+	if not is_instance_valid(_objective_panel):
+		return
+	var pct := clampf(float(detained) / quota, 0.0, 1.0)
+	var n   := int(round(pct * 20))
+	var bar := "█".repeat(n) + "░".repeat(20 - n)
+	var phase_str: String
+	if stage >= 4:
+		phase_str = "[ DISPERSAL COMPLETE — STRAGGLERS REMAIN ]"
+	else:
+		phase_str = "[ PHASE %d · NEXT DISPERSAL IN %.0fs ]" % [stage + 1, time_until_dispersal]
+	_objective_label.text = (
+		"DIRECTIVE: DETENTION QUOTA\n" +
+		"%s  %d / %d  %s" % [bar, detained, quota, phase_str]
+	)
+	var urgency := 1.0 - pct
+	_objective_label.add_theme_color_override(
+		"font_color",
+		Color(0.55 + urgency * 0.4, 0.82 - urgency * 0.3, 0.55 - urgency * 0.3)
+	)
+
+func show_objective_complete() -> void:
+	if not is_instance_valid(_objective_panel):
+		return
+	(_objective_panel as ColorRect).color = Color(0.02, 0.08, 0.04, 0.92)
+	_objective_label.text = "DIRECTIVE: DETENTION QUOTA\n████████████████████  50 / 50  [ QUOTA ACHIEVED — SUBJECTS SECURED ]"
+	_objective_label.add_theme_color_override("font_color", Color(0.3, 1.0, 0.45))
 
 func update_selection(units: Array):
 	_selected_units = units.filter(func(u): return is_instance_valid(u))

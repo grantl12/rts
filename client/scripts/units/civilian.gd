@@ -88,3 +88,9 @@ func panic() -> void:
 	_home      = global_position
 	_captured  = false
 	_schedule_wander()
+
+func expand_wander(new_radius: float) -> void:
+	wander_radius = new_radius
+	var angle := randf() * TAU
+	var dist  := randf_range(wander_radius * 0.4, wander_radius)
+	_target   = _home + Vector3(cos(angle) * dist, 0.0, sin(angle) * dist)

@@ -8,7 +8,7 @@ class_name HoldingPen
 ## Permanently destroyed — no respawn. Raze logged to WorldStateManager.
 
 @export var building_name: String  = "Voluntary Compliance Habitat"
-@export var initial_civs:  int     = 3
+@export var initial_civs:  int     = 0
 @export var max_capacity:  int     = 10
 @export var income_per_civ: float  = 3.0   # funds per civ per income tick
 @export var income_interval: float = 4.0
@@ -253,6 +253,11 @@ func _refresh_health_label() -> void:
 	var n   := int(round(pct * 6))
 	_health_lbl.text    = "█".repeat(n) + "░".repeat(6 - n)
 	_health_lbl.modulate = Color(0.3 + pct * 0.5, pct * 0.7, 0.15)
+
+func set_owned_by(f: String) -> void:
+	faction = f
+	_update_visuals()
+	_restart_income_timer()
 
 # ── Income ─────────────────────────────────────────────────────────────────────
 
