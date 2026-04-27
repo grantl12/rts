@@ -44,6 +44,12 @@ class _Minimap extends Control:
 				p + Vector2(0, -5)
 			]), col, 1.2)
 
+		for v in get_tree().get_nodes_in_group("civilian_vehicles"):
+			if not is_instance_valid(v): continue
+			var p   := _w2m(v.global_position, sz)
+			var col := Color(0.55, 0.50, 0.28) if not v._wrecked else Color(0.45, 0.18, 0.08)
+			draw_rect(Rect2(p - Vector2(3, 2), Vector2(6, 4)), col)
+
 		for u in get_tree().get_nodes_in_group("units"):
 			if not is_instance_valid(u) or not u.visible: continue
 			if not u.get("data"): continue
@@ -352,15 +358,16 @@ func _build_ui():
 	_civ_panel = ColorRect.new()
 	(_civ_panel as ColorRect).color = Color(0.04, 0.03, 0.02, 0.92)
 	_civ_panel.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	_civ_panel.position = Vector2(-460, -175)
-	_civ_panel.custom_minimum_size = Vector2(240, 106)
-	_civ_panel.size = Vector2(240, 106)
+	_civ_panel.position = Vector2(-468, -210)
+	_civ_panel.custom_minimum_size = Vector2(256, 145)
+	_civ_panel.size = Vector2(256, 145)
 	_civ_panel.visible = false
 	add_child(_civ_panel)
 
 	_civ_label = Label.new()
 	_civ_label.position = Vector2(10, 8)
-	_civ_label.size = Vector2(220, 90)
+	_civ_label.size = Vector2(236, 129)
+	_civ_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_civ_label.add_theme_color_override("font_color", Color(0.9, 0.85, 0.7))
 	_civ_panel.add_child(_civ_label)
 
