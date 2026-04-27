@@ -129,7 +129,7 @@ func set_selected(value: bool) -> void:
 		if is_soul_leader:
 			apply_soul_visuals()
 
-# ── Sprite Generation ──────────────────────────────────────────────────────────
+# ── Sprite Generation — C&C 1995 style, 16×24 canvas ─────────────────────────
 
 func _px(img: Image, x: int, y: int, c: Color) -> void:
 	if x >= 0 and x < img.get_width() and y >= 0 and y < img.get_height():
@@ -144,27 +144,23 @@ func _px_h_line(img: Image, y: int, x1: int, x2: int, c: Color) -> void:
 	for x in range(x1, x2 + 1):
 		_px(img, x, y, c)
 
-func _px_v_line(img: Image, x: int, y1: int, y2: int, c: Color) -> void:
-	for y in range(y1, y2 + 1):
-		_px(img, x, y, c)
-
 func _sprite_colors() -> Dictionary:
 	var c := _base_color
 	return {
 		"c":  c,
-		"cd": c.darkened(0.35),
-		"cl": c.lightened(0.30),
-		"sk": Color(0.90, 0.74, 0.58),
-		"dk": Color(0.10, 0.10, 0.13),
-		"gn": Color(0.38, 0.40, 0.46),
-		"gl": Color(0.58, 0.60, 0.65),
+		"cd": c.darkened(0.40),
+		"cl": c.lightened(0.25),
+		"sk": Color(0.88, 0.72, 0.56),
+		"dk": Color(0.08, 0.08, 0.10),
+		"gn": Color(0.32, 0.34, 0.38),
+		"gl": Color(0.55, 0.57, 0.60),
 		"wh": Color(0.92, 0.92, 0.95),
 		"gd": Color(1.00, 0.82, 0.18),
-		"rd": Color(0.80, 0.15, 0.15),
+		"cy": Color(0.10, 0.80, 1.00),
 	}
 
 func _generate_sprite() -> ImageTexture:
-	var img := Image.create(32, 48, false, Image.FORMAT_RGBA8)
+	var img := Image.create(16, 24, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
 	var p := _sprite_colors()
 	match data.unit_name:
@@ -175,169 +171,128 @@ func _generate_sprite() -> ImageTexture:
 		"Gravy Seal":    _draw_gravy_seal(img, p)
 		"The Martyr":    _draw_the_martyr(img, p)
 		_:               _draw_generic(img, p)
+	_outline(img)
 	return ImageTexture.create_from_image(img)
 
-# Park Ranger — lean build, wide-brim hat, long sniper rifle pointing right
+func _outline(img: Image) -> void:
+	var snap := img.duplicate()
+	var w := img.get_width(); var h := img.get_height()
+	var ol := Color(0.06, 0.06, 0.08, 1.0)
+	for y in h:
+		for x in w:
+			if snap.get_pixel(x, y).a > 0.1:
+				continue
+			for dy2 in range(-1, 2):
+				for dx2 in range(-1, 2):
+					var nx := x + dx2; var ny := y + dy2
+					if nx >= 0 and nx < w and ny >= 0 and ny < h:
+						if snap.get_pixel(nx, ny).a > 0.5:
+							img.set_pixel(x, y, ol)
+
+# Shared base: torso, arms, legs — head drawn per unit
+func _draw_base(img: Image, p: Dictionary) -> void:
+	_px_rect(img, 4, 7, 8, 6, p.c)
+	_px_rect(img, 5, 8, 6, 3, p.cd)   # chest shadow
+	_px_rect(img, 2, 7, 2, 5, p.c)    # left arm
+	_px_rect(img, 12, 7, 2, 5, p.c)   # right arm
+	_px_h_line(img, 13, 3, 12, p.dk)  # belt
+	_px_rect(img, 4, 14, 3, 6, p.cd)  # left leg
+	_px_rect(img, 9, 14, 3, 6, p.cd)  # right leg
+	_px_rect(img, 3, 20, 4, 3, p.dk)  # left boot
+	_px_rect(img, 9, 20, 4, 3, p.dk)  # right boot
+
+# Park Ranger — wide patrol hat (12px brim), long sniper rifle to frame edge
 func _draw_park_ranger(img: Image, p: Dictionary) -> void:
-	_px_rect(img, 11, 2, 10, 5, p.cd)           # hat crown
-	_px_rect(img, 4,  6, 24, 2, p.cd)           # hat brim
-	_px_h_line(img, 7, 11, 20, p.dk)            # hat band
-	_px_rect(img, 12, 8,  8, 5, p.sk)           # face
-	_px(img, 13, 10, p.dk); _px(img, 18, 10, p.dk)
-	_px(img, 15, 12, p.dk); _px(img, 16, 12, p.dk)
-	_px_rect(img, 14, 13, 4, 2, p.sk)           # neck
-	_px_rect(img, 12, 15, 8, 9, p.c)            # lean torso
-	_px_rect(img, 9,  15, 3, 9, p.c)            # left arm
-	_px_rect(img, 20, 15, 3, 5, p.c)            # right arm (holds rifle)
-	_px_rect(img, 19, 19, 2, 3, p.gn)           # rifle stock
-	_px_h_line(img, 20, 20, 30, p.gn)           # barrel top
-	_px_h_line(img, 21, 20, 30, p.gl)           # barrel bottom (lighter)
-	_px_rect(img, 20, 22, 4,  2, p.gn)          # breech block
-	_px_h_line(img, 24, 12, 19, p.dk)           # belt
-	_px_rect(img, 12, 25, 3, 3, p.cd)           # left hip
-	_px_rect(img, 17, 25, 3, 3, p.cd)           # right hip
-	_px_rect(img, 12, 28, 3, 11, p.cd)          # left leg
-	_px_rect(img, 17, 28, 3, 11, p.cd)          # right leg
-	_px_rect(img, 11, 39, 5,  3, p.dk)          # left boot
-	_px_rect(img, 16, 39, 5,  3, p.dk)          # right boot
+	_draw_base(img, p)
+	_px_rect(img, 5, 0, 6, 3, p.cd)   # hat crown
+	_px_h_line(img, 3, 2, 13, p.cd)   # brim — 12px wide
+	_px_h_line(img, 3, 5, 10, p.dk)   # hat band
+	_px_rect(img, 5, 4, 6, 3, p.sk)   # face (y=4-6)
+	_px(img, 6, 5, p.dk); _px(img, 9, 5, p.dk)
+	_px_rect(img, 13, 8, 3, 3, p.gn)  # rifle receiver
+	_px_h_line(img, 9, 11, 15, p.gn)  # long barrel
+	_px(img, 14, 7, p.gl)             # scope glint
 
-# Conscript — dome helmet with cyan visor, stocky build, compact SMG
+# Conscript — wide dome helmet (8px), cyan visor, AK-47 with curved mag
 func _draw_conscript(img: Image, p: Dictionary) -> void:
-	_px_rect(img, 12, 3,  8, 1, p.c)            # helmet top
-	_px_rect(img, 10, 4, 12, 2, p.c)
-	_px_rect(img, 9,  6, 14, 3, p.c)
-	_px_rect(img, 9,  7, 14, 2, p.dk)           # visor band
-	_px(img, 12, 8, Color(0.1, 0.8, 1.0)); _px(img, 13, 8, Color(0.1, 0.8, 1.0))
-	_px(img, 16, 8, Color(0.1, 0.8, 1.0)); _px(img, 17, 8, Color(0.1, 0.8, 1.0))
-	_px(img, 20, 8, Color(0.1, 0.8, 1.0)); _px(img, 21, 8, Color(0.1, 0.8, 1.0))
-	_px_rect(img, 11, 9, 10, 2, p.cd)           # neck guard
-	_px_rect(img, 9, 11, 14, 11, p.c)           # stocky torso
-	_px_rect(img, 11, 12, 10, 4, p.cd)          # chest plate
-	_px_v_line(img, 16, 12, 15, p.c)            # centre seam
-	_px_rect(img, 6, 11, 4, 9, p.c)             # left arm
-	_px_rect(img, 22, 11, 4, 6, p.c)            # right arm
-	_px_rect(img, 22, 17, 8, 3, p.gn)           # SMG body
-	_px_h_line(img, 17, 25, 30, p.gn)           # barrel
-	_px_rect(img, 24, 20, 2, 4, p.gn)           # magazine
-	_px_h_line(img, 22, 9, 22, p.dk)            # belt
-	_px_rect(img, 9,  23, 5, 3, p.cd)           # left hip
-	_px_rect(img, 18, 23, 5, 3, p.cd)           # right hip
-	_px_rect(img, 10, 26, 4, 10, p.cd)          # left leg
-	_px_rect(img, 18, 26, 4, 10, p.cd)          # right leg
-	_px_rect(img, 9,  36, 6,  4, p.dk)          # left boot
-	_px_rect(img, 17, 36, 6,  4, p.dk)          # right boot
+	_draw_base(img, p)
+	_px_h_line(img, 1, 5, 10, p.c)    # dome top arc
+	_px_rect(img, 4, 2, 8, 3, p.c)    # dome body (8px wide)
+	_px_h_line(img, 3, 4, 11, p.dk)   # visor band
+	_px_h_line(img, 3, 5, 10, p.cy)   # visor glow
+	_px_rect(img, 5, 5, 6, 2, p.cd)   # neck guard (y=5-6)
+	_px_rect(img, 12, 9, 3, 3, p.gn)  # AK receiver
+	_px_h_line(img, 10, 11, 15, p.gn) # barrel to frame edge
+	_px_rect(img, 13, 12, 2, 2, p.gn) # curved magazine
 
-# Digital Nomad — pointed hoodie, backpack bump, glowing laptop screen
+# Digital Nomad — pointed hoodie, twin glowing eyes, data backpack
 func _draw_digital_nomad(img: Image, p: Dictionary) -> void:
-	_px_rect(img, 14, 1,  4, 2, p.c)            # hood tip
-	_px_rect(img, 12, 3,  8, 2, p.c)
-	_px_rect(img, 10, 5, 12, 3, p.c)
-	_px_rect(img, 9,  8, 14, 2, p.c)            # hood lower
-	_px_rect(img, 11, 5, 10, 5, p.dk)           # dark face cavity
-	_px(img, 13, 7, Color(0.15, 0.95, 1.0)); _px(img, 14, 7, Color(0.15, 0.95, 1.0))
-	_px(img, 17, 7, Color(0.15, 0.95, 1.0)); _px(img, 18, 7, Color(0.15, 0.95, 1.0))
-	_px_rect(img, 13, 10, 6, 2, p.c)            # collar
-	_px_rect(img, 11, 12, 10, 10, p.c)          # hoodie torso
-	_px_rect(img, 7,  12, 4,  9, p.cd)          # backpack
-	_px_rect(img, 7,  16, 4,  2, p.dk)          # backpack strap
-	_px_rect(img, 9,  12, 3,  9, p.c)           # left arm
-	_px_rect(img, 21, 12, 3,  7, p.c)           # right arm
-	_px_rect(img, 21, 19, 8,  6, p.dk)          # laptop case
-	_px_rect(img, 22, 20, 6,  4, Color(0.05, 0.55, 1.0, 0.9))  # screen glow
-	_px_h_line(img, 25, 21, 28, p.gn)           # keyboard row
-	_px_h_line(img, 22, 11, 20, p.dk)           # waist
-	_px_rect(img, 12, 23, 3, 12, p.cd)          # left leg
-	_px_rect(img, 17, 23, 3, 12, p.cd)          # right leg
-	_px_rect(img, 11, 35, 5,  4, p.wh)          # left sneaker
-	_px_rect(img, 16, 35, 5,  4, p.wh)          # right sneaker
-	_px_h_line(img, 38, 11, 15, Color(0.3, 0.3, 0.3))
-	_px_h_line(img, 38, 16, 20, Color(0.3, 0.3, 0.3))
+	_draw_base(img, p)
+	_px(img, 8, 0, p.c)               # hood tip
+	_px_h_line(img, 1, 7, 8, p.c)
+	_px_h_line(img, 2, 6, 9, p.c)
+	_px_rect(img, 4, 3, 8, 3, p.c)    # hood base
+	_px_rect(img, 5, 2, 6, 4, p.dk)   # dark face void
+	_px(img, 5, 4, p.cy); _px(img, 6, 4, p.cy)
+	_px(img, 9, 4, p.cy); _px(img, 10, 4, p.cy)
+	_px_h_line(img, 6, 5, 10, p.c)    # collar (y=6)
+	_px_rect(img, 1, 7, 2, 6, p.cd)   # data backpack
+	_px(img, 1, 9, p.cy)              # indicator light
 
-# The Proxy — wide fedora, flaring trenchcoat, gold-clasped briefcase
+# The Proxy — tall crown + 12px fedora brim (fixed), trenchcoat hem, briefcase
 func _draw_the_proxy(img: Image, p: Dictionary) -> void:
-	_px_rect(img, 11, 2, 10, 5, p.c)            # fedora crown
-	_px_h_line(img, 3, 12, 20, p.cd)            # crease
-	_px_rect(img, 4,  6, 24, 2, p.c)            # brim
-	_px_h_line(img, 7, 11, 20, p.cd)            # under-brim shadow
-	_px_rect(img, 12, 8,  8, 5, p.sk)           # face
-	_px(img, 13, 10, p.dk); _px(img, 18, 10, p.dk)
-	_px(img, 15, 12, p.dk); _px(img, 16, 12, p.dk)
-	_px_rect(img, 12, 13, 3, 5, p.c)            # left lapel
-	_px_rect(img, 17, 13, 3, 5, p.c)            # right lapel
-	_px_rect(img, 14, 13, 4, 10, p.cd)          # tie / shirt centre
-	_px_rect(img, 10, 13, 12, 12, p.c)          # upper coat
-	_px_rect(img, 9,  25, 14,  6, p.c)          # mid coat (wider)
-	_px_rect(img, 7,  31, 18,  9, p.c)          # lower flare
-	_px_h_line(img, 25, 9, 22, p.dk)            # belt
-	_px(img, 15, 25, p.gd); _px(img, 16, 25, p.gd)  # buckle
-	_px_rect(img, 8,  13, 3, 12, p.c)           # left arm
-	_px_rect(img, 21, 13, 3, 10, p.c)           # right arm
-	_px_rect(img, 21, 23, 8,  6, p.cd)          # briefcase body
-	_px_rect(img, 22, 24, 6,  4, p.gn)          # case face
-	_px_h_line(img, 25, 22, 28, p.dk)           # latch
-	_px(img, 25, 23, p.gd); _px(img, 26, 23, p.gd)  # handle
-	_px_rect(img, 11, 40, 5,  4, p.dk)          # left shoe
-	_px_rect(img, 16, 40, 5,  4, p.dk)          # right shoe
+	_draw_base(img, p)
+	_px_rect(img, 5, 0, 6, 4, p.c)    # fedora crown (4px tall, y=0-3)
+	_px_h_line(img, 4, 2, 13, p.c)    # brim — 12px wide (y=4, below crown)
+	_px_h_line(img, 4, 5, 10, p.cd)   # hat band on brim
+	_px_h_line(img, 5, 4, 11, p.cd)   # brim underside shadow
+	_px_rect(img, 5, 5, 6, 2, p.sk)   # face (y=5-6)
+	_px(img, 6, 6, p.dk); _px(img, 9, 6, p.dk)
+	_px_rect(img, 3, 11, 10, 3, p.c)  # trenchcoat hem
+	_px_rect(img, 13, 9, 3, 4, p.gn)  # briefcase
+	_px_h_line(img, 8, 13, 15, p.gd)  # handle
+	_px(img, 14, 9, p.wh)             # latch
 
-# Gravy Seal — box tactical helmet, heavy armour plates, assault rifle
+# Gravy Seal — 12px box helmet with HUD, extra-bulky torso, assault rifle
 func _draw_gravy_seal(img: Image, p: Dictionary) -> void:
-	_px_rect(img, 9,  2, 14, 9, p.c)            # box helmet
-	_px_rect(img, 9,  7, 14, 3, p.dk)           # visor band
-	_px_rect(img, 10, 8, 12, 1, Color(1.0, 0.50, 0.08, 0.9))  # HUD glow
-	_px_rect(img, 20, 1,  2, 4, p.cd)           # antenna/NVG mount
-	_px_rect(img, 11, 11, 10, 2, p.cd)          # neck piece
-	_px_rect(img, 8,  13, 16, 12, p.c)          # heavy torso
-	_px_v_line(img, 16, 13, 24, p.cd)           # chest seam
-	_px_h_line(img, 18, 8, 23, p.cd)            # plate division
-	_px_rect(img, 4,  13, 5, 11, p.c)           # left arm (thick)
-	_px_rect(img, 23, 13, 5,  5, p.c)           # right arm
-	_px_rect(img, 23, 18, 3,  3, p.gn)          # pistol grip
-	_px_rect(img, 25, 14, 8,  3, p.gn)          # receiver
-	_px_h_line(img, 14, 25, 31, p.gl)           # barrel top
-	_px_h_line(img, 15, 25, 31, p.gn)           # barrel
-	_px_rect(img, 26, 17, 3,  3, p.gn)          # magazine
-	_px_h_line(img, 25, 8, 23, p.dk)            # belt
-	_px_rect(img, 7,  26, 6,  4, p.cd)          # left hip armour
-	_px_rect(img, 19, 26, 6,  4, p.cd)          # right hip armour
-	_px_rect(img, 8,  30, 5,  9, p.cd)          # left leg
-	_px_rect(img, 19, 30, 5,  9, p.cd)          # right leg
-	_px_rect(img, 7,  39, 7,  4, p.dk)          # left boot
-	_px_rect(img, 18, 39, 7,  4, p.dk)          # right boot
+	_px_rect(img, 3, 7, 10, 7, p.c)   # wide chest plate
+	_px_rect(img, 4, 9, 8, 3, p.cd)   # armor ribbing
+	_px_rect(img, 1, 7, 2, 6, p.c)    # thick left arm
+	_px_rect(img, 13, 7, 2, 5, p.c)   # right arm
+	_px_h_line(img, 14, 2, 13, p.dk)  # belt
+	_px_rect(img, 3, 15, 4, 5, p.cd); _px_rect(img, 9, 15, 4, 5, p.cd)
+	_px_rect(img, 2, 20, 5, 3, p.dk); _px_rect(img, 9, 20, 5, 3, p.dk)
+	_px_rect(img, 2, 0, 12, 7, p.c)   # box helmet — 12px wide, 7px tall (y=0-6)
+	_px_h_line(img, 3, 2, 13, p.dk)   # visor slit
+	_px_h_line(img, 3, 3, 12, Color(1.0, 0.5, 0.08, 0.9))  # HUD orange
+	_px(img, 13, 0, p.cd)             # NVG mount
+	_px_h_line(img, 9, 13, 15, p.gn)
+	_px_rect(img, 13, 8, 2, 4, p.gn)
+	_px(img, 14, 12, p.gn)            # magazine
 
-# The Martyr — gold halo, raised fist, star emblem, fierce expression
+# The Martyr — wide halo (8px), keffiyeh wrap, raised fist, gold cross emblem
 func _draw_the_martyr(img: Image, p: Dictionary) -> void:
-	_px_h_line(img, 1, 11, 20, p.gd)            # halo top
-	_px(img, 10, 2, p.gd); _px(img, 21, 2, p.gd)
-	_px(img, 10, 3, p.gd); _px(img, 21, 3, p.gd)
-	_px_h_line(img, 4, 11, 20, p.gd)            # halo bottom
-	_px_rect(img, 12, 5, 8, 7, p.sk)            # head
-	_px(img, 13, 7, p.dk); _px(img, 14, 7, p.dk)   # left eye
-	_px(img, 17, 7, p.dk); _px(img, 18, 7, p.dk)   # right eye
-	_px(img, 13, 6, p.dk); _px(img, 18, 6, p.dk)   # brow furrow
-	_px(img, 15, 10, p.dk); _px(img, 16, 10, p.dk) # set jaw
-	_px_rect(img, 14, 12, 4, 2, p.sk)           # neck
-	_px_rect(img, 11, 14, 10, 10, p.c)          # torso
-	_px(img, 16, 17, p.gd)                      # star emblem
-	_px(img, 15, 18, p.gd); _px(img, 16, 18, p.gd); _px(img, 17, 18, p.gd)
-	_px(img, 14, 19, p.gd); _px(img, 16, 19, p.gd); _px(img, 18, 19, p.gd)
-	_px(img, 15, 20, p.gd); _px(img, 16, 20, p.gd); _px(img, 17, 20, p.gd)
-	_px_rect(img, 9,  14, 3,  6, p.c)           # left upper arm
-	_px_rect(img, 7,  10, 3,  5, p.c)           # left forearm (raised)
-	_px_rect(img, 6,   7, 4,  4, p.sk)          # fist
-	_px_rect(img, 6,   7, 4,  1, p.dk)          # knuckles
-	_px_rect(img, 21, 14, 3,  9, p.c)           # right arm
-	_px_h_line(img, 24, 11, 23, p.dk)           # waist
-	_px_rect(img, 11, 25, 10, 12, p.cd)         # trousers
-	_px_rect(img, 10, 37, 5,  5, p.dk)          # left boot
-	_px_rect(img, 17, 37, 5,  5, p.dk)          # right boot
+	_draw_base(img, p)
+	_px_h_line(img, 0, 4, 11, p.gd)   # halo top arc (8px wide)
+	_px(img, 3, 1, p.gd); _px(img, 12, 1, p.gd)
+	_px_rect(img, 5, 1, 6, 5, p.sk)   # face
+	_px(img, 4, 2, p.c); _px(img, 11, 2, p.c)
+	_px(img, 4, 3, p.c); _px(img, 11, 3, p.c)
+	_px(img, 4, 5, p.c); _px(img, 11, 5, p.c)
+	_px_h_line(img, 6, 4, 11, p.c)    # keffiyeh lower wrap (y=6)
+	_px(img, 6, 3, p.dk); _px(img, 9, 3, p.dk)
+	_px(img, 8, 8, p.gd)
+	_px_h_line(img, 9, 7, 9, p.gd)    # gold cross
+	_px(img, 8, 10, p.gd)
+	_px_rect(img, 0, 2, 2, 5, p.c)    # raised left arm
+	_px(img, 0, 1, p.sk); _px(img, 1, 1, p.sk)    # fist
 
 func _draw_generic(img: Image, p: Dictionary) -> void:
-	_px_rect(img, 12, 4,  8,  8, p.c)
-	_px_rect(img, 11, 12, 10, 10, p.c)
-	_px_rect(img, 8,  12, 3,   8, p.c)
-	_px_rect(img, 21, 12, 3,   8, p.c)
-	_px_rect(img, 12, 22, 4,  12, p.cd)
-	_px_rect(img, 16, 22, 4,  12, p.cd)
+	_draw_base(img, p)
+	_px_h_line(img, 1, 5, 10, p.c)    # dome top
+	_px_rect(img, 4, 2, 8, 4, p.c)    # dome body
+	_px_rect(img, 5, 5, 6, 2, p.sk)   # face (y=5-6)
+	_px(img, 6, 6, p.dk); _px(img, 9, 6, p.dk)
 
 # ── Physics ────────────────────────────────────────────────────────────────────
 
@@ -456,20 +411,11 @@ func _show_promotion_effect() -> void:
 
 # ── Movement ───────────────────────────────────────────────────────────────────
 
-func move_to_target(_delta):
+func move_to_target(_delta: float) -> void:
 	if global_position.distance_to(target_position) <= 0.5:
 		velocity = Vector3.ZERO
 		return
-
-	_nav_agent.target_position = target_position
-
-	var dir: Vector3
-	if not _nav_agent.is_navigation_finished():
-		var next_pos := _nav_agent.get_next_path_position()
-		dir = next_pos - global_position
-	else:
-		dir = target_position - global_position
-
+	var dir := target_position - global_position
 	dir.y = 0.0
 	if dir.length() > 0.05:
 		velocity = dir.normalized() * 5.0

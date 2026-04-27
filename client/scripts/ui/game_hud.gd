@@ -257,6 +257,14 @@ func _build_ui():
 	_roe_inc_btn.pressed.connect(_on_roe_increase)
 	add_child(_roe_inc_btn)
 
+	var build_btn := Button.new()
+	build_btn.text = "BUILD\n[B]"
+	build_btn.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	build_btn.position = Vector2(-72, -54)
+	build_btn.size = Vector2(64, 44)
+	build_btn.pressed.connect(show_build_menu)
+	add_child(build_btn)
+
 	# ROE 5 "Absolute Immunity" confirmation dialog — shown before committing
 	_roe_confirm = ColorRect.new()
 	(_roe_confirm as ColorRect).color = Color(0.0, 0.0, 0.0, 0.82)

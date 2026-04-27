@@ -20,8 +20,9 @@ var _target_zoom: float = 20.0
 
 func _ready():
 	add_to_group("rts_camera")
-	_target_zoom = camera.position.y
-	camera.rotation_degrees.x = -60
+	rotation = Vector3.ZERO                          # clear any baked scene rotation
+	camera.rotation_degrees = Vector3(-55, 0, 0)
+	camera.position = Vector3(0, _target_zoom, _target_zoom * 0.75)
 
 func _process(delta):
 	_handle_movement(delta)
