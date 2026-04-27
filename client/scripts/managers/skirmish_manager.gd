@@ -16,6 +16,16 @@ const CIVILIAN_COUNT    := 75        # spawn extra — some will escape
 const DISPERSAL_INTERVAL := 45.0    # seconds between dispersal stages
 const DISPERSAL_RADII   := [10.0, 18.0, 28.0, 42.0]   # 4 escalating stages
 
+const RUNNER_AMBUSH_RADIUS     := 18.0   # player unit proximity that triggers enemy spawn
+const RUNNER_AMBUSH_SQUAD_SIZE :=  4     # enemies per ambush
+
+# Three HVPs scatter immediately — each to a distinct corner of the map
+const _RUNNER_DEFS := [
+	{"codename": "SUBJECT ALPHA",   "dest": Vector3(-42.0, 0.5, -14.0)},
+	{"codename": "SUBJECT BRAVO",   "dest": Vector3( 42.0, 0.5,  12.0)},
+	{"codename": "SUBJECT CHARLIE", "dest": Vector3(  2.0, 0.5,  44.0)},
+]
+
 # ── State ──────────────────────────────────────────────────────────────────────
 
 var player_hq: Building = null
@@ -29,6 +39,9 @@ var _dispersal_stage:    int   = 0
 var _dispersal_timer:    float = DISPERSAL_INTERVAL
 var _objective_met:      bool  = false
 var _last_detained:      int   = -1
+
+var _runners: Array = []          # [{codename, dest, civ, ambush_triggered, resolved}]
+var _runner_check_timer: float = 0.0
 
 # ── Setup ──────────────────────────────────────────────────────────────────────
 
@@ -88,7 +101,6 @@ func _spawn_squad(pos: Vector3, faction: String, res_path: String):
 		get_tree().current_scene.add_child.call_deferred(unit)
 
 func _spawn_mission_civilians() -> void:
-	# Clustered at the rally point (center of the Quad, around the Kirk podium)
 	var center := Vector3(0.0, 0.5, -2.0)
 	var initial_radius := 7.0
 	for i in CIVILIAN_COUNT:
@@ -97,6 +109,23 @@ func _spawn_mission_civilians() -> void:
 		var dist  := randf_range(0.5, initial_radius)
 		civ.position = center + Vector3(cos(angle) * dist, 0.0, sin(angle) * dist)
 		get_tree().current_scene.add_child(civ)
+	_spawn_runners(center)
+
+func _spawn_runners(center: Vector3) -> void:
+	for def in _RUNNER_DEFS:
+		var civ := Civilian.new()
+		# Runners start in the crowd but immediately peel off
+		civ.position           = center + Vector3(randf_range(-2.5, 2.5), 0.0, randf_range(-2.5, 2.5))
+		civ.is_runner          = true
+		civ.runner_destination = def.dest
+		get_tree().current_scene.add_child(civ)
+		_runners.append({
+			"codename":         def.codename,
+			"dest":             def.dest,
+			"civ":              civ,
+			"ambush_triggered": false,
+			"resolved":         false,
+		})
 
 # ── Mission Objective ──────────────────────────────────────────────────────────
 
@@ -161,6 +190,12 @@ func _process(delta: float):
 		if detained >= DETENTION_QUOTA:
 			_objective_met = true
 			_on_objective_met()
+
+	# Runner / HVP sub-objectives (rate-limited to every 0.5s)
+	_runner_check_timer -= delta
+	if _runner_check_timer <= 0.0:
+		_runner_check_timer = 0.5
+		_check_runners()
 
 # ── AI Produce ────────────────────────────────────────────────────────────────
 
@@ -240,6 +275,55 @@ func _ai_raid_pen() -> void:
 	for i in raid_count:
 		raiders[i].target_building = target_pen
 		raiders[i].target_unit     = null
+
+# ── Runner / HVP sub-objectives ──────────────────────────────────────────────
+
+func _check_runners() -> void:
+	if _runners.is_empty():
+		return
+	var player := GameSession.player_faction
+	var player_units: Array = get_tree().get_nodes_in_group("units").filter(
+		func(u): return is_instance_valid(u) and u is Unit and u.data.faction == player
+	)
+	var state_changed := false
+	for r in _runners:
+		if r.resolved:
+			continue
+		if not is_instance_valid(r.civ):
+			r.resolved = true
+			state_changed = true
+			continue
+		if not r.ambush_triggered:
+			var dest: Vector3 = r.dest
+			for unit in player_units:
+				if unit.global_position.distance_to(dest) < RUNNER_AMBUSH_RADIUS:
+					r.ambush_triggered = true
+					state_changed = true
+					_trigger_runner_ambush(r)
+					break
+	if state_changed:
+		var hud := get_tree().get_first_node_in_group("hud")
+		if hud and hud.has_method("update_runner_objectives"):
+			hud.update_runner_objectives(_runners)
+	elif not _runners.is_empty():
+		# Still push HUD update so ACTIVE runners show correctly on first call
+		var hud := get_tree().get_first_node_in_group("hud")
+		if hud and hud.has_method("update_runner_objectives"):
+			hud.update_runner_objectives(_runners)
+
+func _trigger_runner_ambush(r: Dictionary) -> void:
+	var enemy := GameSession.enemy_faction
+	var dest: Vector3 = r.dest
+	AdvisorManager.speak("runner_ambush")
+	var unit_res: UnitResource = load(GameSession.default_unit_path(enemy))
+	if not unit_res:
+		return
+	for i in RUNNER_AMBUSH_SQUAD_SIZE:
+		var unit: Unit = (load("res://scenes/units/unit_base.tscn") as PackedScene).instantiate()
+		unit.data = unit_res
+		var angle := float(i) / RUNNER_AMBUSH_SQUAD_SIZE * TAU
+		unit.position = dest + Vector3(cos(angle) * 3.5, 0.0, sin(angle) * 3.5)
+		get_tree().current_scene.add_child(unit)
 
 # ── Win / Loss ────────────────────────────────────────────────────────────────
 

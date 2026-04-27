@@ -128,6 +128,8 @@ var _produce_btn: Button
 var _civ_panel: Control
 var _civ_label: Label
 var _build_menu: Control
+var _runner_panel: Control
+var _runner_label: Label
 var _game_over_panel: Control
 var _sel_box: _SelectionBox
 var _advisor_label: Label
@@ -277,6 +279,23 @@ func _build_ui():
 	stand_btn.size = Vector2(185, 44)
 	stand_btn.pressed.connect(func(): _roe_confirm.visible = false)
 	dlg_panel.add_child(stand_btn)
+
+	# High-Value Person sub-objective tracker (bottom-left, above selection panel)
+	_runner_panel = ColorRect.new()
+	(_runner_panel as ColorRect).color = Color(0.04, 0.02, 0.01, 0.90)
+	_runner_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	_runner_panel.position = Vector2(8, -292)
+	_runner_panel.custom_minimum_size = Vector2(220, 100)
+	_runner_panel.size = Vector2(220, 100)
+	_runner_panel.visible = false
+	add_child(_runner_panel)
+
+	_runner_label = Label.new()
+	_runner_label.position = Vector2(8, 6)
+	_runner_label.size = Vector2(204, 88)
+	_runner_label.add_theme_font_size_override("font_size", 9)
+	_runner_label.add_theme_color_override("font_color", Color(0.9, 0.7, 0.4))
+	_runner_panel.add_child(_runner_label)
 
 	# Unit selection panel (bottom-left)
 	_selection_panel = ColorRect.new()
@@ -759,3 +778,26 @@ func _update_roe_display() -> void:
 	var locked := ROEManager.is_butcher
 	_roe_dec_btn.disabled = locked or ROEManager.current_roe <= 1
 	_roe_inc_btn.disabled = locked
+
+# ── Runner / HVP sub-objectives ───────────────────────────────────────────────
+
+func update_runner_objectives(runners: Array) -> void:
+	if not is_instance_valid(_runner_panel) or runners.is_empty():
+		return
+	_runner_panel.visible = true
+	var lines: PackedStringArray = ["[ HIGH-VALUE PERSONS ]"]
+	var any_contact := false
+	for r in runners:
+		var status: String
+		if r.resolved:
+			status = "SECURED"
+		elif r.ambush_triggered:
+			status = "!! CONTACT"
+			any_contact = true
+		else:
+			status = "ACTIVE"
+		lines.append("▶ %s   %s" % [r.codename, status])
+	_runner_label.text = "\n".join(lines)
+	_runner_label.add_theme_color_override("font_color",
+		Color(1.0, 0.35, 0.08) if any_contact else Color(0.9, 0.72, 0.42)
+	)

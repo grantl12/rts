@@ -8,9 +8,15 @@ class_name Civilian
 @export var wander_radius: float = 10.0
 @export var wander_speed:  float = 1.1
 
+const RUNNER_SPEED := 5.4
+
+var is_runner:          bool    = false
+var runner_destination: Vector3 = Vector3.ZERO
+
 var _home:     Vector3
 var _target:   Vector3
 var _mesh_mat: StandardMaterial3D
+var _lbl:      Label3D
 var _captured: bool = false
 
 # ── Setup ──────────────────────────────────────────────────────────────────────
@@ -20,7 +26,13 @@ func _ready() -> void:
 	_home   = global_position
 	_target = global_position
 	_build_visuals()
-	_schedule_wander()
+	if is_runner:
+		_mesh_mat.albedo_color = Color(1.0, 0.25, 0.08)
+		_lbl.text     = "HVP"
+		_lbl.modulate = Color(1.0, 0.4, 0.1, 1.0)
+		_target = runner_destination
+	else:
+		_schedule_wander()
 
 func _build_visuals() -> void:
 	var col := CollisionShape3D.new()
@@ -43,14 +55,14 @@ func _build_visuals() -> void:
 	mi.position          = Vector3(0, 0.5, 0)
 	add_child(mi)
 
-	var lbl := Label3D.new()
-	lbl.text         = "CIV"
-	lbl.font_size    = 4
-	lbl.outline_size = 1
-	lbl.billboard    = BaseMaterial3D.BILLBOARD_ENABLED
-	lbl.modulate     = Color(0.85, 0.82, 0.72, 0.65)
-	lbl.position     = Vector3(0, 1.12, 0)
-	add_child(lbl)
+	_lbl = Label3D.new()
+	_lbl.text         = "CIV"
+	_lbl.font_size    = 4
+	_lbl.outline_size = 1
+	_lbl.billboard    = BaseMaterial3D.BILLBOARD_ENABLED
+	_lbl.modulate     = Color(0.85, 0.82, 0.72, 0.65)
+	_lbl.position     = Vector3(0, 1.12, 0)
+	add_child(_lbl)
 
 # ── Wander AI ─────────────────────────────────────────────────────────────────
 
@@ -69,8 +81,16 @@ func _physics_process(_delta: float) -> void:
 	var dir := _target - global_position
 	dir.y = 0.0
 	if dir.length_squared() < 0.3:
+		if is_runner:
+			# Arrived — go to ground with tight local wander
+			is_runner     = false
+			wander_radius = 5.0
+			_home         = global_position
+			_mesh_mat.albedo_color = Color(0.55, 0.22, 0.12)
+			_schedule_wander()
 		return
-	velocity   = dir.normalized() * wander_speed
+	var spd := RUNNER_SPEED if is_runner else wander_speed
+	velocity   = dir.normalized() * spd
 	velocity.y = 0.0
 	move_and_slide()
 
@@ -90,6 +110,8 @@ func panic() -> void:
 	_schedule_wander()
 
 func expand_wander(new_radius: float) -> void:
+	if is_runner:
+		return
 	wander_radius = new_radius
 	var angle := randf() * TAU
 	var dist  := randf_range(wander_radius * 0.4, wander_radius)
