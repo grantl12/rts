@@ -9,7 +9,7 @@ extends Control
 @onready var header = $Header
 @onready var bgm = $BGM
 
-@onready var pixelation_rect: ColorRect = $PostProcess/Pixelation # Reference to the shader layer
+@onready var pixelation_rect: ColorRect = get_node_or_null("PostProcess/Pixelation")
 
 var _glitch_timer: float = 2.0
 
