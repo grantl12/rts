@@ -823,7 +823,7 @@ func _on_roe_changed(_level: int) -> void:
 
 func _update_roe_display() -> void:
 	var col := ROEManager.get_color()
-	_roe_label.text = "ROE // %d\n%s" % [ROEManager.current_roe, ROEManager.get_name()]
+	_roe_label.text = "ROE // %d\n%s" % [ROEManager.current_roe, ROEManager.get_roe_name()]
 	_roe_label.add_theme_color_override("font_color", col)
 	var locked := ROEManager.is_butcher
 	_roe_dec_btn.disabled = locked or ROEManager.current_roe <= 1

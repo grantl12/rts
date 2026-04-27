@@ -44,7 +44,7 @@ func set_roe(level: int) -> void:
 	if level == 5:
 		_activate_absolute_immunity()
 
-func get_name() -> String:
+func get_roe_name() -> String:
 	return ROE_NAMES[current_roe - 1]
 
 func get_color() -> Color:
