@@ -19,8 +19,8 @@ extends CharacterBody3D
 var _target_zoom: float = 20.0
 
 func _ready():
+	add_to_group("rts_camera")
 	_target_zoom = camera.position.y
-	# Ensure the camera is looking down at an angle
 	camera.rotation_degrees.x = -60
 
 func _process(delta):

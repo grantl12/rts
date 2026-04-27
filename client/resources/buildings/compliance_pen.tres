@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="BuildingResource" load_steps=2 format=3 uid="uid://bcp1d2e3f4g5h"]
+
+[ext_resource type="Script" path="res://scripts/resources/building_resource.gd" id="1_br"]
+
+[resource]
+script = ExtResource("1_br")
+building_name = "Compliance Pen"
+description = "Detains nearby civilians. Earns Administrative Credits per occupant."
+extra_group = "holding_pen"
+cost = 100
+passive_income = 0
+max_health = 180.0
+produces_units = false
+producible_unit_path_override = ""
+produce_time = 0.0
+effect_type = ""
+effect_radius = 0.0
+effect_interval = 0.0

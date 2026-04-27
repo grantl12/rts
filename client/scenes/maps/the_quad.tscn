@@ -6,15 +6,8 @@
 [ext_resource type="Script" path="res://scripts/managers/skirmish_generator.gd" id="4_gen"]
 [ext_resource type="Script" path="res://scripts/input_controller.gd" id="5_input"]
 [ext_resource type="Script" path="res://scripts/ui/game_hud.gd" id="6_hud"]
-[ext_resource type="Script" path="res://scripts/maps/the_quad_visuals.gd" id="7_vis"]
-[ext_resource type="Shader" path="res://shaders/post_process_pixelation.gdshader" id="8_pixel"]
-[ext_resource type="Script" path="res://scripts/maps/pixelation_controller.gd" id="9_ctrl"]
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_pixel"]
-shader = ExtResource("8_pixel")
-shader_parameter/pixel_size = 3
-shader_parameter/scanline_intensity = 0.15
-shader_parameter/color_bleed = 0.001
+[ext_resource type="Script" path="res://scripts/maps/audit_point.gd" id="7_ap"]
+[ext_resource type="Script" path="res://scripts/buildings/civ_building.gd" id="8_civ"]
 
 [node name="TheQuad" type="Node3D"]
 script = ExtResource("1_map")
@@ -56,7 +49,7 @@ audit_point_count = 6
 civilian_cluster_count = 5
 
 [node name="RTSCamera" type="CharacterBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 25, 25)
+transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 15, -10)
 script = ExtResource("3_cam")
 
 [node name="Camera3D" type="Camera3D" parent="RTSCamera"]
@@ -68,4 +61,101 @@ script = ExtResource("5_input")
 [node name="GameHUD" type="CanvasLayer" parent="."]
 script = ExtResource("6_hud")
 
-[connection signal="captured" from="." to="SkirmishGenerator" method="_on_capture_point_captured"]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -0.707107, 0.707107, 0, -0.707107, -0.707107, 0, 10, 0)
+light_energy = 0.7
+shadow_enabled = true
+
+[node name="Ground" type="CSGBox3D" parent="."]
+use_collision = true
+size = Vector3(100, 1, 100)
+material = ExtResource("2_mat")
+
+[node name="WestWing" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -38, 5, 0)
+use_collision = true
+size = Vector3(12, 10, 42)
+
+[node name="EastWing" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 38, 5, 0)
+use_collision = true
+size = Vector3(12, 10, 42)
+
+[node name="AP_Center" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+script = ExtResource("7_ap")
+point_name = "THE QUAD"
+
+[node name="AP_North" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -28)
+script = ExtResource("7_ap")
+point_name = "NORTH PLAZA"
+
+[node name="AP_South" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 28)
+script = ExtResource("7_ap")
+point_name = "SOUTH STEPS"
+
+[node name="CampusCafe" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0.5, 0)
+script = ExtResource("8_civ")
+building_name = "Campus Café"
+buff_type = "income"
+max_health = 250.0
+
+[node name="StudentLibrary" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0.5, -20)
+script = ExtResource("8_civ")
+building_name = "Student Library"
+buff_type = "xp"
+max_health = 250.0
+
+[node name="MedicalCenter" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0.5, 20)
+script = ExtResource("8_civ")
+building_name = "Medical Center"
+buff_type = "supply"
+max_health = 250.0
+
+[node name="DeltaHouse" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 0.5, -12)
+script = ExtResource("8_civ")
+building_name = "Δ Delta House"
+buff_type = "morale"
+building_size = Vector3(5, 4, 5)
+mesh_color = Color(0.65, 0.32, 0.22)
+label_color = Color(1.0, 0.85, 0.25)
+max_health = 300.0
+
+[node name="PhiHouse" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 0.5, -12)
+script = ExtResource("8_civ")
+building_name = "Φ Phi House"
+buff_type = "xp"
+building_size = Vector3(5, 4, 5)
+mesh_color = Color(0.65, 0.32, 0.22)
+label_color = Color(1.0, 0.85, 0.25)
+max_health = 300.0
+
+[node name="BetaHouse" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 0.5, 12)
+script = ExtResource("8_civ")
+building_name = "Β Beta House"
+buff_type = "income"
+building_size = Vector3(5, 4, 5)
+mesh_color = Color(0.65, 0.32, 0.22)
+label_color = Color(1.0, 0.85, 0.25)
+max_health = 300.0
+
+[node name="SigmaHouse" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 0.5, 12)
+script = ExtResource("8_civ")
+building_name = "Σ Sigma House"
+buff_type = "supply"
+building_size = Vector3(5, 4, 5)
+mesh_color = Color(0.65, 0.32, 0.22)
+label_color = Color(1.0, 0.85, 0.25)
+max_health = 300.0
+

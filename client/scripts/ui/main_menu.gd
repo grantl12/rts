@@ -78,7 +78,7 @@ func _on_new_audit_pressed():
 	get_tree().change_scene_to_file("res://scenes/ui/faction_selection.tscn")
 
 func _on_access_archives_pressed():
-	pass
+	get_tree().change_scene_to_file("res://scenes/ui/hall_of_heroes.tscn")
 
 func _on_calibration_pressed():
 	pass

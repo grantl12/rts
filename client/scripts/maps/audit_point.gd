@@ -19,6 +19,7 @@ var _point_label: Label3D
 var _progress_label: Label3D
 
 func _ready():
+	add_to_group("audit_points")
 	_build_visuals()
 	body_entered.connect(_on_body_entered)
 	body_exited.connect(_on_body_exited)
