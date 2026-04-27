@@ -9,14 +9,15 @@ const RATE := 22050
 var _shoot_throttle: float = -99.0
 
 func _ready() -> void:
-	_build("shoot",      _gen_shoot())
-	_build("capture",    _gen_capture())
-	_build("suppressed", _gen_suppressed())
-	_build("promotion",  _gen_promotion())
-	_build("fact_check", _gen_fact_check())
-	_build("reinforce",  _gen_reinforce())
-	_build("hq_alert",   _gen_hq_alert())
-	_build("ui_click",   _gen_ui_click())
+	_build("shoot",              _gen_shoot())
+	_build("capture",            _gen_capture())
+	_build("suppressed",         _gen_suppressed())
+	_build("promotion",          _gen_promotion())
+	_build("fact_check",         _gen_fact_check())
+	_build("reinforce",          _gen_reinforce())
+	_build("hq_alert",           _gen_hq_alert())
+	_build("ui_click",           _gen_ui_click())
+	_build("absolute_immunity",  _gen_absolute_immunity())
 
 func _build(id: String, wav: AudioStreamWAV) -> void:
 	var p       := AudioStreamPlayer.new()
@@ -156,4 +157,19 @@ func _gen_ui_click() -> AudioStreamWAV:
 	for i in n:
 		var t := float(i) / RATE
 		s[i] = _sine(t, 900.0) * exp(-t * 85.0) * 0.72
+	return _make_wav(s)
+
+func _gen_absolute_immunity() -> AudioStreamWAV:
+	# Deep sub-bass drone swelling into distorted harmonics — irreversible, ominous
+	var n := int(RATE * 1.4)
+	var s := PackedFloat32Array(); s.resize(n)
+	for i in n:
+		var t   := float(i) / RATE
+		var env := minf(t * 2.5, 1.0) * (0.7 + 0.3 * sin(TAU * 0.6 * t))
+		s[i] = clampf(
+			(_sine(t, 55.0) * 0.55 +
+			 _sine(t, 110.0) * 0.25 +
+			 _sine(t, 220.0) * 0.15 +
+			 randf_range(-1.0, 1.0) * 0.12) * env,
+			-1.0, 1.0)
 	return _make_wav(s)

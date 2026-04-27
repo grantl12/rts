@@ -116,6 +116,10 @@ var _objective_panel: Control
 var _objective_label: Label
 var _q_label: Label
 var _e_label: Label
+var _roe_label: Label
+var _roe_dec_btn: Button
+var _roe_inc_btn: Button
+var _roe_confirm: Control
 var _selection_panel: Control
 var _selection_label: Label
 var _building_panel: Control
@@ -137,8 +141,10 @@ func _ready():
 	ResourceManager.resources_changed.connect(_on_resources_changed)
 	AdvisorManager.advisor_spoke.connect(_show_advisor_line)
 	InfamyManager.infamy_changed.connect(_on_infamy_changed)
+	ROEManager.roe_changed.connect(_on_roe_changed)
 	_sync_faction_label()
 	_on_infamy_changed(InfamyManager.infamy)
+	_update_roe_display()
 
 func _sync_faction_label():
 	var faction := GameSession.player_faction
@@ -197,6 +203,80 @@ func _build_ui():
 	_e_label = e_slot.get_child(0) as Label
 	_e_label.text = "[E]\nCALL\nBACKUP"
 	_e_label.add_theme_color_override("font_color", Color(1.0, 0.55, 0.2))
+
+	# ROE indicator — bottom-right of screen, inside the ability bar area
+	var roe_bg := ColorRect.new()
+	(roe_bg as ColorRect).color = Color(0.05, 0.02, 0.02, 0.92)
+	roe_bg.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	roe_bg.position = Vector2(-222, -54)
+	roe_bg.size = Vector2(88, 44)
+	add_child(roe_bg)
+
+	_roe_label = Label.new()
+	_roe_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_roe_label.offset_left = 4
+	_roe_label.offset_top  = 2
+	_roe_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_roe_label.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
+	_roe_label.add_theme_font_size_override("font_size", 9)
+	roe_bg.add_child(_roe_label)
+
+	_roe_dec_btn = Button.new()
+	_roe_dec_btn.text = "▼"
+	_roe_dec_btn.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	_roe_dec_btn.position = Vector2(-130, -50)
+	_roe_dec_btn.size = Vector2(24, 36)
+	_roe_dec_btn.pressed.connect(_on_roe_decrease)
+	add_child(_roe_dec_btn)
+
+	_roe_inc_btn = Button.new()
+	_roe_inc_btn.text = "▲"
+	_roe_inc_btn.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	_roe_inc_btn.position = Vector2(-102, -50)
+	_roe_inc_btn.size = Vector2(24, 36)
+	_roe_inc_btn.pressed.connect(_on_roe_increase)
+	add_child(_roe_inc_btn)
+
+	# ROE 5 "Absolute Immunity" confirmation dialog — shown before committing
+	_roe_confirm = ColorRect.new()
+	(_roe_confirm as ColorRect).color = Color(0.0, 0.0, 0.0, 0.82)
+	_roe_confirm.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_roe_confirm.visible = false
+	add_child(_roe_confirm)
+
+	var dlg_panel := ColorRect.new()
+	(dlg_panel as ColorRect).color = Color(0.10, 0.02, 0.02, 0.96)
+	dlg_panel.set_anchors_preset(Control.PRESET_CENTER)
+	dlg_panel.position = Vector2(-220, -88)
+	dlg_panel.size = Vector2(440, 176)
+	_roe_confirm.add_child(dlg_panel)
+
+	var dlg_lbl := Label.new()
+	dlg_lbl.text = (
+		"⚠  AUTHORIZE ABSOLUTE IMMUNITY?\n\n" +
+		"All operational constraints dissolved. Irreversible.\n" +
+		"Infamy +200.  Civilians panic.  Enemies suppressed."
+	)
+	dlg_lbl.position = Vector2(14, 14)
+	dlg_lbl.size = Vector2(412, 88)
+	dlg_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	dlg_lbl.add_theme_font_size_override("font_size", 12)
+	dlg_lbl.add_theme_color_override("font_color", Color(1.0, 0.28, 0.18))
+	dlg_panel.add_child(dlg_lbl)
+
+	var auth_btn := Button.new()
+	auth_btn.text = "[ AUTHORIZE ]"
+	auth_btn.position = Vector2(20, 116)
+	auth_btn.size = Vector2(185, 44)
+	auth_btn.pressed.connect(_on_roe_authorize)
+	dlg_panel.add_child(auth_btn)
+
+	var stand_btn := Button.new()
+	stand_btn.text = "[ STAND DOWN ]"
+	stand_btn.position = Vector2(235, 116)
+	stand_btn.size = Vector2(185, 44)
+	stand_btn.pressed.connect(func(): _roe_confirm.visible = false)
+	dlg_panel.add_child(stand_btn)
 
 	# Unit selection panel (bottom-left)
 	_selection_panel = ColorRect.new()
@@ -649,3 +729,33 @@ func try_e(world_pos: Vector3) -> bool:
 	_e_cooldown = E_COOLDOWN_MAX
 	AbilityManager.spawn_reinforcements(world_pos, GameSession.player_faction)
 	return true
+
+# ── ROE Controls ───────────────────────────────────────────────────────────────
+
+func _on_roe_decrease() -> void:
+	if ROEManager.is_butcher:
+		return
+	ROEManager.set_roe(ROEManager.current_roe - 1)
+
+func _on_roe_increase() -> void:
+	if ROEManager.is_butcher:
+		return
+	if ROEManager.current_roe == 4:
+		_roe_confirm.visible = true
+	else:
+		ROEManager.set_roe(ROEManager.current_roe + 1)
+
+func _on_roe_authorize() -> void:
+	_roe_confirm.visible = false
+	ROEManager.set_roe(5)
+
+func _on_roe_changed(_level: int) -> void:
+	_update_roe_display()
+
+func _update_roe_display() -> void:
+	var col := ROEManager.get_color()
+	_roe_label.text = "ROE // %d\n%s" % [ROEManager.current_roe, ROEManager.get_name()]
+	_roe_label.add_theme_color_override("font_color", col)
+	var locked := ROEManager.is_butcher
+	_roe_dec_btn.disabled = locked or ROEManager.current_roe <= 1
+	_roe_inc_btn.disabled = locked

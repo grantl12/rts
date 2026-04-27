@@ -390,7 +390,10 @@ func _shoot_building():
 		return
 	attack_cooldown = 1.0 / data.attack_speed
 	current_supplies -= 1.0
-	target_building.take_damage(data.damage * _damage_mult * 0.75)
+	var dmg := data.damage * _damage_mult * 0.75
+	if data.faction == GameSession.player_faction:
+		dmg *= ROEManager.get_damage_mult()
+	target_building.take_damage(dmg)
 	_award_xp(3.0)
 
 func shoot():
@@ -400,9 +403,10 @@ func shoot():
 	current_supplies -= 1.0
 	if data.faction == GameSession.player_faction:
 		SoundManager.play_shoot()
-	target_unit.take_damage(data.damage * _damage_mult * 0.5, "Bureaucracy", global_position)
+	var roe_mult := ROEManager.get_damage_mult() if data.faction == GameSession.player_faction else 1.0
+	target_unit.take_damage(data.damage * _damage_mult * 0.5 * roe_mult, "Bureaucracy", global_position)
 	if randf() <= data.accuracy:
-		target_unit.take_damage(data.damage * _damage_mult, "Vitality", global_position)
+		target_unit.take_damage(data.damage * _damage_mult * roe_mult, "Vitality", global_position)
 	if not is_instance_valid(target_unit):
 		_award_xp(25.0)
 
