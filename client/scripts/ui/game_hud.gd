@@ -167,7 +167,7 @@ func _ready():
 
 func _sync_faction_label():
 	var faction := GameSession.player_faction
-	var funds := ResourceManager.faction_funds.get(faction, 0)
+	var funds := ResourceManager.faction_funds.get(faction, 0) as int
 	_funds_label.text = faction.to_upper() + " // INTELLIGENCE BUDGET: $" + str(funds)
 	_funds_label.add_theme_color_override("font_color", _faction_color(faction))
 
@@ -722,11 +722,11 @@ func _refresh_selection():
 		_selection_panel.visible = false
 		return
 	if _selected_units.size() == 1:
-		var u := _selected_units[0]
+		var u        := _selected_units[0] as Unit
 		var vit_pct  := u.current_vitality / (u.data.max_vitality * u._health_mult)
 		var bur_pct  := u.current_bureaucracy / u.data.max_bureaucracy
-		var xp_prev  := Unit.RANK_XP[u.current_rank - 1]
-		var xp_next  := Unit.RANK_XP[u.current_rank]
+		var xp_prev  := Unit.RANK_XP[u.current_rank - 1] as float
+		var xp_next  := Unit.RANK_XP[u.current_rank] as float
 		var xp_pct   := 1.0 if u.current_rank >= 5 else \
 						clampf((u.current_xp - xp_prev) / (xp_next - xp_prev), 0.0, 1.0)
 		_selection_label.text = (
