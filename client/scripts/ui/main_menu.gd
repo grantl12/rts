@@ -49,9 +49,8 @@ func _process(delta):
 		_glitch_timer = randf_range(3.0, 7.0)
 		_trigger_glitch()
 
-	# Update CRT shader visibility based on GameManager setting
 	if pixelation_rect:
-		pixelation_rect.visible = GameManager.use_crt_shader
+		pixelation_rect.visible = true
 
 func _trigger_glitch():
 	var original_text = header.text

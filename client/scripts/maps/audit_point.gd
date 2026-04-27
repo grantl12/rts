@@ -69,11 +69,7 @@ func _process_audit(delta):
 
 	var strengths := {"Regency": 0, "Oligarchy": 0, "Frontline": 0, "Sovereign": 0, "Insurgent": 0}
 	for body in units_in_area:
-		if body is Civilian:
-			var civ = body as Civilian
-			if civ.current_state == Civilian.CivilianState.INSURGENCY:
-				strengths["Insurgent"] += 2
-		elif body is Unit:
+		if body is Unit:
 			var u = body as Unit
 			strengths[u.data.faction] += 1
 
@@ -87,7 +83,6 @@ func _process_audit(delta):
 		if enemy_strength > 0:
 			current_audit_value -= sabotage_speed * enemy_strength * delta
 			if current_audit_value <= 0:
-				GameManager.log_message("ZONE LOST: " + point_name.to_upper() + " SABOTAGED", Color(1, 0.4, 0))
 				controlling_faction = "Neutral"
 				current_audit_value = 0
 				_point_label.text = point_name.to_upper() + "\n[ NEUTRAL ]"
@@ -116,7 +111,7 @@ func _process_audit(delta):
 			captured.emit(controlling_faction)
 			_point_label.text = point_name.to_upper() + "\n[ " + controlling_faction.to_upper() + " ]"
 			_point_label.modulate = _faction_color(controlling_faction)
-			GameManager.log_message("ZONE AUDITED: " + point_name.to_upper(), _faction_color(controlling_faction))
+			AdvisorManager.speak("zone_captured")
 	elif strongest == controlling_faction and current_audit_value < total_audit_required:
 		current_audit_value += capture_speed * delta
 

@@ -58,14 +58,6 @@ func _ready():
 
 func _build_visuals() -> void:
 	_base_color = _get_faction_color()
-	
-	if data and data.sprite_texture:
-		_build_sprite_visuals()
-	else:
-		_build_mesh_visuals()
-	
-	_build_selection_ui()
-	_build_shadow()
 
 	_sprite.pixel_size = 0.038
 	_sprite.billboard  = BaseMaterial3D.BILLBOARD_ENABLED

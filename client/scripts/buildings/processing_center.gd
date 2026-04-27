@@ -34,37 +34,16 @@ func _setup_processing_zone():
 	area.body_entered.connect(_on_body_entered)
 
 func _on_body_entered(body):
-	if body is Civilian and body.current_state == Civilian.CivilianState.TETHERED:
+	if body is Civilian:
 		_process_civilian(body)
-	elif body is Unit and body.tethered_units.size() > 0:
-		# Process all units tethered to this squad leader
-		var to_process = body.tethered_units.duplicate()
-		for civ in to_process:
-			if is_instance_valid(civ):
-				_process_civilian(civ)
-		body.tethered_units.clear()
 
 func _process_civilian(civ: Civilian):
-	if civ.current_state == Civilian.CivilianState.PROCESSED: return
-	
-	civ.current_state = Civilian.CivilianState.PROCESSED
 	processed_count += 1
-	GameManager.processed_civilians += 1
-	
-	# Reward logic
-	var credit_reward = 50
-	ResourceManager.add_funds(faction, credit_reward)
-	GameManager.log_message("CITIZEN VETTED: +50 CREDITS", Color(0.2, 1.0, 0.4))
-	
-	# ROE Impact
-	if GameManager.current_roe == GameManager.ROELevel.HEARTS_AND_MINDS:
-		GameManager.infamy_score -= 1.0 # Successful non-lethal processing reduces Infamy
-	
-	# Visual Feedback
+	ResourceManager.add_funds(faction, 50)
+	if ROEManager.current_roe == 1:
+		InfamyManager.add_infamy(-1, "processing_success")
 	_status_label.text = "PROCESSING: " + str(processed_count)
 	_show_processing_popup(civ.global_position)
-	
-	# "Delete" the civilian from the world (they are inside the system now)
 	civ.queue_free()
 
 func _show_processing_popup(pos: Vector3):
