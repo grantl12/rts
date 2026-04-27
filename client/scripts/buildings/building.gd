@@ -61,9 +61,10 @@ func _on_effect_tick() -> void:
 				if node.data.faction != faction:
 					continue
 				if global_position.distance_to(node.global_position) <= effect_radius:
-					var cap := node.data.max_vitality * node._health_mult
-					node.current_vitality = minf(node.current_vitality + 15.0, cap)
-					node._bars_dirty = true
+					var u := node as Unit
+					var cap := u.data.max_vitality * u._health_mult
+					u.current_vitality = minf(u.current_vitality + 15.0, cap)
+					u._bars_dirty = true
 		"suppress_enemies":
 			for node in get_tree().get_nodes_in_group("units"):
 				if not (node is Unit) or not is_instance_valid(node):
