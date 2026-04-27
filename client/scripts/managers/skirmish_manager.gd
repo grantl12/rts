@@ -127,7 +127,7 @@ func _spawn_civilian_vehicles() -> void:
 		var route: Array = _CAR_ROUTES[route_idx]
 		for offset in [0, 2]:
 			var car := CivilianCar.new()
-			car.waypoints = route.duplicate()
+			car.waypoints.assign(route)
 			car._wp_idx   = offset % route.size()
 			get_tree().current_scene.add_child(car)
 
