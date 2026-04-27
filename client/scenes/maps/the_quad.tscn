@@ -84,8 +84,8 @@ script = ExtResource("8_civ")
 building_name = "Δ Delta House"
 buff_type = "morale"
 building_size = Vector3(5, 4, 5)
-mesh_color = Color(0.65, 0.32, 0.22)
-label_color = Color(1.0, 0.85, 0.25)
+mesh_color = Color(0.65, 0.32, 0.22, 1)
+label_color = Color(1.0, 0.85, 0.25, 1)
 max_health = 300.0
 
 [node name="PhiHouse" type="StaticBody3D" parent="."]
@@ -94,8 +94,8 @@ script = ExtResource("8_civ")
 building_name = "Φ Phi House"
 buff_type = "xp"
 building_size = Vector3(5, 4, 5)
-mesh_color = Color(0.65, 0.32, 0.22)
-label_color = Color(1.0, 0.85, 0.25)
+mesh_color = Color(0.65, 0.32, 0.22, 1)
+label_color = Color(1.0, 0.85, 0.25, 1)
 max_health = 300.0
 
 [node name="BetaHouse" type="StaticBody3D" parent="."]
@@ -104,8 +104,8 @@ script = ExtResource("8_civ")
 building_name = "Β Beta House"
 buff_type = "income"
 building_size = Vector3(5, 4, 5)
-mesh_color = Color(0.65, 0.32, 0.22)
-label_color = Color(1.0, 0.85, 0.25)
+mesh_color = Color(0.65, 0.32, 0.22, 1)
+label_color = Color(1.0, 0.85, 0.25, 1)
 max_health = 300.0
 
 [node name="SigmaHouse" type="StaticBody3D" parent="."]
@@ -114,8 +114,8 @@ script = ExtResource("8_civ")
 building_name = "Σ Sigma House"
 buff_type = "supply"
 building_size = Vector3(5, 4, 5)
-mesh_color = Color(0.65, 0.32, 0.22)
-label_color = Color(1.0, 0.85, 0.25)
+mesh_color = Color(0.65, 0.32, 0.22, 1)
+label_color = Color(1.0, 0.85, 0.25, 1)
 max_health = 300.0
 
 [node name="SkirmishManager" type="Node" parent="."]
