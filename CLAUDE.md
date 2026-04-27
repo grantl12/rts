@@ -132,10 +132,9 @@ effect_type, effect_radius, effect_interval
 - Δ Delta House (-22, z:-12) morale · Φ Phi House (+22, z:-12) xp
 - Β Beta House (-22, z:+12) income · Σ Sigma House (+22, z:+12) supply
 
-**Holding Pens (HoldingPen, 180 HP, 3–4 initial civs):**
-- Voluntary Compliance Habitat (-8, z:-10) · Civic Realignment Suite (+8, z:+14)
+**Holding Pens:** Player-built via build menu (COMPLIANCE PEN — $100). No pre-placed pens. Pens auto-suck nearby Civilians into captivity. Bust = bounty + panic survivors + infamy +15.
 
-**Civilians:** 6 wandering CharacterBody3D NPCs scattered across the central Quad area
+**Civilians:** 75 spawned procedurally at mission start, clustered at rally point (0, 0.5, -2). Dispersal system expands wander radii every 45s: 10→18→28→42 units (4 stages).
 
 **Audit Points:** THE QUAD (center) · NORTH PLAZA (z:-28) · SOUTH STEPS (z:+28)
 
@@ -145,24 +144,30 @@ effect_type, effect_radius, effect_interval
 
 ## 🚧 Pending / Next Up
 
-### Immediate
-- [ ] Wire `WorldStateManager.commit_state()` into game-over flow (skirmish_manager._on_building_destroyed)
-- [ ] ROE system — global enum ROE 1–5; ROE 5 cuts music, sets `is_butcher` flag, max infamy event
-- [ ] Infamy consequences — SURVEILLED tier spawns Frontline drone unit near player; SANCTIONED freezes high-tier unit production
-- [ ] Post-op allocation screen (civilians → silo drag UI)
-- [ ] `Civilian.gd` patrol behavior needs NavigationAgent3D or navmesh to avoid clipping through buildings
+### Mission 01 — Remaining
+- [ ] Wire `WorldStateManager.commit_state()` into game-over + quota-met flows
+- [ ] ROE system — global enum ROE 1–5; ROE 5 cuts music, sets `is_butcher` flag, +MAX infamy
+- [ ] Infamy consequences — SURVEILLED (≥400) spawns Frontline drone; SANCTIONED (≥750) freezes high-tier production
+- [ ] `Civilian.gd` needs NavigationAgent3D / navmesh to avoid clipping through buildings
+
+### Main Menu Satellite View
+- Opening of Mission 01 described as: top-down satellite thermal view of the Quad, 250+ "individualists" as heat signatures, Kirk's synth theme at 100%
+- **Reuse for main menu background** — orthographic Camera3D panning/zooming between preset POIs on The Quad scene, thermal/night-vision post-process shader
+- Architecture: `SatelliteViewController.gd` with `pan_targets: Array[Vector3]`, `zoom_levels: Array[float]`, lerp-based movement
+- The same scene loads in both main menu background and Mission 01 cinematic opener
 
 ### Near-term
-- [ ] Compliance Bus — high-capacity escort unit (30 civs), 3× credit multiplier on extraction
-- [ ] Vehicle_Base.gd — Idle/Audited/Moving/Wrecked state machine; persistent wrecks as cover
-- [ ] BOLO mechanic — per-mission FEMA target plate; ALPR Scout unit
+- [ ] Post-op allocation screen (detained civilians → Bio-Metric DB / Infrastructure / PR silos)
+- [ ] Press Briefing UI (post-op spin tree: Gaslight / Double Down / Redact)
+- [ ] Compliance Bus — 30-seat escort unit, 3× credit multiplier on extraction to base
+- [ ] Vehicle_Base.gd — Idle/Audited/Moving/Wrecked states; VBIED for Sovereign
+- [ ] BOLO mechanic — per-mission FEMA target plate; ALPR Scout unit type
 - [ ] Map Phase system — `map_phase: int` on MapBase; visual scarring shader variants
-- [ ] Press Briefing UI (post-op spin tree)
 
 ### Architecture
-- [ ] Supabase world_state table creation (SQL in docs/ TBD)
-- [ ] `commit_state()` call on mission end
-- [ ] Multi-campaign save slot selection
+- [ ] Supabase `world_state` table SQL schema (docs/ TBD) — map_id PK, razed_buildings jsonb, wreck_positions jsonb
+- [ ] `commit_state()` call on mission end / quota met
+- [ ] Multi-campaign save slot selection (Regency / Frontline / Oligarchy campaigns)
 
 ---
 
