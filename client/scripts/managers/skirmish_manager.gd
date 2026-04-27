@@ -368,12 +368,13 @@ func _find_nearest_car(from: Vector3) -> CivilianCar:
 	for node in get_tree().get_nodes_in_group("civilian_vehicles"):
 		if not (node is CivilianCar) or not is_instance_valid(node):
 			continue
-		if node._wrecked or node._escaping:
+		var car := node as CivilianCar
+		if car._wrecked or car._escaping:
 			continue
-		var d := node.global_position.distance_to(from)
+		var d := car.global_position.distance_to(from)
 		if d < best_dist:
 			best_dist = d
-			best      = node
+			best      = car
 	return best
 
 # ── Win / Loss ────────────────────────────────────────────────────────────────
