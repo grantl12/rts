@@ -192,7 +192,7 @@ func _process(delta: float) -> void:
 
 	var counts: Dictionary = {}
 	for unit in _units_in_zone:
-		var f := unit.data.faction
+		var f := (unit as Unit).data.faction
 		counts[f] = counts.get(f, 0) + 1
 
 	var strongest   := ""
@@ -306,7 +306,7 @@ func _collapse() -> void:
 			if not (node is Unit) or not is_instance_valid(node): continue
 			if node.data.faction == faction: continue
 			if global_position.distance_to(node.global_position) <= capture_radius + 5.0:
-				var f := node.data.faction
+				var f := (node as Unit).data.faction
 				nearby[f] = nearby.get(f, 0) + 1
 		var best_f := ""
 		var best_n := 0

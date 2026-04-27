@@ -129,7 +129,7 @@ func _process(delta: float) -> void:
 
 	var counts: Dictionary = {}
 	for unit in _units_in_zone:
-		var f := unit.data.faction
+		var f := (unit as Unit).data.faction
 		counts[f] = counts.get(f, 0) + 1
 
 	var strongest := ""
