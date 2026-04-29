@@ -7,10 +7,13 @@
 
 ## 🎯 Project Identity
 
-**Engine:** Godot 4.4 · Forward Plus renderer · GDScript  
-**Backend:** Supabase (REST + Realtime)  
+**Engine:** Python · pygame · Isometric RTS  
+**Coordinate system:** `iso.py` — TILE_W=72, TILE_H=36, WALL_H=22; 28×24 tile grid  
 **Tone:** Detached, corporate, absurdly bureaucratic. Satire that earns it.  
 **Working branch:** `claude/build-more-features-FEAzl`
+
+> Note: An earlier Godot 4.4 prototype lives in `client/` and is no longer being actively developed.
+> All new work goes in `game/`.
 
 ---
 
@@ -20,15 +23,13 @@
 Kirk — a prominent activist — is assassinated at a rally on **The Quad**. Every faction's presence on every map is a downstream consequence of this moment. The Regency's Deepfake monetizing his death is the mid-game reveal. The final mission destroys the servers housing the Kirk AI before the Oligarchy steals the code.
 
 ### Three-Campaign Architecture
-Same maps, time-shifted POVs, shared world state via Supabase:
+Same maps, time-shifted POVs:
 
 | Campaign | Faction | Vibe | Map State |
 |---|---|---|---|
 | **"The Administration"** | Regency | First Responders / Janitors | Pristine — your choices create the original scars |
 | **"The Information War"** | Frontline | Insurgents / Observers | Scarred — arrives after Regency messed it up |
 | **"The Salvage Operation"** | Oligarchy | Vultures | Shattered — picks through the ruins of both prior runs |
-
-Playing Regency first → Russia campaign loads your exact wreck coordinates ("Ghost of the Player"). Playing Russia first → randomized chaos seed.
 
 ### Eight Factions
 1. **Regency** (US/ICE) — Janitors, compliance, Administrative Credits, holding pens
@@ -37,7 +38,7 @@ Playing Regency first → Russia campaign loads your exact wreck coordinates ("G
 4. **Oligarchy** (Russia-adj) — Vultures, salvage, insurance payouts, "Staffing Agency" pens
 5. **The Collective** (EU-adj) — International Observers; high infamy → sanctions freeze production
 6. **The Syndicate** (Cartel-adj) — Black market, intercepts extraction routes, steals Compliance Buses
-7. **The Tech-State** (Silicon Valley) — Kirk AI Deepfake, manages Fundraising Windows, throttles UI at low data points
+7. **The Tech-State** (Silicon Valley) — Kirk AI Deepfake, manages Fundraising Windows
 8. **The Remnant** (Veteran-adj) — Rogue ex-Regency; Hero units to recruit or execute
 
 ### Map Evolution (3 visits per map)
@@ -49,134 +50,116 @@ Playing Regency first → Russia campaign loads your exact wreck coordinates ("G
 1. **Allocation Screen** — drag harvested civilians into Bio-Metric DB / Infrastructure / PR silos
 2. **Press Briefing** — Gaslight / Double Down / Redact spin tree; redacting journalist costs +50 Infamy
 
-### Vehicle Systems (planned)
-- BOLO target per mission (FEMA/IPAWS flavor, anonymous federal aesthetic)
-- ALPR Scouts scan plates; wrong audit → "Civil Rights Litigation" 30s freeze
-- Sovereign VBIED paranoia — any civilian car could be a Sleeper
-- Compliance Bus (30-seat escort objective, 3× credit multiplier)
-- Wrecks persistent; Oligarchy can salvage them for scrap (removes cover)
-- Vehicle flavor text on click: "Driving to a job that was automated six months ago."
+---
+
+## 🏗️ Current Code Architecture (`game/`)
+
+### Entry Point
+- `game/main.py` — pygame main loop, state machine (`STATE_PLAYING` / menus), event dispatch, `_point_in_poly` helper
+
+### Coordinate System
+- `game/iso.py` — `TILE_W=72, TILE_H=36, WALL_H=22`; `tile_to_screen(tx,ty,floor)`, `screen_to_tile(sx,sy)` transforms
+- `game/camera.py` — pan/zoom; `world_to_screen(gx,gy,floor=0)`, `tile_diamond(gx,gy)` for hit testing
+
+### World State
+- `game/world.py` — `World` class: units dict, civilians dict, placed_buildings dict, credits per faction, ROE manager, AI factions
+  - `place_building(bid, faction, gx, gy)` → creates `PlacedBuilding`, registers `ProductionQueue` if produces
+  - `_place_map_buildings()` — loads `map_data.BUILDINGS` as neutral PlacedBuildings at mission start
+  - `update(dt_ms)` — units, civilians, AI, capture logic, production queues, income tick, pen harvest
+  - `enemies_of(faction)` — relation table for all 4 active factions
+
+### Units
+- `game/unit_entity.py` — `Unit` class: STATE_IDLE/MOVING/ATTACK/DEAD; `UNIT_DEFS` dict (utype→stats); ROE damage scaling
+  - Stats tuple index: `[0]=hp, [1]=damage, [2]=speed, [3]=range, [4]=cost ...`
+  - `order_move(waypoints)`, `order_attack(target_uid)`
+
+### Buildings
+- `game/building_defs.py` — `BUILDINGS` dict keyed by string ID; each entry has: `name, sub, category, faction, w, h, floors, cost, hp, power_draw, garrison, produces, description, palette, flags, roof_style`
+  - Categories: `"base"` (faction-built) · `"civilian"` (neutral capturable) · `"garrisonable"`
+  - Key flags: `"command"`, `"production"`, `"holding_pen"`, `"capturable"`, `"objective"`, `"vision"`, `"relay"`
+  - `get_by_category(cat)`, `get_by_faction(faction)` helpers
+  - **No duplicate keys** — `"reg_pen"` is the holding pen (garrison=12); `"reg_detention"` is the detention center
+
+### Civilians
+- `game/civilian.py` — `Civilian` class; types: `NORMIE / PURPLE_HAIR / RIOT_GEAR / RUNNER / KIRK`
+  - `panic()` → 10s flee burst; `take_damage()` → big infamy hit on death
+  - World pens auto-capture nearby civs at range 3.0 tiles
+
+### AI
+- `game/ai.py` — `AIFaction` class; timers for production (12s), orders (6s), raids (25s)
+  - `_do_production()` — picks random factory, enqueues cheapest unit if credits allow
+  - `_do_orders()` — priority: 1) uncaptured objectives 2) attack player units 3) attack player HQ
+  - `_do_raids()` — targets player holding pens with up to 3 units
+
+### ROE / Infamy
+- `game/roe.py` — `ROEManager`; 5 levels (RESTRAINED→ABSOLUTE IMMUNITY)
+  - Damage multipliers: `[0.35, 0.65, 1.00, 1.50, 2.50]`
+  - ROE 5 is irreversible (`is_butcher = True`); panics all civs, halves enemy unit stats
+  - Ambient infamy: ROE 4 = +1/10s, ROE 5 = +5/5s
+  - Thresholds: 200 SCRUTINIZED / 400 SURVEILLED / 750 SANCTIONED
+
+### Map Data
+- `game/map_data.py` — 28×24 terrain grid (VOID/GROUND/PATH/PLAZA/GRASS); `BUILDINGS` list of pre-placed map structures; `KIRK_RALLY=(13.5,12.0)`
+  - UVU campus buildings: Fulton Library (intel) · Engineering Center (tech) · Sorensen (command) · Woodbury Business (resource) · Losee Center (barracks) · Admin · Clock Tower (sensor) · North Parking (depot)
+
+### Rendering
+- `game/renderer.py` — isometric tile + building renderer; per-building palette (top/wall_l/wall_r/accent/window)
+- `game/fog.py` — fog of war ("Data Blackout"); tile visibility array
+- `game/hud.py` — top-bar HUD: credits, infamy, ROE indicator
+- `game/sidebar.py` — right-panel sidebar; building/unit info, production queue display
+
+### Input / Selection
+- `game/selection.py` — drag-box multi-select; `SelectionManager`
+- `game/pathfinding.py` — A* with diagonal movement; `find_path(start, goal, blocked)`; `formation_goals(center, n)` for squad spreading
 
 ---
 
-## 🏗️ Current Code Architecture
+## 🗺️ The Quad — Current Map State
 
-### Autoloads (project.godot)
-```
-GameSession        — player/enemy faction, default unit paths
-AdvisorManager     — faction-flavored VO lines, advisor_spoke signal
-SupabaseManager    — REST helper (SUPABASE_URL, SUPABASE_KEY constants), hero upload/fetch
-ResourceManager    — faction_funds dict, add_funds/spend_funds, resources_changed signal
-AbilityManager     — Fact Check (Q) + Call Backup (E) abilities; relay station radius bonus
-SoundManager       — play(key) dispatcher
-InfamyManager      — global infamy int (0–1000), add/reduce/reset, get_tier(), infamy_changed signal
-WorldStateManager  — Supabase world_state table R/W; record_raze/record_wreck; begin_mission/commit_state
-```
-
-### Key Scripts
-
-#### Units
-- `scripts/units/unit.gd` — core unit; `target_building` is **untyped** (var, not Building) to support duck-typed attacks on CivBuilding/HoldingPen
-- `scripts/units/civilian.gd` — wandering CharacterBody3D; `get_captured()` / `panic()` for pen bust
-
-#### Buildings
-- `scripts/buildings/building.gd` — faction-owned placeable; BuildingResource-driven; produces units, passive income, AoE effects
-- `scripts/buildings/civ_building.gd` — pre-placed neutral; capturable; buff types: income/supply/xp/morale; `_collapse()` fires InfamyManager +25 + WorldStateManager.record_raze
-- `scripts/buildings/holding_pen.gd` — capturable; inner zone sucks in Civilian nodes; income = civs_held × rate; bust pays bounty, panics freed civs, fires InfamyManager +15
-
-#### Managers
-- `scripts/managers/infamy_manager.gd` — thresholds: 200 SCRUTINIZED / 400 SURVEILLED / 750 SANCTIONED
-- `scripts/managers/world_state_manager.gd` — `begin_mission(map_id)` called from SkirmishManager._ready(); `commit_state()` called on game-over (TODO: wire up)
-- `scripts/managers/skirmish_manager.gd` — spawns HQ + squads, AI tick, win/loss detection, calls WorldStateManager.begin_mission("the_quad")
-
-#### UI
-- `scripts/ui/game_hud.gd` — top bar: funds (left) + infamy bar (right, color-shifts red); bottom panels: unit selection, building panel, civ/pen panel (shared slot, mutually exclusive)
-- `scripts/input_controller.gd` — handles Unit/Building/CivBuilding/HoldingPen clicks; B key = build menu; ESC = cancel
-
-### Building Catalog Pattern
-New building = one `.tres` file in `resources/buildings/`. The `_BUILD_CATALOG` array in `game_hud.gd` auto-generates the build menu — no other code changes needed.
-
-Current catalog: Barracks · Watchtower · Supply Depot · Relay Station · Propaganda Tower · Field Hospital · Black Site · Fortification
-
-#### BuildingResource fields
-```gdscript
-building_name, description, extra_group, cost, passive_income, max_health,
-produces_units, producible_unit_path_override, produce_time,
-effect_type, effect_radius, effect_interval
-```
-
-#### Extra groups wired up
-- `"vision_tower"` → FogOfWarManager gives 48.0 radius (vs 28.0 default)
-- `"relay_station"` → AbilityManager adds +8 Fact Check AoE per station
-- `"cover"` → (planned) unit damage reduction when behind
-
-### Fog of War
-- `shaders/data_blackout.gdshader` — per-source `vis_radii[32]` array (not single uniform)
-- `scripts/managers/fog_of_war_manager.gd` — pushes both `vis_positions` and `vis_radii` packed arrays
-
-### Supabase Tables (live)
-- `hero_units` — soul leader persistence (unit_type, faction, veterancy_rank, status)
-- `world_state` — map persistence (map_id PK, razed_buildings jsonb, wreck_positions jsonb, infamy_score, updated_at)
-  - **Required:** `map_id text PRIMARY KEY` with `resolution=merge-duplicates` Prefer header
-
----
-
-## 🗺️ The Quad — Current Scene State
-
-`scenes/maps/the_quad.tscn`
-
-**Neutral capturable buildings (CivBuilding, 250 HP):**
-- Campus Café (income) · Student Library (xp) · Medical Center (supply)
-
-**Greek / Dorm houses (CivBuilding, 300 HP, brick-red, gold labels):**
-- Δ Delta House (-22, z:-12) morale · Φ Phi House (+22, z:-12) xp
-- Β Beta House (-22, z:+12) income · Σ Sigma House (+22, z:+12) supply
-
-**Holding Pens:** Player-built via build menu (COMPLIANCE PEN — $100). No pre-placed pens. Pens auto-suck nearby Civilians into captivity. Bust = bounty + panic survivors + infamy +15.
-
-**Civilians:** 75 spawned procedurally at mission start, clustered at rally point (0, 0.5, -2). Dispersal system expands wander radii every 45s: 10→18→28→42 units (4 stages).
-
-**Audit Points:** THE QUAD (center) · NORTH PLAZA (z:-28) · SOUTH STEPS (z:+28)
-
-**Spawn positions:** Player HQ (z:-40) / Enemy HQ (z:+40)
+**Terrain:** 28×24 grid, UVU campus layout  
+**KIRK_RALLY:** (13.5, 12.0) — center plaza where assassination occurred  
+**Pre-placed buildings:** 8 map structures loaded as neutral at mission start  
+**Civilians:** 25 spawned at KIRK_RALLY with ±4 tile scatter at `World.__init__`  
+**AI factions:** Sovereign + Oligarchy (both run production + order ticks)  
+**Player faction:** Regency (starts with 5000 credits)
 
 ---
 
 ## 🚧 Pending / Next Up
 
-### Mission 01 — Remaining
-- [ ] Wire `WorldStateManager.commit_state()` into game-over + quota-met flows
-- [ ] ROE system — global enum ROE 1–5; ROE 5 cuts music, sets `is_butcher` flag, +MAX infamy
-- [ ] Infamy consequences — SURVEILLED (≥400) spawns Frontline drone; SANCTIONED (≥750) freezes high-tier production
-- [ ] `Civilian.gd` needs NavigationAgent3D / navmesh to avoid clipping through buildings
+### Bug fixes (done this session)
+- [x] `civilian.py`: added `KIRK = "kirk"` constant (NameError fix)
+- [x] `building_defs.py`: renamed duplicate `"reg_pen"` to `"reg_detention"`
+- [x] `world.py`: removed corrupted duplicate lines at end of `_place_map_buildings`; added `unit_queues` registration for map buildings that produce
+- [x] `ai.py`: completed `_do_orders` case 2 (attack player units / HQ fallback)
 
-### Main Menu Satellite View
-- Opening of Mission 01 described as: top-down satellite thermal view of the Quad, 250+ "individualists" as heat signatures, Kirk's synth theme at 100%
-- **Reuse for main menu background** — orthographic Camera3D panning/zooming between preset POIs on The Quad scene, thermal/night-vision post-process shader
-- Architecture: `SatelliteViewController.gd` with `pan_targets: Array[Vector3]`, `zoom_levels: Array[float]`, lerp-based movement
-- The same scene loads in both main menu background and Mission 01 cinematic opener
-
-### Near-term
-- [ ] Post-op allocation screen (detained civilians → Bio-Metric DB / Infrastructure / PR silos)
-- [ ] Press Briefing UI (post-op spin tree: Gaslight / Double Down / Redact)
+### Near-term gameplay
+- [ ] Selection UI — 16-bit glitch selection boxes around selected units
+- [ ] Unit visuals — distinct sprites/shapes per faction (Gravy Seal vs. Conscript vs. Proxy)
+- [ ] Infamy consequences — SURVEILLED (≥400) spawns Frontline observer unit; SANCTIONED (≥750) freezes high-tier production
+- [ ] Suppression UI — "Red Tape" bar above suppressed units
+- [ ] ROE confirmation dialog — require second click at ROE 4→5 to prevent accidents
 - [ ] Compliance Bus — 30-seat escort unit, 3× credit multiplier on extraction to base
-- [ ] Vehicle_Base.gd — Idle/Audited/Moving/Wrecked states; VBIED for Sovereign
-- [ ] BOLO mechanic — per-mission FEMA target plate; ALPR Scout unit type
-- [ ] Map Phase system — `map_phase: int` on MapBase; visual scarring shader variants
+
+### Narrative / campaign
+- [ ] Runner HVP sub-objectives (3 fast civilians flee to fixed map zones, triggering ambushes)
+- [ ] Press Briefing UI (post-op spin tree: Gaslight / Double Down / Redact)
+- [ ] Post-op allocation screen (detained civs → Bio-Metric DB / Infrastructure / PR silos)
+- [ ] Map Phase system — `map_phase` int; visual scarring on tiles/buildings between visits
 
 ### Architecture
-- [ ] Supabase `world_state` table SQL schema (docs/ TBD) — map_id PK, razed_buildings jsonb, wreck_positions jsonb
-- [ ] `commit_state()` call on mission end / quota met
-- [ ] Multi-campaign save slot selection (Regency / Frontline / Oligarchy campaigns)
+- [ ] Civilian `NavigationAgent` equivalent — path around buildings instead of clipping through
+- [ ] Vehicle system — `Vehicle` class with Idle/Moving/Wrecked states; VBIED for Sovereign
+- [ ] BOLO mechanic — per-mission target plate; ALPR Scanner unit scans vehicles
+- [ ] Multi-campaign save state (Regency / Frontline / Oligarchy slot selection)
 
 ---
 
 ## 🛠️ Conventions
 
-- **No typed `Building` on `target_building`** — keep it `var` for duck-typed attacks
-- **New neutral buildings** → extend `CivBuilding` or `HoldingPen`; add to the_quad.tscn directly
-- **New faction buildings** → one `.tres` + one row in `_BUILD_CATALOG`
-- **Infamy events** → always `InfamyManager.add_infamy(amount, "source_string")`
-- **World scars** → always `WorldStateManager.record_raze(name)` + `record_wreck(asset_id, pos)` in `_collapse()`
+- **All game code in `game/`** — `client/` is the retired Godot prototype, do not modify
+- **Building catalog** — one key in `game/building_defs.py` `BUILDINGS` dict; no duplicate keys
+- **Infamy events** → `world.roe_manager.add_infamy(amount)` — always pass a positive int
+- **Pathfinding** → `find_path(start_tuple, goal_tuple, blocked_set)` — returns list of (gx,gy) tuples
 - **Comments** — only the WHY, never the WHAT. No multi-line blocks.
-- **Satire tone** — corporate detachment. Names like "Voluntary Compliance Habitat", not "Prison".
+- **Satire tone** — corporate detachment. "Voluntary Compliance Habitat", not "Prison".

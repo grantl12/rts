@@ -1,0 +1,205 @@
+"""
+C&C-style build sidebar — two columns (structures left, units right).
+Plugs into HUD's right panel area.
+"""
+import pygame
+from game.building_defs import BUILDINGS as BDEF
+from game.unit_entity   import UNIT_DEFS
+
+TEAL    = (0, 255, 204)
+TEAL_DIM= (0, 80, 60)
+ORANGE  = (255, 102, 0)
+DARK    = (6, 13, 10)
+PANEL   = (10, 20, 16)
+PANEL2  = (14, 28, 22)
+BORDER  = (0, 50, 38)
+GREEN   = (30, 180, 60)
+
+# Buildings available to each faction in the sidebar
+FACTION_BUILD_MENU = {
+    "regency": {
+        "structures": [
+            "reg_power", "reg_barracks", "reg_depot",
+            "reg_pen", "reg_tower", "reg_wall",
+            "reg_propaganda", "reg_relay",
+        ],
+        "units": [
+            "gravy_seal", "ice_agent", "unmarked_van",
+        ],
+    },
+    "frontline": {
+        "structures": ["fl_drone", "fl_press"],
+        "units": ["proxy", "drone_scout", "drone_assault"],
+    },
+}
+
+BTN_W  = 88
+BTN_H  = 56
+BTN_PAD= 6
+
+
+class BuildSidebar:
+    def __init__(self, faction="regency"):
+        self.faction       = faction
+        self.menu          = FACTION_BUILD_MENU.get(faction, {"structures": [], "units": []})
+
+        # Active queues: {"type": "structure"|"unit", "id": str, "progress": 0-1, "timer": 0}
+        self.struct_queue  = []   # list of {"id", "progress", "timer"}
+        self.unit_queue    = []
+
+        self._font_sm   = None
+        self._font_med  = None
+        self._font_px   = None
+
+        self.panel_rect    = None   # set by HUD
+        self.placing       = None   # building id being ghost-placed
+
+    def _fonts(self):
+        if not self._font_sm:
+            self._font_sm  = pygame.font.SysFont("couriernew", 10)
+            self._font_med = pygame.font.SysFont("couriernew", 12, bold=True)
+            self._font_px  = pygame.font.SysFont("couriernew", 9)
+
+    # ── Update ────────────────────────────────────────────────────────────────
+
+    def update(self, dt_ms, world, player_faction):
+        dt = dt_ms / 1000.0
+        creds = world.credits.get(player_faction, 0)
+
+        completed_struct = self._tick_queue(self.struct_queue, dt, build_time=15.0)
+        completed_unit   = self._tick_queue(self.unit_queue,   dt, build_time=8.0)
+
+        return completed_struct, completed_unit
+
+    def _tick_queue(self, queue, dt, build_time):
+        if not queue:
+            return None
+        item = queue[0]
+        item["progress"] += dt / build_time
+        if item["progress"] >= 1.0:
+            queue.pop(0)
+            return item["id"]
+        return None
+
+    def enqueue_structure(self, bid, world, player_faction):
+        bdef = BDEF.get(bid)
+        if not bdef:
+            return False
+        cost = bdef["cost"]
+        creds = world.credits.get(player_faction, 0)
+        if creds < cost:
+            return False
+        world.credits[player_faction] -= cost
+        self.struct_queue.append({"id": bid, "progress": 0.0})
+        return True
+
+    def enqueue_unit(self, utype, world, player_faction):
+        row = UNIT_DEFS.get(utype)
+        if not row:
+            return False
+        cost = row[7]
+        creds = world.credits.get(player_faction, 0)
+        if creds < cost:
+            return False
+        world.credits[player_faction] -= cost
+        self.unit_queue.append({"id": utype, "progress": 0.0})
+        return True
+
+    # ── Draw ──────────────────────────────────────────────────────────────────
+
+    def draw(self, surf, rect, world, player_faction):
+        self._fonts()
+        if rect is None:
+            return []
+
+        self.panel_rect = rect
+        click_zones = []   # (pygame.Rect, "structure"|"unit", id)
+
+        # Split rect into two columns
+        col_w  = (rect.width - BTN_PAD * 3) // 2
+        col_lx = rect.left + BTN_PAD
+        col_rx = col_lx + col_w + BTN_PAD
+
+        # Column headers
+        hl = self._font_px.render("STRUCTURES", True, TEAL_DIM)
+        hr = self._font_px.render("UNITS", True, TEAL_DIM)
+        surf.blit(hl, (col_lx, rect.top + 2))
+        surf.blit(hr, (col_rx, rect.top + 2))
+
+        creds = world.credits.get(player_faction, 0)
+
+        # Draw buttons for structures
+        sy = rect.top + 14
+        for bid in self.menu["structures"]:
+            bdef = BDEF.get(bid, {})
+            cost = bdef.get("cost", 0)
+            affordable = creds >= cost
+            brect = pygame.Rect(col_lx, sy, col_w, BTN_H)
+            self._draw_btn(surf, brect, bdef.get("name", bid)[:12], cost, affordable,
+                           bid in [q["id"] for q in self.struct_queue])
+            click_zones.append((brect, "structure", bid))
+            sy += BTN_H + BTN_PAD
+
+        # Draw buttons for units
+        uy = rect.top + 14
+        for utype in self.menu["units"]:
+            row = UNIT_DEFS.get(utype)
+            cost = row[7] if row else 0
+            affordable = creds >= cost
+            brect = pygame.Rect(col_rx, uy, col_w, BTN_H)
+            self._draw_btn(surf, brect, utype.replace("_", " ").upper()[:12], cost, affordable,
+                           utype in [q["id"] for q in self.unit_queue])
+            click_zones.append((brect, "unit", utype))
+            uy += BTN_H + BTN_PAD
+
+        # Queue progress bars
+        qy = max(sy, uy) + 8
+        if self.struct_queue:
+            self._draw_queue_bar(surf, col_lx, qy, col_w, self.struct_queue[0], "BLDG")
+        if self.unit_queue:
+            self._draw_queue_bar(surf, col_rx, qy, col_w, self.unit_queue[0], "UNIT")
+
+        return click_zones
+
+    def _draw_btn(self, surf, rect, name, cost, affordable, queued):
+        bg = (16, 32, 24) if affordable else (20, 15, 12)
+        border_col = TEAL if affordable else (0, 40, 30)
+        if queued:
+            border_col = ORANGE
+            bg = (28, 20, 10)
+
+        pygame.draw.rect(surf, bg, rect)
+        pygame.draw.rect(surf, border_col, rect, 1)
+
+        nl = self._font_px.render(name, True, TEAL if affordable else TEAL_DIM)
+        surf.blit(nl, (rect.left + 4, rect.top + 4))
+
+        cl = self._font_px.render(f"§{cost}", True, ORANGE if not affordable else (0, 180, 100))
+        surf.blit(cl, (rect.left + 4, rect.top + 18))
+
+        if queued:
+            ql = self._font_px.render("QUEUED", True, ORANGE)
+            surf.blit(ql, (rect.left + 4, rect.top + 30))
+
+    def _draw_queue_bar(self, surf, x, y, w, item, label):
+        lbl = self._font_px.render(f"{label}: {item['id'][:10].upper()}", True, TEAL_DIM)
+        surf.blit(lbl, (x, y))
+        bar = pygame.Rect(x, y + 12, w, 8)
+        pygame.draw.rect(surf, (20, 20, 20), bar)
+        fill_w = int(bar.width * item["progress"])
+        pygame.draw.rect(surf, (30, 180, 60), pygame.Rect(x, y + 12, fill_w, 8))
+        pygame.draw.rect(surf, BORDER, bar, 1)
+
+    def handle_click(self, pos, click_zones, world, player_faction):
+        """Call with result of draw(). Returns ("place", bid) or ("spawned", utype) or None."""
+        for rect, kind, iid in click_zones:
+            if rect.collidepoint(pos):
+                if kind == "structure":
+                    ok = self.enqueue_structure(iid, world, player_faction)
+                    if ok:
+                        return ("queued_struct", iid)
+                elif kind == "unit":
+                    ok = self.enqueue_unit(iid, world, player_faction)
+                    if ok:
+                        return ("queued_unit", iid)
+        return None
