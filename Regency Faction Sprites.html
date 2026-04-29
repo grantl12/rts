@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>THE REGENCY — UNIT DOSSIER</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --red: #cc2200;
+    --red2: #ff3300;
+    --gold: #c8a020;
+    --khaki: #b8a870;
+    --dark: #0e0a08;
+    --panel: #160f0a;
+    --panel2: #1e150e;
+    --border: rgba(200,160,32,0.35);
+    --mono: 'Share Tech Mono','Courier New',monospace;
+    --bebas: 'Bebas Neue', sans-serif;
+  }
+  body {
+    background: var(--dark);
+    background-image:
+      radial-gradient(ellipse at 50% 0%, rgba(180,30,0,0.12) 0%, transparent 70%);
+    color: var(--khaki);
+    font-family: var(--mono);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 28px 24px 40px;
+    gap: 28px;
+  }
+
+  /* scanlines */
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.12) 3px, rgba(0,0,0,0.12) 4px);
+    pointer-events:none; z-index:100;
+  }
+
+  /* ── HEADER ── */
+  .faction-header {
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 16px;
+    width: 100%;
+    max-width: 1100px;
+  }
+  .faction-eyebrow {
+    font-size: 9px;
+    letter-spacing: 6px;
+    color: rgba(200,160,32,0.45);
+    margin-bottom: 6px;
+  }
+  .faction-title {
+    font-family: var(--bebas);
+    font-size: 52px;
+    color: var(--red2);
+    letter-spacing: 8px;
+    line-height: 1;
+    text-shadow: 0 0 30px rgba(204,34,0,0.5), 0 2px 0 #400;
+  }
+  .faction-sub {
+    font-size: 10px;
+    letter-spacing: 4px;
+    color: var(--gold);
+    margin-top: 4px;
+    opacity: 0.7;
+  }
+
+  /* ── UNIT LINEUP ── */
+  .unit-lineup {
+    display: flex;
+    gap: 24px;
+    align-items: stretch;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    max-width: 1100px;
+  }
+
+  .unit-card {
+    flex: 1;
+    min-width: 300px;
+    max-width: 340px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+  .unit-card::before {
+    content:'';
+    position: absolute; top:0; left:0; right:0; height:3px;
+    background: var(--red);
+  }
+
+  .card-top {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    background: #0a0806;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+    min-height: 280px;
+  }
+  /* checker under sprite */
+  .card-top::before {
+    content:'';
+    position: absolute; inset:0;
+    background-image:
+      linear-gradient(45deg,#151010 25%,transparent 25%),
+      linear-gradient(-45deg,#151010 25%,transparent 25%),
+      linear-gradient(45deg,transparent 75%,#151010 75%),
+      linear-gradient(-45deg,transparent 75%,#151010 75%);
+    background-size: 14px 14px;
+    background-position: 0 0, 0 7px, 7px -7px, -7px 0;
+    background-color: #0a0806;
+    opacity: 0.6;
+  }
+  .unit-canvas {
+    display: block;
+    image-rendering: pixelated;
+    position: relative; z-index:1;
+  }
+
+  .card-nameplate {
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid rgba(200,160,32,0.2);
+  }
+  .unit-class {
+    font-size: 8px;
+    letter-spacing: 4px;
+    color: var(--red);
+    margin-bottom: 3px;
+  }
+  .unit-name {
+    font-family: var(--bebas);
+    font-size: 28px;
+    letter-spacing: 3px;
+    color: var(--khaki);
+    line-height: 1;
+    text-shadow: 0 1px 0 #000;
+  }
+  .unit-quote {
+    font-size: 9px;
+    color: rgba(184,168,112,0.45);
+    font-style: italic;
+    margin-top: 4px;
+    line-height: 1.5;
+  }
+
+  .card-stats {
+    padding: 12px 16px;
+    flex: 1;
+  }
+  .stat-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+  .stat-label { font-size: 8px; letter-spacing: 2px; color: rgba(184,168,112,0.45); }
+  .stat-val { font-size: 9px; color: var(--khaki); }
+  .stat-bar-wrap { height:4px; background:#1a1006; margin-bottom:10px; }
+  .stat-bar { height:100%; }
+
+  .card-ability {
+    margin: 0 16px 14px;
+    border: 1px solid rgba(200,160,32,0.2);
+    padding: 8px 10px;
+    background: rgba(200,160,32,0.04);
+  }
+  .ability-tag { font-size: 7px; letter-spacing: 3px; color: var(--gold); margin-bottom:3px; }
+  .ability-name { font-size: 10px; color: var(--khaki); letter-spacing: 1px; }
+  .ability-desc { font-size: 8px; line-height: 1.6; color: rgba(184,168,112,0.45); margin-top:3px; }
+
+  /* scale strip */
+  .scale-strip {
+    display: flex;
+    gap: 16px;
+    align-items: flex-end;
+    padding: 10px 16px;
+    border-top: 1px solid rgba(200,160,32,0.15);
+    background: rgba(0,0,0,0.2);
+  }
+  .scale-item { display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .scale-item span { font-size:7px; letter-spacing:2px; color:rgba(184,168,112,0.3); }
+  .scale-box {
+    background-image:
+      linear-gradient(45deg,#151010 25%,transparent 25%),
+      linear-gradient(-45deg,#151010 25%,transparent 25%),
+      linear-gradient(45deg,transparent 75%,#151010 75%),
+      linear-gradient(-45deg,transparent 75%,#151010 75%);
+    background-size: 8px 8px;
+    background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+    background-color: #0a0806;
+    padding: 4px;
+  }
+  canvas { display:block; image-rendering:pixelated; }
+
+  /* bottom */
+  .doc-footer {
+    font-size: 8px;
+    letter-spacing: 3px;
+    color: rgba(200,160,32,0.2);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="faction-header">
+  <div class="faction-eyebrow">CLASSIFIED — DEEP STATE RTS · UNIT DOSSIER</div>
+  <div class="faction-title">THE REGENCY</div>
+  <div class="faction-sub">DOMESTIC ENFORCEMENT DIVISION · OREM VALLEY SECTOR</div>
+</div>
+
+<div class="unit-lineup">
+
+  <!-- GRAVY SEAL -->
+  <div class="unit-card">
+    <div class="card-top">
+      <canvas class="unit-canvas" id="gs-main" width="288" height="336"></canvas>
+    </div>
+    <div class="card-nameplate">
+      <div class="unit-class">▸ MILITIA IRREGULARS</div>
+      <div class="unit-name">GRAVY SEAL</div>
+      <div class="unit-quote">"I did my own research."</div>
+    </div>
+    <div class="card-stats">
+      <div class="stat-row"><span class="stat-label">STRENGTH</span><span class="stat-val">85 / 100</span></div>
+      <div class="stat-bar-wrap"><div class="stat-bar" style="width:85%;background:#cc2200"></div></div>
+      <div class="stat-row"><span class="stat-label">SPEED</span><span class="stat-val">38 / 100</span></div>
+      <div class="stat-bar-wrap"><div class="stat-bar" style="width:38%;background:#c8a020"></div></div>
+      <div class="stat-row"><span class="stat-label">RANGE</span><span class="stat-val">60 / 100</span></div>
+      <div class="stat-bar-wrap"><div class="stat-bar" style="width:60%;background:#c8a020"></div></div>
+      <div class="stat-row"><span class="stat-label">COST</span><span class="stat-val">$200</span></div>
+    </div>
+    <div class="card-ability">
+      <div class="ability-tag">SPECIAL ABILITY</div>
+      <div class="ability-name">GRAVY SPLASH</div>
+      <div class="ability-desc">AoE slow. Targets caught in radius move at 40% speed for 8 seconds. Smells terrible.</div>
+    </div>
+    <div class="scale-strip">
+      <div class="scale-item"><div class="scale-box"><canvas id="gs1" width="48" height="56"></canvas></div><span>1×</span></div>
+      <div class="scale-item"><div class="scale-box"><canvas id="gs2" width="96" height="112"></canvas></div><span>2×</span></div>
+    </div>
+  </div>
+
+  <!-- ICE AGENT -->
+  <div class="unit-card">
+    <div class="card-top">
+      <canvas class="unit-canvas" id="ice-main" width="288" height="336"></canvas>
+    </div>
+    <div class="card-nameplate">
+      <div class="unit-class">▸ REGENCY ENFORCEMENT</div>
+      <div class="unit-name">ICE AGENT</div>
+      <div class="unit-quote">"Papers. Now."</div>
+    </div>
+    <div class="card-stats">
+      <div class="stat-row"><span class="stat-label">STRENGTH</span><span class="stat-val">70 / 100</span></div>
+      <div class="stat-bar-wrap"><div class="stat-bar" style="width:70%;background:#cc2200"></div></div>
+      <div class="stat-row"><span class="stat-label">SPEED</span><span class="stat-val">72 / 100</span></div>
+      <div class="stat-bar-wrap"><div class="stat-bar" style="width:72%;background:#c8a020"></div></div>
+      <div class="stat-row"><span class="stat-label">RANGE</span><span class="stat-val">45 / 100</span></div>
+      <div class="stat-bar-wrap"><div class="stat-bar" style="width:45%;background:#c8a020"></div></div>
+      <div class="stat-row"><span class="stat-label">COST</span><span class="stat-val">$350</span></div>
+    </div>
+    <div class="card-ability">
+      <div class="ability-tag">SPECIAL ABILITY</div>
+      <div class="ability-name">ZIP-TIE DETENTION</div>
+      <div class="ability-desc">Immobilizes single civilian unit for 12 seconds. Captured unit loads into Unmarked Van.</div>
+    </div>
+    <div class="scale-strip">
+      <div class="scale-item"><div class="scale-box"><canvas id="ice1" width="48" height="56"></canvas></div><span>1×</span></div>
+      <div class="scale-item"><div class="scale-box"><canvas id="ice2" width="96" height="112"></canvas></div><span>2×</span></div>
+    </div>
+  </div>
+
+  <!-- PROTESTER -->
+  <div class="unit-card">
+    <div class="card-top">
+      <canvas class="unit-canvas" id="pr-main" width="288" height="336"></canvas>
+    </div>
+    <div class="card-nameplate">
+      <div class="unit-class">▸ CIVILIAN RESISTANCE</div>
+      <div class="unit-name">PROTESTER</div>
+      <div class="unit-quote">"The whole world is watching."</div>
+    </div>
+    <div class="card-stats">
+      <div class="stat-row"><span class="stat-label">STRENGTH</span><span class="stat-val">30 / 100</span></div>
+      <div class="stat-bar-wrap"><div class="stat-bar" style="width:30%;background:#cc2200"></div></div>
+      <div class="stat-row"><span class="stat-label">SPEED</span><span class="stat-val">55 / 100</span></div>
+      <div class="stat-bar-wrap"><div class="stat-bar" style="width:55%;background:#c8a020"></div></div>
+      <div class="stat-row"><span class="stat-label">MORALE AUR</span><span class="stat-val">+20%</span></div>
+      <div class="stat-bar-wrap"><div class="stat-bar" style="width:80%;background:#4a8a4a"></div></div>
+      <div class="stat-row"><span class="stat-label">COST</span><span class="stat-val">FREE</span></div>
+    </div>
+    <div class="card-ability">
+      <div class="ability-tag">SPECIAL ABILITY</div>
+      <div class="ability-name">MORAL HIGH GROUND</div>
+      <div class="ability-desc">Adjacent allied units gain +15 armor. Enemy Gravy Seals suffer -20 accuracy when in range.</div>
+    </div>
+    <div class="scale-strip">
+      <div class="scale-item"><div class="scale-box"><canvas id="pr1" width="48" height="56"></canvas></div><span>1×</span></div>
+      <div class="scale-item"><div class="scale-box"><canvas id="pr2" width="96" height="112"></canvas></div><span>2×</span></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="doc-footer">REGENCY DOSSIER REV. 4.1 · DEEP STATE RTS · CLASSIFICATION: SATIRICAL</div>
+
+<script>
+// ─────────────────────────────────────────────
+//  UTILITY
+// ─────────────────────────────────────────────
+function rr(ctx, x, y, w, h, r, fill, stroke) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y);
+  ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r);
+  ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h);
+  ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r);
+  ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+  if(fill) { ctx.fillStyle=fill; ctx.fill(); }
+  if(stroke) { ctx.strokeStyle=stroke.c; ctx.lineWidth=stroke.w||1; ctx.stroke(); }
+}
+
+function ellipse(ctx, cx, cy, rx, ry, fill, stroke) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(1, ry/rx);
+  ctx.beginPath();
+  ctx.arc(0, 0, rx, 0, Math.PI*2);
+  ctx.restore();
+  if(fill) { ctx.fillStyle=fill; ctx.fill(); }
+  if(stroke) { ctx.strokeStyle=stroke.c; ctx.lineWidth=stroke.w||1; ctx.stroke(); }
+}
+
+function text(ctx, txt, x, y, size, fill, font, align='center') {
+  ctx.font = `bold ${size}px ${font||'Arial'}`;
+  ctx.fillStyle = fill;
+  ctx.textAlign = align;
+  ctx.textBaseline = 'middle';
+  ctx.fillText(txt, x, y);
+}
+
+// ─────────────────────────────────────────────
+//  GRAVY SEAL
+//  SW-facing, 48×56 native
+// ─────────────────────────────────────────────
+function drawGravySeal(ctx, W, H, t=0) {
+  const s = n => n * W/48;
+  ctx.clearRect(0,0,W,H);
+  const bob = Math.sin(t*0.003)*s(0.8);
+
+  // Shadow
+  ellipse(ctx, s(26), s(53)+bob*0.3, s(10), s(3.5), 'rgba(0,0,0,0.4)');
+
+  // ── Boots (chunky sneakers) ──
+  // Back boot
+  rr(ctx, s(27), s(46)+bob, s(11), s(7), s(2), '#4a3a28');
+  ctx.fillStyle='#333028'; ctx.fillRect(s(27), s(50)+bob, s(11), s(3));
+  // Front boot (Nike check vibe)
+  rr(ctx, s(14), s(47)+bob, s(12), s(7), s(2), '#5a4a30');
+  ctx.fillStyle='#3a3020'; ctx.fillRect(s(14), s(51)+bob, s(12), s(3));
+  // Sole white stripe
+  ctx.fillStyle='rgba(220,200,180,0.4)';
+  ctx.fillRect(s(15), s(51)+bob, s(10), s(1.5));
+
+  // ── Cargo shorts (camo, knee-length) ──
+  // Back leg
+  rr(ctx, s(25), s(34)+bob, s(10), s(14), s(2), '#4a5238');
+  // camo blotches on back leg
+  ctx.fillStyle='rgba(50,60,30,0.6)';
+  ctx.fillRect(s(26), s(36)+bob, s(4), s(3));
+  ctx.fillRect(s(29), s(41)+bob, s(5), s(2));
+  // front leg (wider due to gut)
+  rr(ctx, s(13), s(34)+bob, s(11), s(15), s(2), '#525a40');
+  ctx.fillStyle='rgba(40,50,25,0.6)';
+  ctx.fillRect(s(14), s(38)+bob, s(5), s(3));
+  ctx.fillRect(s(17), s(44)+bob, s(4), s(2));
+  // Cargo pocket side
+  rr(ctx, s(12), s(38)+bob, s(4), s(7), s(1), '#3d4430', {c:'rgba(0,0,0,0.4)',w:s(0.5)});
+
+  // ── Beer belly & shirt ──
+  // The gut sticks out prominently to the left-front
+  ctx.beginPath();
+  ctx.moveTo(s(10), s(24)+bob);
+  ctx.lineTo(s(36), s(22)+bob);
+  ctx.lineTo(s(36), s(37)+bob);
+  ctx.lineTo(s(8),  s(37)+bob);
+  ctx.quadraticCurveTo(s(4), s(37)+bob, s(4), s(31)+bob);
+  ctx.quadraticCurveTo(s(4), s(24)+bob, s(10), s(24)+bob);
+  ctx.closePath();
+  ctx.fillStyle='#c8c0a8'; // dirty white tee
+  ctx.fill();
+
+  // Gravy stains on shirt
+  ctx.fillStyle='rgba(120,80,20,0.55)';
+  ctx.beginPath(); ctx.ellipse(s(9), s(30)+bob, s(3), s(2), -0.3, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(s(12), s(34)+bob, s(2), s(1.5), 0.2, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(100,60,10,0.4)';
+  ctx.beginPath(); ctx.ellipse(s(7), s(27)+bob, s(2.5), s(1.5), 0.5, 0, Math.PI*2); ctx.fill();
+
+  // ── Tactical vest (doesn't close over gut) ──
+  // Right panel (back side)
+  rr(ctx, s(27), s(22)+bob, s(9), s(15), s(2), '#8a7850');
+  rr(ctx, s(28), s(24)+bob, s(7), s(11), s(1), '#7a6840');
+  // Left panel (front side, offset by gut)
+  rr(ctx, s(10), s(22)+bob, s(8), s(14), s(2), '#9a8860');
+  rr(ctx, s(11), s(24)+bob, s(6), s(10), s(1), '#8a7850');
+  // MOLON LABE patch on left panel
+  ctx.fillStyle='rgba(50,30,10,0.8)';
+  rr(ctx, s(11), s(25)+bob, s(6), s(4), s(0.5), 'rgba(50,30,10,0.8)');
+  text(ctx,'ΜΟΛΩΝ',s(14),s(26.5)+bob,s(2.2),'rgba(220,200,150,0.8)');
+  text(ctx,'ΛΑΒΕ',s(14),s(28.5)+bob,s(2.2),'rgba(220,200,150,0.8)');
+  // Gap showing belly in middle
+  // Vest straps across gut (barely)
+  ctx.strokeStyle='rgba(100,80,40,0.5)';
+  ctx.lineWidth=s(1.5);
+  ctx.beginPath(); ctx.moveTo(s(18),s(28)+bob); ctx.lineTo(s(10),s(30)+bob); ctx.stroke();
+  // American flag patch on right shoulder
+  ctx.fillStyle='#cc2200'; rr(ctx, s(29),s(22)+bob, s(7),s(3), s(0.5),'#cc2200');
+  ctx.fillStyle='#ffffff'; ctx.fillRect(s(29),s(22)+bob,s(7),s(1));
+  ctx.fillStyle='#cc2200'; ctx.fillRect(s(29),s(22)+bob,s(7),s(0.5));
+  // Blue canton
+  ctx.fillStyle='#003399'; ctx.fillRect(s(29),s(22)+bob,s(3),s(1.5));
+  // stars (tiny dots)
+  ctx.fillStyle='white';
+  [[30,22.4],[31,22.4],[32,22.4],[30.5,23],[31.5,23]].forEach(([px,py])=>{
+    ctx.beginPath(); ctx.arc(s(px),s(py)+bob,s(0.3),0,Math.PI*2); ctx.fill();
+  });
+
+  // Punisher skull on back panel
+  ctx.fillStyle='rgba(30,20,10,0.9)';
+  rr(ctx, s(28), s(26)+bob, s(7), s(7), s(1), 'rgba(30,20,10,0.9)');
+  text(ctx,'💀',s(31.5),s(29.5)+bob,s(5),'rgba(180,160,120,0.8)');
+
+  // ── AR-15 ──
+  // Main body
+  rr(ctx, s(-4), s(28)+bob, s(20), s(4), s(1), '#2a2820');
+  // Stock
+  rr(ctx, s(13), s(27)+bob, s(5), s(6), s(1), '#3a3830');
+  // Grip
+  rr(ctx, s(8), s(32)+bob, s(3), s(5), s(1), '#2a2820');
+  // Magazine
+  rr(ctx, s(4), s(32)+bob, s(3), s(7), s(1), '#353530');
+  // Barrel
+  ctx.fillStyle='#404040'; ctx.fillRect(s(-8),s(29)+bob,s(6),s(2));
+  // Muzzle brake
+  rr(ctx, s(-10), s(28.5)+bob, s(3), s(3), s(0.5), '#4a4a48');
+  // Red dot sight
+  rr(ctx, s(6), s(27)+bob, s(4), s(2), s(0.5), '#cc2200');
+  ctx.fillStyle='rgba(255,50,0,0.8)';
+  ctx.beginPath(); ctx.arc(s(8),s(28)+bob,s(0.8),0,Math.PI*2); ctx.fill();
+
+  // ── Back arm ──
+  rr(ctx, s(34), s(24)+bob, s(6), s(12), s(2), '#8a7850');
+
+  // ── Front arm (holding foregrip) ──
+  rr(ctx, s(2), s(24)+bob, s(6), s(12), s(2), '#9a8860');
+
+  // ── Neck ──
+  ctx.fillStyle='#d4a870';
+  ctx.fillRect(s(21),s(16)+bob,s(7),s(8));
+
+  // ── Head (face) ──
+  rr(ctx, s(14), s(10)+bob, s(21), s(14), s(4), '#d4a870'); // face
+  // Double chin
+  ctx.beginPath();
+  ctx.ellipse(s(24), s(22)+bob, s(9), s(4), 0, 0, Math.PI*2);
+  ctx.fillStyle='#c49860';
+  ctx.fill();
+  // 5 o'clock shadow
+  ctx.fillStyle='rgba(100,70,40,0.3)';
+  rr(ctx, s(15), s(17)+bob, s(19), s(8), s(3), 'rgba(100,70,40,0.25)');
+
+  // ── Wraparound Oakleys ──
+  rr(ctx, s(13), s(13)+bob, s(24), s(5), s(2.5), '#1a1410'); // frame
+  // Left lens
+  ctx.fillStyle='rgba(180,140,80,0.6)'; // mirrored gold
+  rr(ctx, s(14), s(13.5)+bob, s(10), s(4), s(2), 'rgba(180,140,80,0.6)');
+  // Right lens
+  rr(ctx, s(25), s(13.5)+bob, s(11), s(4), s(2), 'rgba(160,120,60,0.6)');
+  // Reflection glint
+  ctx.fillStyle='rgba(255,220,150,0.6)';
+  ctx.fillRect(s(15.5),s(14)+bob,s(3),s(1));
+  ctx.fillRect(s(26.5),s(14)+bob,s(3),s(1));
+
+  // ── MAGA Cap ──
+  // Brim (front)
+  ctx.beginPath();
+  ctx.moveTo(s(10), s(13)+bob);
+  ctx.lineTo(s(36), s(12)+bob);
+  ctx.lineTo(s(37), s(15)+bob);
+  ctx.lineTo(s(10), s(15)+bob);
+  ctx.closePath();
+  ctx.fillStyle='#aa1500';
+  ctx.fill();
+  // Cap body
+  ctx.beginPath();
+  ctx.moveTo(s(14), s(13)+bob);
+  ctx.lineTo(s(36), s(11)+bob);
+  ctx.quadraticCurveTo(s(38), s(5)+bob, s(32), s(4)+bob);
+  ctx.quadraticCurveTo(s(24), s(2)+bob, s(14), s(6)+bob);
+  ctx.closePath();
+  ctx.fillStyle='#cc1800';
+  ctx.fill();
+  // Cap highlight
+  ctx.fillStyle='rgba(255,80,60,0.25)';
+  ctx.beginPath();
+  ctx.ellipse(s(26), s(6)+bob, s(8), s(3), -0.3, 0, Math.PI*2);
+  ctx.fill();
+  // MAGA text on brim
+  text(ctx,'MAGA',s(23),s(13.5)+bob,s(2.8),'rgba(255,220,200,0.9)','Arial Narrow');
+  // Snap-back button on top
+  ctx.beginPath(); ctx.arc(s(28),s(4)+bob,s(1.5),0,Math.PI*2); ctx.fillStyle='#991000'; ctx.fill();
+  // Sweat stain on brim edge
+  ctx.fillStyle='rgba(120,90,50,0.35)';
+  ctx.fillRect(s(14),s(14.5)+bob,s(8),s(0.5));
+}
+
+// ─────────────────────────────────────────────
+//  ICE AGENT
+// ─────────────────────────────────────────────
+function drawIceAgent(ctx, W, H, t=0) {
+  const s = n => n * W/48;
+  ctx.clearRect(0,0,W,H);
+  const bob = Math.sin(t*0.003+1)*s(0.6);
+
+  // Shadow
+  ellipse(ctx, s(25), s(53)+bob*0.3, s(8), s(3), 'rgba(0,0,0,0.4)');
+
+  // ── Boots (tactical, black) ──
+  rr(ctx, s(27), s(46)+bob, s(9), s(7), s(2), '#1c1c1a');
+  ctx.fillStyle='#282826'; ctx.fillRect(s(27),s(50)+bob,s(9),s(3));
+  rr(ctx, s(15), s(47)+bob, s(9), s(7), s(2), '#222220');
+  ctx.fillStyle='#2e2e2c'; ctx.fillRect(s(15),s(51)+bob,s(9),s(3));
+  // boot laces
+  ctx.strokeStyle='rgba(180,160,120,0.4)'; ctx.lineWidth=s(0.5);
+  for(let i=0;i<3;i++){
+    ctx.beginPath(); ctx.moveTo(s(16),s(47.5+i*1.5)+bob); ctx.lineTo(s(23),s(47.5+i*1.5)+bob); ctx.stroke();
+  }
+
+  // ── Tactical pants (black) ──
+  rr(ctx, s(26), s(34)+bob, s(9), s(14), s(1), '#1e1e1c');
+  rr(ctx, s(15), s(34)+bob, s(9), s(15), s(1), '#252522');
+  // Knee pads
+  rr(ctx, s(26), s(42)+bob, s(9), s(5), s(1), '#333330', {c:'#444',w:s(0.5)});
+  rr(ctx, s(15), s(42)+bob, s(9), s(5), s(1), '#3a3a38', {c:'#444',w:s(0.5)});
+
+  // ── Torso / Body armor ──
+  rr(ctx, s(11), s(20)+bob, s(27), s(16), s(3), '#222220');
+  // ICE vest (yellow lettering vest over armor)
+  rr(ctx, s(10), s(20)+bob, s(28), s(14), s(2), '#1a1a18');
+  // Front plate
+  rr(ctx, s(13), s(22)+bob, s(22), s(12), s(2), '#222220', {c:'#333',w:s(0.5)});
+  // ICE text (big yellow)
+  text(ctx,'ICE',s(24),s(28)+bob,s(5),'#f0c020','Impact');
+  ctx.strokeStyle='rgba(200,160,20,0.3)'; ctx.lineWidth=s(0.5);
+  ctx.strokeText('ICE',s(24),s(28)+bob);
+  // POLICE on back panel
+  rr(ctx, s(27), s(22)+bob, s(5), s(10), s(1), '#1a1a18');
+  // Belt with zip-ties
+  ctx.fillStyle='#333330'; ctx.fillRect(s(10),s(33)+bob,s(28),s(3));
+  // Zip ties hanging (3 of them)
+  ctx.strokeStyle='rgba(220,220,180,0.7)'; ctx.lineWidth=s(1);
+  for(let i=0;i<3;i++){
+    ctx.beginPath();
+    ctx.moveTo(s(16+i*4), s(36)+bob);
+    ctx.lineTo(s(16+i*4), s(40)+bob);
+    ctx.stroke();
+    rr(ctx,s(15+i*4),s(39)+bob,s(2),s(1.5),s(0.5),'rgba(220,220,180,0.7)');
+  }
+  // Radio on belt
+  rr(ctx,s(28),s(33)+bob,s(4),s(5),s(1),'#2a2a28');
+  ctx.fillStyle='rgba(0,200,100,0.6)'; ctx.beginPath(); ctx.arc(s(29),s(35)+bob,s(0.8),0,Math.PI*2); ctx.fill();
+  // Antenna
+  ctx.strokeStyle='#666'; ctx.lineWidth=s(0.7);
+  ctx.beginPath(); ctx.moveTo(s(31),s(33)+bob); ctx.lineTo(s(32),s(28)+bob); ctx.stroke();
+
+  // ── Back arm ──
+  rr(ctx, s(35), s(22)+bob, s(6), s(13), s(2), '#1e1e1c');
+  // Glove
+  rr(ctx, s(35), s(32)+bob, s(6), s(5), s(2), '#111110');
+
+  // ── Front arm (holding baton) ──
+  rr(ctx, s(7), s(22)+bob, s(6), s(13), s(2), '#222220');
+  rr(ctx, s(7), s(32)+bob, s(6), s(5), s(2), '#111110');
+
+  // ── Baton ──
+  ctx.fillStyle='#333330';
+  rr(ctx, s(2), s(30)+bob, s(8), s(3), s(1), '#2a2a28');
+  ctx.fillStyle='#444440'; ctx.fillRect(s(2),s(30)+bob,s(3),s(3));
+  // Baton tip
+  rr(ctx,s(-1),s(30)+bob,s(3),s(3),s(1),'#1a1a18');
+  // Electric tip glow
+  ctx.fillStyle='rgba(80,120,255,0.9)';
+  ctx.beginPath(); ctx.arc(s(-1),s(31.5)+bob,s(2),0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(80,120,255,0.3)';
+  ctx.beginPath(); ctx.arc(s(-1),s(31.5)+bob,s(4),0,Math.PI*2); ctx.fill();
+  // Wrist strap
+  ctx.strokeStyle='rgba(180,160,100,0.5)'; ctx.lineWidth=s(1);
+  ctx.beginPath(); ctx.moveTo(s(8),s(33)+bob); ctx.lineTo(s(4),s(31)+bob); ctx.stroke();
+
+  // ── Neck ──
+  ctx.fillStyle='#2a2a28'; ctx.fillRect(s(21),s(16)+bob,s(7),s(6));
+
+  // ── Head (balaclava) ──
+  rr(ctx,s(15),s(8)+bob,s(18),s(14),s(5),'#1a1a18');
+  // Face hole (dark mesh)
+  rr(ctx,s(16),s(12)+bob,s(16),s(8),s(3),'#0e0e0c');
+
+  // ── Aviator shades ──
+  rr(ctx,s(14),s(12)+bob,s(20),s(6),s(3),'#0c0c0a');
+  // Lenses (dark mirror)
+  rr(ctx,s(15),s(12.5)+bob,s(8),s(5),s(2.5),'#1a1816');
+  rr(ctx,s(24.5),s(12.5)+bob,s(8),s(5),s(2.5),'#181614');
+  // Reflection
+  ctx.fillStyle='rgba(200,180,100,0.35)';
+  ctx.fillRect(s(16.5),s(13)+bob,s(3),s(1));
+  ctx.fillRect(s(26),s(13)+bob,s(3),s(1));
+  // Bridge
+  ctx.fillStyle='#252520'; ctx.fillRect(s(23),s(14)+bob,s(2),s(1.5));
+
+  // ── Helmet ──
+  ctx.beginPath();
+  ctx.moveTo(s(13), s(12)+bob);
+  ctx.lineTo(s(35), s(10)+bob);
+  ctx.quadraticCurveTo(s(38), s(5)+bob, s(32), s(3)+bob);
+  ctx.quadraticCurveTo(s(24), s(1)+bob, s(14), s(5)+bob);
+  ctx.closePath();
+  ctx.fillStyle='#1e1e1c';
+  ctx.fill();
+  ctx.strokeStyle='#333'; ctx.lineWidth=s(0.5); ctx.stroke();
+  // Helmet strap
+  ctx.strokeStyle='#2a2a28'; ctx.lineWidth=s(1.5);
+  ctx.beginPath(); ctx.moveTo(s(15),s(12)+bob); ctx.lineTo(s(17),s(17)+bob); ctx.stroke();
+  // NVG mount on helmet
+  rr(ctx,s(22),s(4)+bob,s(8),s(4),s(1),'#252520');
+  rr(ctx,s(23),s(5)+bob,s(6),s(3),s(1),'#1a1a18');
+  ctx.fillStyle='rgba(200,220,80,0.8)';
+  ctx.beginPath(); ctx.ellipse(s(26), s(6.5)+bob, s(2.5), s(1.5), 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(200,220,80,0.2)';
+  ctx.beginPath(); ctx.ellipse(s(26), s(6.5)+bob, s(4), s(3), 0, 0, Math.PI*2); ctx.fill();
+}
+
+// ─────────────────────────────────────────────
+//  PROTESTER
+// ─────────────────────────────────────────────
+function drawProtester(ctx, W, H, t=0) {
+  const s = n => n * W/48;
+  ctx.clearRect(0,0,W,H);
+  const bob = Math.sin(t*0.003+2)*s(0.7);
+  // Arm wave for sign
+  const wave = Math.sin(t*0.005)*s(1.5);
+
+  // Shadow
+  ellipse(ctx, s(24), s(53)+bob*0.3, s(8), s(3), 'rgba(0,0,0,0.35)');
+
+  // ── Shoes (sneakers) ──
+  rr(ctx,s(26),s(47)+bob,s(9),s(6),s(2),'#e8e0d0');
+  ctx.fillStyle='rgba(80,80,80,0.4)'; ctx.fillRect(s(26),s(51)+bob,s(9),s(2));
+  rr(ctx,s(14),s(48)+bob,s(9),s(6),s(2),'#d8d0c0');
+  ctx.fillStyle='rgba(80,80,80,0.4)'; ctx.fillRect(s(14),s(52)+bob,s(9),s(2));
+
+  // ── Jeans ──
+  rr(ctx,s(25),s(34)+bob,s(9),s(15),s(1),'#3d5a8a');
+  rr(ctx,s(14),s(34)+bob,s(9),s(16),s(1),'#4a6a9a');
+  // Seam
+  ctx.strokeStyle='rgba(50,80,140,0.6)'; ctx.lineWidth=s(0.7);
+  ctx.beginPath(); ctx.moveTo(s(26),s(34)+bob); ctx.lineTo(s(26),s(49)+bob); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(s(15),s(34)+bob); ctx.lineTo(s(15),s(50)+bob); ctx.stroke();
+
+  // ── Hoodie ──
+  rr(ctx,s(10),s(19)+bob,s(28),s(17),s(3),'#5a7060');
+  // Front pocket
+  rr(ctx,s(16),s(28)+bob,s(16),s(6),s(2),'#4a6050',{c:'rgba(0,0,0,0.2)',w:s(0.5)});
+  // Hoodie string
+  ctx.strokeStyle='rgba(200,180,150,0.5)'; ctx.lineWidth=s(1);
+  ctx.beginPath(); ctx.moveTo(s(20),s(22)+bob); ctx.lineTo(s(18),s(28)+bob); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(s(26),s(22)+bob); ctx.lineTo(s(28),s(28)+bob); ctx.stroke();
+
+  // Back arm (right, normal hang)
+  rr(ctx,s(35),s(21)+bob,s(6),s(14),s(2),'#4a6050');
+  // Fist
+  rr(ctx,s(35),s(32)+bob,s(6),s(5),s(2),'#d4a870');
+
+  // ── Sign arm (left, raised) ──
+  rr(ctx,s(6),s(18)+bob+wave,s(6),s(14),s(2),'#5a7060');
+  rr(ctx,s(6),s(16)+bob+wave,s(6),s(5),s(2),'#d4a870');
+
+  // ── CARDBOARD SIGN ──
+  // Stick
+  ctx.strokeStyle='#8a6840'; ctx.lineWidth=s(2);
+  ctx.beginPath(); ctx.moveTo(s(9),s(3)+bob+wave); ctx.lineTo(s(9),s(18)+bob+wave); ctx.stroke();
+  // Sign board
+  rr(ctx,s(-6),s(1)+bob+wave,s(30),s(14),s(1),'#d4b870');
+  // Sign border
+  ctx.strokeStyle='rgba(100,70,20,0.5)'; ctx.lineWidth=s(0.8);
+  ctx.strokeRect(s(-5),s(2)+bob+wave,s(28),s(12));
+  // Sign lines
+  text(ctx,'THEY LIVE',s(8),s(5.5)+bob+wave,s(3.2),'#5a3010','Impact');
+  text(ctx,'WE SLEEP',s(8),s(9.5)+bob+wave,s(3.2),'#5a3010','Impact');
+  text(ctx,'———',s(8),s(11.5)+bob+wave,s(2.5),'rgba(100,60,20,0.6)');
+
+  // ── Torso visible at bottom of hoodie ──
+  // Belt / waistband
+  ctx.fillStyle='#2a2820'; ctx.fillRect(s(10),s(33)+bob,s(28),s(2));
+  // Small protest button on hoodie
+  ctx.beginPath(); ctx.arc(s(14),s(26)+bob,s(2),0,Math.PI*2); ctx.fillStyle='#cc2200'; ctx.fill();
+  ctx.fillStyle='white'; text(ctx,'✊',s(14),s(26)+bob,s(2.5),'white');
+
+  // ── Head ──
+  rr(ctx,s(16),s(9)+bob,s(17),s(13),s(5),'#d4a870');
+  // Hair (messy, sticking out from beanie)
+  ctx.fillStyle='#3a2810';
+  rr(ctx,s(17),s(12)+bob,s(5),s(3),s(2),'#3a2810');
+
+  // ── Beanie / knit hat ──
+  ctx.beginPath();
+  ctx.moveTo(s(14), s(13)+bob);
+  ctx.lineTo(s(34), s(11)+bob);
+  ctx.quadraticCurveTo(s(36), s(4)+bob, s(28), s(3)+bob);
+  ctx.quadraticCurveTo(s(22), s(1)+bob, s(14), s(5)+bob);
+  ctx.closePath();
+  ctx.fillStyle='#c03030'; ctx.fill();
+  // Beanie ribbing
+  ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.lineWidth=s(0.8);
+  for(let i=0;i<4;i++){
+    ctx.beginPath();
+    ctx.moveTo(s(14+i*4),s(13)+bob);
+    ctx.quadraticCurveTo(s(16+i*4),s(4)+bob,s(17+i*4),s(4)+bob);
+    ctx.stroke();
+  }
+  // Pom-pom
+  ctx.beginPath(); ctx.arc(s(25),s(2)+bob,s(3),0,Math.PI*2); ctx.fillStyle='#e84040'; ctx.fill();
+
+  // ── Face ──
+  // Eyes (determined expression)
+  ctx.fillStyle='#3a2810';
+  ctx.beginPath(); ctx.ellipse(s(20),s(14)+bob,s(2),s(1.5),0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(s(27),s(13)+bob,s(2),s(1.5),-0.1,0,Math.PI*2); ctx.fill();
+  // Eyebrows (angry/determined)
+  ctx.strokeStyle='#3a2810'; ctx.lineWidth=s(1.2);
+  ctx.beginPath(); ctx.moveTo(s(18),s(12)+bob); ctx.lineTo(s(22),s(13)+bob); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(s(25),s(12)+bob); ctx.lineTo(s(29),s(12.5)+bob); ctx.stroke();
+  // Mouth (set firmly)
+  ctx.strokeStyle='#a07850'; ctx.lineWidth=s(1);
+  ctx.beginPath(); ctx.moveTo(s(20),s(18)+bob); ctx.lineTo(s(27),s(17.5)+bob); ctx.stroke();
+  // Nose
+  ctx.strokeStyle='#c49060'; ctx.lineWidth=s(0.8);
+  ctx.beginPath(); ctx.moveTo(s(23),s(14)+bob); ctx.quadraticCurveTo(s(22),s(17)+bob,s(23),s(17)+bob); ctx.stroke();
+
+  // Mask on chin (not fully covering)
+  rr(ctx,s(18),s(18)+bob,s(13),s(3),s(1),'rgba(50,50,50,0.4)');
+}
+
+// ─────────────────────────────────────────────
+//  RENDER ALL
+// ─────────────────────────────────────────────
+function renderAll(t) {
+  // Main animated
+  drawGravySeal(document.getElementById('gs-main').getContext('2d'), 288, 336, t);
+  drawIceAgent(document.getElementById('ice-main').getContext('2d'), 288, 336, t);
+  drawProtester(document.getElementById('pr-main').getContext('2d'), 288, 336, t);
+  requestAnimationFrame(renderAll);
+}
+
+// Static scale canvases
+drawGravySeal(document.getElementById('gs1').getContext('2d'), 48, 56);
+drawGravySeal(document.getElementById('gs2').getContext('2d'), 96, 112);
+drawIceAgent(document.getElementById('ice1').getContext('2d'), 48, 56);
+drawIceAgent(document.getElementById('ice2').getContext('2d'), 96, 112);
+drawProtester(document.getElementById('pr1').getContext('2d'), 48, 56);
+drawProtester(document.getElementById('pr2').getContext('2d'), 96, 112);
+
+let t0 = 0;
+function loop(t) { t0=t; renderAll(t); }
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GRAVY SEAL — UNIT SPRITE</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --teal: #00ffcc;
+    --orange: #ff6600;
+    --dark: #060d0a;
+    --panel: #08130f;
+    --border: rgba(0,255,204,0.25);
+    --mono: 'Share Tech Mono','Courier New',monospace;
+    --pixel: 'Press Start 2P',monospace;
+  }
+  body {
+    background: var(--dark);
+    color: var(--teal);
+    font-family: var(--mono);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    gap: 32px;
+  }
+
+  /* scanlines */
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.15) 4px);
+    pointer-events:none; z-index:100;
+  }
+
+  h1 {
+    font-family: var(--pixel);
+    font-size: 11px;
+    color: var(--orange);
+    letter-spacing: 2px;
+    text-shadow: 0 0 16px var(--orange);
+    text-align: center;
+  }
+  .subtitle {
+    font-size: 10px;
+    letter-spacing: 4px;
+    color: rgba(0,255,204,0.45);
+    margin-top: 6px;
+    text-align: center;
+  }
+
+  /* ── MAIN SHOWCASE ── */
+  .showcase {
+    display: flex;
+    gap: 48px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  /* Big sprite + transparent checker */
+  .main-sprite-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .sprite-frame {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    padding: 24px;
+    position: relative;
+  }
+  .sprite-frame::before {
+    content: attr(data-label);
+    position:absolute; top:-1px; left:8px;
+    font-size: 8px; letter-spacing: 3px;
+    color: rgba(0,255,204,0.4);
+    background: var(--panel);
+    padding: 0 6px;
+    transform: translateY(-50%);
+  }
+  .checker {
+    background-image: 
+      linear-gradient(45deg, #1a1a1a 25%, transparent 25%),
+      linear-gradient(-45deg, #1a1a1a 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #1a1a1a 75%),
+      linear-gradient(-45deg, transparent 75%, #1a1a1a 75%);
+    background-size: 12px 12px;
+    background-position: 0 0, 0 6px, 6px -6px, -6px 0px;
+    background-color: #111;
+  }
+  canvas { display: block; image-rendering: pixelated; }
+
+  /* ── SCALE STRIP ── */
+  .scales {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .scale-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .scale-label {
+    font-size: 8px;
+    letter-spacing: 2px;
+    color: rgba(0,255,204,0.4);
+    width: 28px;
+    text-align: right;
+  }
+  .scale-box {
+    border: 1px solid rgba(0,255,204,0.15);
+    padding: 8px;
+    background: #030806;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── DIRECTIONS ── */
+  .directions-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+  }
+  .dir-grid {
+    display: grid;
+    grid-template-columns: repeat(4, auto);
+    gap: 8px;
+  }
+  .dir-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .dir-cell span {
+    font-size: 7px;
+    letter-spacing: 2px;
+    color: rgba(0,255,204,0.35);
+  }
+
+  /* ── PALETTE ── */
+  .palette-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .swatch-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .swatch {
+    width: 24px; height: 24px;
+    border: 1px solid rgba(0,255,204,0.2);
+    flex-shrink: 0;
+  }
+  .swatch-name {
+    font-size: 8px;
+    letter-spacing: 1px;
+    color: rgba(0,255,204,0.5);
+    min-width: 80px;
+  }
+  .swatch-hex {
+    font-size: 8px;
+    color: rgba(0,255,204,0.3);
+  }
+
+  /* ── STATS ── */
+  .stats-panel {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    padding: 16px;
+    min-width: 200px;
+    position: relative;
+  }
+  .stats-panel::before {
+    content:'UNIT STATS';
+    position:absolute; top:-1px; left:8px;
+    font-size: 8px; letter-spacing: 3px;
+    color: rgba(0,255,204,0.4);
+    background: var(--panel);
+    padding: 0 6px;
+    transform: translateY(-50%);
+  }
+  .stat { display:flex; justify-content:space-between; margin-bottom:8px; font-size:9px; }
+  .stat .sn { color:rgba(0,255,204,0.45); letter-spacing:1px; }
+  .stat .sv { color:var(--teal); }
+  .stat-bar { height:4px; background:#0d1a15; margin-bottom:10px; }
+  .stat-fill { height:100%; background:var(--teal); }
+
+  /* ── BOTTOM BAR ── */
+  .bottom-bar {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .dl-btn {
+    padding: 9px 20px;
+    border: 1px solid var(--teal);
+    background: transparent;
+    color: var(--teal);
+    font-family: var(--mono);
+    font-size: 10px; letter-spacing: 3px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.15s;
+  }
+  .dl-btn:hover { background: rgba(0,255,204,0.1); text-shadow: 0 0 10px var(--teal); }
+  .info-chip { font-size: 9px; color: rgba(0,255,204,0.35); letter-spacing: 2px; }
+</style>
+</head>
+<body>
+
+<div>
+  <h1>GRAVY SEAL</h1>
+  <div class="subtitle">INFANTRY UNIT — DEEP STATE RTS · UVU SECTOR</div>
+</div>
+
+<div class="showcase">
+
+  <!-- MAIN SPRITE -->
+  <div class="main-sprite-wrap">
+    <div class="sprite-frame checker" data-label="8× SCALE — SW FACING">
+      <canvas id="main-sprite" width="384" height="448"></canvas>
+    </div>
+    <div class="info-chip">48×56 PX NATIVE · TRANSPARENT BG</div>
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div style="display:flex;flex-direction:column;gap:24px;">
+
+    <!-- SCALE REFERENCE -->
+    <div class="sprite-frame" data-label="SCALE REFERENCE" style="padding:16px;">
+      <div class="scales">
+        <div class="scale-row">
+          <span class="scale-label">1×</span>
+          <div class="scale-box checker"><canvas id="s1" width="48" height="56"></canvas></div>
+        </div>
+        <div class="scale-row">
+          <span class="scale-label">2×</span>
+          <div class="scale-box checker"><canvas id="s2" width="96" height="112"></canvas></div>
+        </div>
+        <div class="scale-row">
+          <span class="scale-label">4×</span>
+          <div class="scale-box checker"><canvas id="s4" width="192" height="224"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- UNIT STATS -->
+    <div class="stats-panel">
+      <div class="stat"><span class="sn">UNIT TYPE</span><span class="sv">INFANTRY</span></div>
+      <div class="stat"><span class="sn">HP</span><span class="sv">120</span></div>
+      <div class="stat-bar"><div class="stat-fill" style="width:85%"></div></div>
+      <div class="stat"><span class="sn">ARMOR</span><span class="sv">LIGHT</span></div>
+      <div class="stat-bar"><div class="stat-fill" style="width:30%"></div></div>
+      <div class="stat"><span class="sn">SPEED</span><span class="sv">4 tiles/s</span></div>
+      <div class="stat-bar"><div class="stat-fill" style="width:55%"></div></div>
+      <div class="stat"><span class="sn">DAMAGE</span><span class="sv">12–18</span></div>
+      <div class="stat-bar"><div class="stat-fill" style="width:40%;background:var(--orange)"></div></div>
+      <div class="stat"><span class="sn">RANGE</span><span class="sv">5 tiles</span></div>
+      <div class="stat-bar"><div class="stat-fill" style="width:50%"></div></div>
+      <div class="stat" style="margin-top:4px"><span class="sn">SPECIAL</span><span class="sv" style="color:var(--orange)">GRAVY SPLASH</span></div>
+    </div>
+
+  </div>
+
+  <!-- FACING DIRECTIONS -->
+  <div class="directions-wrap">
+    <div class="sprite-frame" data-label="FACING DIRECTIONS" style="padding:16px;">
+      <div class="dir-grid" id="dir-grid"></div>
+    </div>
+
+    <!-- PALETTE -->
+    <div class="sprite-frame" data-label="COLOR PALETTE" style="padding:14px;">
+      <div class="palette-wrap" id="palette"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="bottom-bar">
+  <button class="dl-btn" id="dl-btn">⬇ DOWNLOAD PNG</button>
+  <span class="info-chip">RIGHT-CLICK MAIN SPRITE TO SAVE</span>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+//  PALETTE
+// ─────────────────────────────────────────────
+const PAL = {
+  helmetHi:  '#7a6040',
+  helmetMid: '#5a4830',
+  helmetShd: '#3c3020',
+  visorDark: '#001a14',
+  visorGlow: '#00ffcc',
+  armorHi:   '#6a5030',
+  armorMid:  '#4a3820',
+  armorShd:  '#2e2212',
+  pantsHi:   '#4a4030',
+  pantsMid:  '#343028',
+  pantsShd:  '#201e18',
+  bootDark:  '#181410',
+  skinTone:  '#c8a060',
+  weaponDk:  '#252520',
+  weaponMid: '#353530',
+  neonTeal:  '#00ffcc',
+  neonOrng:  '#ff6600',
+  shadow:    'rgba(0,0,0,0.35)',
+};
+
+const PALETTE_DISPLAY = [
+  { name:'HELMET',      hex:'#5a4830', color: PAL.helmetMid },
+  { name:'BODY ARMOR',  hex:'#4a3820', color: PAL.armorMid  },
+  { name:'TACTICAL GRN',hex:'#343028', color: PAL.pantsMid  },
+  { name:'BOOTS',       hex:'#181410', color: PAL.bootDark  },
+  { name:'NEON TEAL',   hex:'#00ffcc', color: PAL.neonTeal  },
+  { name:'NEON ORANGE', hex:'#ff6600', color: PAL.neonOrng  },
+  { name:'VISOR',       hex:'#001a14', color: PAL.visorDark },
+  { name:'WEAPON',      hex:'#252520', color: PAL.weaponDk  },
+];
+
+// Build palette HTML
+const palWrap = document.getElementById('palette');
+PALETTE_DISPLAY.forEach(p => {
+  palWrap.innerHTML += `
+    <div class="swatch-row">
+      <div class="swatch" style="background:${p.color}"></div>
+      <span class="swatch-name">${p.name}</span>
+      <span class="swatch-hex">${p.hex}</span>
+    </div>`;
+});
+
+// ─────────────────────────────────────────────
+//  DRAW GRAVY SEAL
+//  cx, cy = canvas dimensions
+//  dir: 0=SW(default), 1=SE, 2=NE, 3=NW
+// ─────────────────────────────────────────────
+function drawGravySeal(ctx, canvasW, canvasH, dir=0, animated=false, t=0) {
+  const scale = canvasW / 48;
+  const s = n => n * scale;
+
+  ctx.clearRect(0, 0, canvasW, canvasH);
+  ctx.save();
+
+  // Slight bob animation
+  const bob = animated ? Math.sin(t * 0.003) * 1.2 * scale : 0;
+
+  // Mirror for NE/NW directions (facing right)
+  const facingRight = dir === 1 || dir === 2;
+  if(facingRight) {
+    ctx.translate(canvasW, 0);
+    ctx.scale(-1, 1);
+  }
+
+  // Flip Y for NE/NW facing away (slight perspective shift)
+  const facingBack = dir === 2 || dir === 3;
+
+  const Y = (y) => s(y) + bob;
+
+  // ── SHADOW ──
+  ctx.save();
+  ctx.translate(s(24), s(53) + bob*0.3);
+  ctx.scale(1, 0.35);
+  ctx.beginPath();
+  ctx.arc(0, 0, s(11), 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.fill();
+  ctx.restore();
+
+  // ── BACK BOOT (right) ──
+  roundRect(ctx, s(26), Y(45), s(10), s(6), s(2), PAL.bootDark);
+  // Sole highlight
+  ctx.fillStyle = '#2a2420';
+  ctx.fillRect(s(26), Y(49), s(10), s(2));
+
+  // ── BACK LEG (right) ──
+  // Thigh
+  roundRect(ctx, s(25), Y(35), s(9), s(12), s(1), PAL.pantsShd);
+  // Knee pad
+  roundRect(ctx, s(25), Y(40), s(9), s(5), s(1), PAL.pantsMid);
+
+  // ── BACK ARM (right, shadowed) ──
+  roundRect(ctx, s(34), Y(24), s(7), s(13), s(2), PAL.armorShd);
+  // Neon trim on back shoulder
+  ctx.fillStyle = 'rgba(0,255,204,0.25)';
+  ctx.fillRect(s(34), Y(24), s(7), s(1.5));
+
+  // ── TORSO ──
+  // Main body shape
+  ctx.beginPath();
+  ctx.moveTo(s(11), Y(24));
+  ctx.lineTo(s(37), Y(23));
+  ctx.lineTo(s(38), Y(39));
+  ctx.lineTo(s(10), Y(40));
+  ctx.closePath();
+  ctx.fillStyle = PAL.armorMid;
+  ctx.fill();
+
+  // Chest plate
+  ctx.beginPath();
+  ctx.moveTo(s(14), Y(26));
+  ctx.lineTo(s(34), Y(25));
+  ctx.lineTo(s(34), Y(37));
+  ctx.lineTo(s(14), Y(38));
+  ctx.closePath();
+  ctx.fillStyle = PAL.armorHi;
+  ctx.fill();
+
+  // Chest plate edge lines (neon)
+  ctx.strokeStyle = 'rgba(0,255,204,0.5)';
+  ctx.lineWidth = s(0.8);
+  ctx.beginPath();
+  ctx.moveTo(s(14), Y(26));
+  ctx.lineTo(s(34), Y(25));
+  ctx.stroke();
+
+  // Center chest ridge
+  ctx.strokeStyle = 'rgba(0,255,204,0.3)';
+  ctx.lineWidth = s(0.7);
+  ctx.beginPath();
+  ctx.moveTo(s(24), Y(26));
+  ctx.lineTo(s(24), Y(37));
+  ctx.stroke();
+
+  // Belt line
+  ctx.fillStyle = PAL.armorShd;
+  ctx.fillRect(s(10), Y(37), s(28), s(3));
+  // Belt buckle
+  ctx.fillStyle = PAL.weaponMid;
+  ctx.fillRect(s(21), Y(37.5), s(6), s(2));
+  ctx.strokeStyle = 'rgba(0,255,204,0.6)';
+  ctx.lineWidth = s(0.7);
+  ctx.strokeRect(s(21), Y(37.5), s(6), s(2));
+
+  // Side shoulder neon lines
+  ctx.strokeStyle = 'rgba(0,255,204,0.7)';
+  ctx.lineWidth = s(1);
+  // Left shoulder stripe
+  ctx.beginPath();
+  ctx.moveTo(s(11), Y(24));
+  ctx.lineTo(s(11), Y(36));
+  ctx.stroke();
+  // Shoulder neon dot
+  ctx.beginPath();
+  ctx.arc(s(11), Y(24), s(1.5), 0, Math.PI*2);
+  ctx.fillStyle = PAL.visorGlow;
+  ctx.fill();
+
+  // Back pocket detail
+  ctx.fillStyle = PAL.armorShd;
+  ctx.fillRect(s(29), Y(28), s(5), s(6));
+
+  // ── FRONT ARM (left, weapon arm) ──
+  roundRect(ctx, s(5), Y(22), s(7), s(14), s(2), PAL.armorMid);
+  // Arm highlight
+  ctx.fillStyle = PAL.armorHi;
+  ctx.fillRect(s(5), Y(22), s(3), s(14));
+  // Elbow pad
+  roundRect(ctx, s(4), Y(30), s(9), s(4), s(1), PAL.armorHi);
+
+  // ── WEAPON (SMG/PDW) ──
+  // Body of weapon
+  roundRect(ctx, s(-2), Y(28), s(18), s(5), s(1), PAL.weaponDk);
+  // Top rail
+  ctx.fillStyle = PAL.weaponMid;
+  ctx.fillRect(s(-2), Y(28), s(14), s(2));
+  // Magazine (below)
+  roundRect(ctx, s(5), Y(33), s(4), s(6), s(1), PAL.weaponDk);
+  // Stock
+  ctx.fillStyle = PAL.weaponMid;
+  ctx.fillRect(s(13), Y(28), s(4), s(5));
+  // Barrel
+  ctx.fillStyle = '#303030';
+  ctx.fillRect(s(-6), Y(29.5), s(6), s(2));
+  // Muzzle sight / flash
+  ctx.beginPath();
+  ctx.arc(s(-7), Y(30.5), s(2.5), 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(255,102,0,0.9)';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(s(-7), Y(30.5), s(4), 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(255,102,0,0.3)';
+  ctx.fill();
+  // Scope/sight neon
+  ctx.fillStyle = PAL.visorGlow;
+  ctx.fillRect(s(3), Y(28), s(5), s(1.5));
+  ctx.fillStyle = 'rgba(0,255,204,0.4)';
+  ctx.fillRect(s(3), Y(28), s(5), s(1.5));
+
+  // ── FRONT BOOT (left) ──
+  roundRect(ctx, s(13), Y(47), s(11), s(7), s(2), '#201a14');
+  ctx.fillStyle = '#2e2418';
+  ctx.fillRect(s(13), Y(51), s(11), s(3));
+
+  // ── FRONT LEG (left) ──
+  roundRect(ctx, s(14), Y(37), s(9), s(12), s(1), PAL.pantsMid);
+  // Knee pad
+  roundRect(ctx, s(13), Y(43), s(10), s(5), s(1), PAL.pantsHi);
+  // Knee neon
+  ctx.fillStyle = 'rgba(0,255,204,0.4)';
+  ctx.fillRect(s(13), Y(43), s(10), s(1));
+
+  // ── NECK ──
+  ctx.fillStyle = PAL.skinTone;
+  ctx.fillRect(s(20), Y(16), s(7), s(7));
+
+  // ── HELMET ──
+  // Base dome
+  ctx.save();
+  ctx.translate(s(24), Y(10));
+  ctx.scale(1, 0.72);
+  ctx.beginPath();
+  ctx.arc(0, 0, s(13), 0, Math.PI*2);
+  ctx.fillStyle = PAL.helmetMid;
+  ctx.fill();
+  ctx.restore();
+
+  // Helmet highlight (lighter top)
+  ctx.save();
+  ctx.translate(s(21), Y(8));
+  ctx.scale(1, 0.72);
+  ctx.beginPath();
+  ctx.arc(0, 0, s(8), 0, Math.PI*2);
+  ctx.fillStyle = PAL.helmetHi;
+  ctx.fill();
+  ctx.restore();
+
+  // Helmet brim
+  roundRect(ctx, s(11), Y(16), s(26), s(4.5), s(1), PAL.helmetShd);
+
+  // Chin strap
+  ctx.strokeStyle = PAL.helmetShd;
+  ctx.lineWidth = s(1.5);
+  ctx.beginPath();
+  ctx.moveTo(s(11), Y(18));
+  ctx.quadraticCurveTo(s(12), Y(22), s(20), Y(22));
+  ctx.stroke();
+
+  // ── VISOR ──
+  roundRect(ctx, s(12), Y(16.5), s(23), s(6), s(1.5), PAL.visorDark);
+  // Visor glow
+  const grad = ctx.createLinearGradient(s(12), 0, s(35), 0);
+  grad.addColorStop(0, 'rgba(0,255,204,0.15)');
+  grad.addColorStop(0.5, 'rgba(0,255,204,0.8)');
+  grad.addColorStop(1, 'rgba(0,255,204,0.15)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(s(13), Y(17.5), s(21), s(4));
+
+  // Visor scan line
+  const scanY = Y(17.5) + ((t * 0.04) % (s(4)));
+  ctx.fillStyle = 'rgba(0,255,204,0.5)';
+  ctx.fillRect(s(13), scanY, s(21), s(0.8));
+
+  // Helmet neon band (bottom of dome)
+  ctx.strokeStyle = 'rgba(0,255,204,0.6)';
+  ctx.lineWidth = s(1);
+  ctx.beginPath();
+  ctx.moveTo(s(12), Y(15.5));
+  ctx.lineTo(s(35), Y(15.5));
+  ctx.stroke();
+
+  // Antenna
+  ctx.strokeStyle = 'rgba(0,255,204,0.7)';
+  ctx.lineWidth = s(1);
+  ctx.beginPath();
+  ctx.moveTo(s(33), Y(8));
+  ctx.lineTo(s(36), Y(1));
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(s(36), Y(1), s(1.5), 0, Math.PI*2);
+  ctx.fillStyle = PAL.neonOrng;
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(s(36), Y(1), s(3), 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(255,102,0,0.3)';
+  ctx.fill();
+
+  // Backpack (behind torso, peek out right)
+  roundRect(ctx, s(36), Y(24), s(5), s(12), s(1), PAL.armorShd);
+  // Pack straps
+  ctx.strokeStyle = 'rgba(0,255,204,0.2)';
+  ctx.lineWidth = s(0.6);
+  ctx.beginPath();
+  ctx.moveTo(s(36), Y(26));
+  ctx.lineTo(s(38), Y(28));
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function roundRect(ctx, x, y, w, h, r, fill) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y);
+  ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r);
+  ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h);
+  ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r);
+  ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+  ctx.fillStyle = fill;
+  ctx.fill();
+}
+
+// ─────────────────────────────────────────────
+//  DRAW STATIC CANVASES
+// ─────────────────────────────────────────────
+const dirLabels = ['SW','SE','NE','NW'];
+const dirGrid = document.getElementById('dir-grid');
+const dirCanvases = [];
+dirLabels.forEach((d, i) => {
+  const cell = document.createElement('div');
+  cell.className = 'dir-cell';
+  const box = document.createElement('div');
+  box.className = 'scale-box checker';
+  box.style.padding = '6px';
+  const c = document.createElement('canvas');
+  c.width = 96; c.height = 112;
+  c.style.imageRendering = 'pixelated';
+  box.appendChild(c);
+  const label = document.createElement('span');
+  label.textContent = d;
+  cell.appendChild(box);
+  cell.appendChild(label);
+  dirGrid.appendChild(cell);
+  dirCanvases.push(c);
+});
+
+// Static scale canvases
+const s1 = document.getElementById('s1');
+const s2 = document.getElementById('s2');
+const s4 = document.getElementById('s4');
+drawGravySeal(s1.getContext('2d'), 48, 56, 0);
+drawGravySeal(s2.getContext('2d'), 96, 112, 0);
+drawGravySeal(s4.getContext('2d'), 192, 224, 0);
+dirCanvases.forEach((c, i) => drawGravySeal(c.getContext('2d'), 96, 112, i));
+
+// ─────────────────────────────────────────────
+//  ANIMATED MAIN CANVAS
+// ─────────────────────────────────────────────
+const mainCanvas = document.getElementById('main-sprite');
+const mainCtx = mainCanvas.getContext('2d');
+let t = 0;
+function animLoop() {
+  t++;
+  drawGravySeal(mainCtx, 384, 448, 0, true, t);
+  requestAnimationFrame(animLoop);
+}
+animLoop();
+
+// ─────────────────────────────────────────────
+//  DOWNLOAD
+// ─────────────────────────────────────────────
+document.getElementById('dl-btn').addEventListener('click', () => {
+  const dl = document.createElement('canvas');
+  dl.width = 48; dl.height = 56;
+  drawGravySeal(dl.getContext('2d'), 48, 56, 0);
+  const a = document.createElement('a');
+  a.download = 'gravy-seal-sprite.png';
+  a.href = dl.toDataURL('image/png');
+  a.click();
+});
+</script>
+</body>
+</html>

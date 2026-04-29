@@ -38,6 +38,11 @@ A satirical RTS built on Godot 4.4 and Supabase. The game blends the weighted sq
 - **Supabase Bridge:** `SupabaseManager.gd` is set up for REST API calls. Tracks `infamy_score`, `global_reputation`, and `veteran_roster`.
 - **Local Persistence:** `ArchiveManager.gd` handles local "Audit Log" saves and "Legacy Flags".
 - **Shader Library:** `neon_grid.gdshader` (World overlay) and `analog_zone.gdshader` (Dead zones).
+- **Phase 2 Design Docs:** 
+  - `docs/BACKLOG_PHASE_2.md`: Population Harvest & Compliance Pens.
+  - `docs/FACTION_ECONOMY.md`: Faction-specific civilian interaction loops.
+  - `docs/MAP_EVOLUTION.md`: Persistent map scarring and visit-based phases.
+  - `docs/VEHICLE_LOGIC.md`: ALPR scanning, BOLO targets, and mobile cover.
 
 ---
 
