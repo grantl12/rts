@@ -19,7 +19,7 @@ class FogManager:
         # last_vision stores which tiles were visible in the last update to update FOG
         self.vision_sources = [] # list of (gx, gy, radius)
         
-    def update(self, world, player_faction):
+    def update(self, world, player_faction, extra_sources=None):
         # 1. Turn current VISION into FOG
         for y in range(self.h):
             for x in range(self.w):
@@ -28,20 +28,23 @@ class FogManager:
         
         # 2. Gather vision sources
         sources = []
+        if extra_sources:
+            sources.extend(extra_sources)
+
         # Units
         for u in world.units.values():
             if u.faction == player_faction and u.state != "dead" and not u.garrisoned_in:
                 # Default vision radius for units
-                rad = 6 if u.utype != "drone_scout" else 10
+                rad = 10 if u.utype != "drone_scout" else 15
                 sources.append((u.gx, u.gy, rad))
         
         # Buildings
         for pb in world.placed_buildings.values():
             if pb.faction == player_faction:
                 # Buildings give vision
-                rad = 8
+                rad = 12
                 if pb.bdef.get("produces") == "sensor": # Sensor towers
-                    rad = 14
+                    rad = 20
                 # Center of building
                 sources.append((pb.gx + pb.bdef["w"]/2, pb.gy + pb.bdef["h"]/2, rad))
                 

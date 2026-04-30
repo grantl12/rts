@@ -122,6 +122,11 @@ class World:
         self.units[u.uid] = u
         return u
 
+    def spawn_civilian(self, gx, gy, ctype="normie") -> Civilian:
+        c = Civilian(gx, gy, ctype)
+        self.civilians[c.uid] = c
+        return c
+
     def place_building(self, bid, faction, gx, gy) -> Optional[PlacedBuilding]:
         bdef = BDEF.get(bid)
         if not bdef:

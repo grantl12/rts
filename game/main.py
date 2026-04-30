@@ -141,7 +141,11 @@ def main():
         # ── Update ────────────────────────────────────────────────────────────
         cam.update()
         world.update(dt, PLAYER_FACTION)
-        fog.update(world, PLAYER_FACTION)
+
+        extra_v = []
+        if intro_state != "end":
+            extra_v.append((*KIRK_RALLY, 12))
+        fog.update(world, PLAYER_FACTION, extra_sources=extra_v)
 
         completed_struct, completed_unit = sidebar.update(dt, world, PLAYER_FACTION)
         if completed_struct:
@@ -338,30 +342,6 @@ def _point_in_poly(px, py, pts):
         xi, yi = pts[i]
         xj, yj = pts[j]
         if ((yi > py) != (yj > py)) and (px < (xj - xi) * (py - yi) / (yj - yi) + xi):
-            inside = not inside
-        j = i
-    return inside
-
-
-if __name__ == "__main__":
-    main()
- - yi) / (yj - yi) + xi):
-            inside = not inside
-        j = i
-    return inside
-
-
-if __name__ == "__main__":
-    main()
-nd (px < (xj - xi) * (py - yi) / (yj - yi) + xi):
-            inside = not inside
-        j = i
-    return inside
-
-
-if __name__ == "__main__":
-    main()
- - yi) / (yj - yi) + xi):
             inside = not inside
         j = i
     return inside

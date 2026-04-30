@@ -40,8 +40,8 @@ def draw_terrain(surf: pygame.Surface, cam, fog=None):
             
             if fstate == FOG:
                 # Dim the color
-                col = [c // 2.5 for c in col]
-                edge_col = [c // 2.5 for c in edge_col]
+                col = [c // 1.5 for c in col]
+                edge_col = [c // 1.5 for c in edge_col]
                 
             pygame.draw.polygon(surf, col, pts)
             pygame.draw.polygon(surf, edge_col, pts, 1)
