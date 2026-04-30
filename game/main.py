@@ -13,6 +13,7 @@ from game.hud       import HUD, TOPBAR_H, SIDEBAR_W
 from game.map_data  import KIRK_RALLY, BUILDINGS as MAP_BLDS
 from game.fog       import FogManager
 from game import menu as _menu_mod
+from game import postop as _postop_mod
 
 TITLE    = "DEEP STATE RTS — OP: WOLVERINE"
 WIN_W, WIN_H = 1280, 800
@@ -52,6 +53,7 @@ def main():
     placing_bid    = None   # building being ghost-placed
     placing_ghost  = None   # (gx, gy) of ghost
     click_zones    = []     # updated each draw by sidebar
+    roe5_confirm   = False  # waiting for Y/N confirmation before ROE 5
 
     while True:
         dt = clock.tick(FPS)
@@ -89,6 +91,14 @@ def main():
                 enemy = world._ENEMY_MAP.get(PLAYER_FACTION, "sovereign")
                 for i in range(3):
                     world.spawn_unit("proxy", enemy, 6 + i, 5)
+                # Spawn 3 Runner HVPs near rally — they flee to map edges
+                from game.civilian import RUNNER_DESTINATIONS
+                import random as _rnd
+                for dest in RUNNER_DESTINATIONS:
+                    rx = KIRK_RALLY[0] + _rnd.uniform(-2, 2)
+                    ry = KIRK_RALLY[1] + _rnd.uniform(-2, 2)
+                    runner = world.spawn_civilian(rx, ry, ctype="runner")
+                    runner.set_destination(*dest)
 
         # ── Events ────────────────────────────────────────────────────────────
         for event in pygame.event.get():
@@ -113,11 +123,28 @@ def main():
                                 world.units[uid].order_stop()
                     
                     # ROE keys
-                    if event.key == pygame.K_1: world.roe_manager.set_roe(1, world)
-                    if event.key == pygame.K_2: world.roe_manager.set_roe(2, world)
-                    if event.key == pygame.K_3: world.roe_manager.set_roe(3, world)
-                    if event.key == pygame.K_4: world.roe_manager.set_roe(4, world)
-                    if event.key == pygame.K_5: world.roe_manager.set_roe(5, world)
+                    if roe5_confirm:
+                        if event.key == pygame.K_y:
+                            world.roe_manager.set_roe(5, world)
+                            roe5_confirm = False
+                        elif event.key in (pygame.K_n, pygame.K_ESCAPE):
+                            roe5_confirm = False
+                    else:
+                        if event.key == pygame.K_1: world.roe_manager.set_roe(1, world)
+                        if event.key == pygame.K_2: world.roe_manager.set_roe(2, world)
+                        if event.key == pygame.K_3: world.roe_manager.set_roe(3, world)
+                        if event.key == pygame.K_4: world.roe_manager.set_roe(4, world)
+                        if event.key == pygame.K_5:
+                            if world.roe_manager.current_roe < 5:
+                                roe5_confirm = True
+                    # Tab = end mission early → post-op screen
+                    if event.key == pygame.K_TAB and not roe5_confirm:
+                        detained = sum(pb.civs_held for pb in world.placed_buildings.values()
+                                       if pb.faction == PLAYER_FACTION)
+                        _postop_mod.run(screen, clock, detained,
+                                        world.roe_manager.infamy,
+                                        hud.mission_time,
+                                        world.credits.get(PLAYER_FACTION, 0))
 
             cam.handle_event(event)
 
@@ -242,6 +269,10 @@ def main():
         # Selection info strip (bottom of screen, above sidebar bottom)
         _draw_selection_info(screen, selection, world, font_sm, WIN_H, WIN_W - SIDEBAR_W)
 
+        # ROE 5 confirmation overlay (drawn last, over everything)
+        if roe5_confirm:
+            _draw_roe5_confirm(screen, font_sm, WIN_W, WIN_H)
+
         pygame.display.flip()
 
 
@@ -343,6 +374,31 @@ def _draw_selection_info(surf, selection, world, font, screen_h, panel_w):
             bar_col = (40,200,60) if pct>0.6 else (220,180,0) if pct>0.3 else (220,40,40)
             pygame.draw.rect(surf, bar_col, (x + 2, screen_h - bar_h + 24, 12, 3))
             x += 22
+
+
+def _draw_roe5_confirm(surf, font_sm, sw, sh):
+    overlay = pygame.Surface((sw, sh), pygame.SRCALPHA)
+    overlay.fill((20, 0, 0, 200))
+    surf.blit(overlay, (0, 0))
+
+    f_lg  = pygame.font.SysFont("couriernew", 28, bold=True)
+    f_med = pygame.font.SysFont("couriernew", 13, bold=True)
+
+    title = f_lg.render("!! ABSOLUTE IMMUNITY — CONFIRM ESCALATION !!",
+                         True, (255, 38, 25))
+    surf.blit(title, (sw // 2 - title.get_width() // 2, sh // 2 - 60))
+
+    lines = [
+        "ALL RULES OF ENGAGEMENT SUSPENDED.",
+        "THIS ACTION IS IRREVERSIBLE.",
+        "+200 INFAMY IMMEDIATELY.",
+        "",
+        "[ Y ] AUTHORIZE        [ N ] ABORT",
+    ]
+    for i, line in enumerate(lines):
+        col = (255, 166, 25) if "Y]" in line else (200, 200, 200)
+        lbl = f_med.render(line, True, col)
+        surf.blit(lbl, (sw // 2 - lbl.get_width() // 2, sh // 2 - 20 + i * 22))
 
 
 def _point_in_poly(px, py, pts):

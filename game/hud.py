@@ -22,6 +22,8 @@ class HUD:
 
         self.credits       = 5000
         self.infamy        = 0
+        self.roe_name      = "STANDARD"
+        self.roe_col       = (209, 209, 209)
         self.selected_bld  = None
         self.mission_time  = 0   # seconds
         self._tick         = 0
@@ -106,17 +108,31 @@ class HUD:
         cv = self._font_med.render(f"§{self.credits:,}", True, TEAL)
         surf.blit(cv, (self.sidebar_rect.left + 8, res_y + 22))
 
-        # Infamy bar
-        inf_label = self._font_px.render(f"INFAMY  {self.infamy}/1000", True, TEAL_DIM)
+        # Infamy bar with tier markers
+        _TIERS = [(200, "SCRUTINIZED", (200, 200, 0)),
+                  (400, "SURVEILLED",  (255, 140, 0)),
+                  (750, "SANCTIONED",  (220, 40,  30))]
+        tier_name = "CLEAN"
+        tier_col  = TEAL_DIM
+        for thresh, tname, tcol in _TIERS:
+            if self.infamy >= thresh:
+                tier_name, tier_col = tname, tcol
+
+        inf_label = self._font_px.render(
+            f"INFAMY  {self.infamy}/1000  [{tier_name}]", True, tier_col)
         surf.blit(inf_label, (self.sidebar_rect.left + 8, res_y + 44))
         bar_rect = pygame.Rect(self.sidebar_rect.left + 8, res_y + 56, SIDEBAR_W - 20, 6)
         pygame.draw.rect(surf, (20, 5, 5), bar_rect)
-        fill_w = int(bar_rect.width * self.infamy / 1000)
+        fill_w = int(bar_rect.width * min(self.infamy, 1000) / 1000)
         if fill_w:
             r = min(255, 80 + int(175 * self.infamy / 1000))
             pygame.draw.rect(surf, (r, 20, 20),
                 pygame.Rect(bar_rect.left, bar_rect.top, fill_w, bar_rect.height))
         pygame.draw.rect(surf, BORDER, bar_rect, 1)
+        # Tier threshold ticks
+        for thresh, _, tcol in _TIERS:
+            tx = bar_rect.left + int(bar_rect.width * thresh / 1000)
+            pygame.draw.line(surf, tcol, (tx, bar_rect.top - 1), (tx, bar_rect.bottom + 1))
 
     def _draw_bld_panel(self, surf, y):
         b = self.selected_bld

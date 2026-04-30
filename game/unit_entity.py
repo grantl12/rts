@@ -82,6 +82,9 @@ class Unit:
         self.garrisoned_in= None        # building id if inside
         self.target_building_id = None  # ID of building to enter
 
+        self.suppressed      = False
+        self._suppress_timer = 0.0      # counts down; >0 = suppressed
+
     # ── Orders ────────────────────────────────────────────────────────────────
 
     def order_move(self, waypoints):
@@ -108,6 +111,10 @@ class Unit:
         self.target_building_id = None
         self.state      = STATE_IDLE
 
+    def suppress(self, duration=3.0):
+        self._suppress_timer = max(self._suppress_timer, duration)
+        self.suppressed = True
+
     # ── Update ────────────────────────────────────────────────────────────────
 
     def update(self, dt_sec: float, world):
@@ -116,6 +123,11 @@ class Unit:
 
         self.flash_timer = max(0.0, self.flash_timer - dt_sec)
         self.atk_timer   = max(0.0, self.atk_timer - dt_sec)
+        if self._suppress_timer > 0:
+            self._suppress_timer -= dt_sec
+            self.suppressed = self._suppress_timer > 0
+        else:
+            self.suppressed = False
 
         # ── Garrisoned Logic ──
         if self.garrisoned_in:
@@ -198,6 +210,8 @@ class Unit:
         self.state = STATE_MOVING if self.waypoints else STATE_IDLE
 
     def _do_attack(self, target, dt_sec, world):
+        if self.suppressed:
+            return
         if self.atk_timer <= 0:
             # ROE damage multiplier
             roe_mult = world.roe_manager.get_damage_mult() if self.faction == "regency" else 1.0
@@ -247,36 +261,72 @@ class Unit:
 
     # ── Draw ──────────────────────────────────────────────────────────────────
 
+    # Shape definitions per utype: list of (dx,dy) polygon relative to (sx, sy-8)
+    _SHAPES = {
+        # Gravy Seal — wide helmet box
+        "gravy_seal":    [(-6,-10),(6,-10),(8,-4),(8,4),(6,8),(-6,8),(-8,4),(-8,-4)],
+        # ICE Agent — tall narrow wedge
+        "ice_agent":     [(-4,-12),(4,-12),(7,6),(-7,6)],
+        # Proxy — diamond
+        "proxy":         [(0,-11),(8,0),(0,9),(-8,0)],
+        # Contractor — heavy square
+        "contractor":    [(-9,-9),(9,-9),(9,9),(-9,9)],
+        # Drone Scout — small cross/plus
+        "drone_scout":   [(0,-9),(3,-3),(9,-3),(4,2),(6,9),(0,5),(-6,9),(-4,2),(-9,-3),(-3,-3)],
+        # Drone Assault — larger cross
+        "drone_assault": [(0,-11),(4,-4),(11,-4),(5,3),(7,11),(0,7),(-7,11),(-5,3),(-11,-4),(-4,-4)],
+        # Unmarked Van — wide flat rectangle
+        "unmarked_van":  [(-12,-6),(12,-6),(12,6),(-12,6)],
+    }
+    _DEFAULT_SHAPE = [(-7,-7),(7,-7),(7,7),(-7,7)]  # square fallback
+
     def draw(self, surf: pygame.Surface, cam):
         if self.state == STATE_DEAD or self.garrisoned_in:
             return
 
         sx, sy = cam.world_to_screen(self.gx, self.gy)
-        col    = FACTION_COLORS.get(self.faction, (128, 128, 128))
+        base_col = FACTION_COLORS.get(self.faction, (128, 128, 128))
+        col = (255, 255, 255) if self.flash_timer > 0 else base_col
 
-        # Ground shadow
-        pygame.draw.ellipse(surf, (0, 0, 0, 80), (sx - 10, sy - 4, 20, 8))
+        # Ground shadow (solid dark ellipse — no alpha needed)
+        pygame.draw.ellipse(surf, (0, 8, 6), (sx - 10, sy - 2, 20, 6))
 
-        # Body
-        flash_col = (255, 255, 255) if self.flash_timer > 0 else col
+        # Selection ring
         if self.selected:
-            pygame.draw.circle(surf, (0, 255, 100), (sx, sy - 6), 11, 2)
-        pygame.draw.circle(surf, flash_col, (sx, sy - 8), 7)
+            pygame.draw.circle(surf, (0, 255, 100), (sx, sy - 8), 13, 2)
+
+        # Unit body — distinct polygon per type
+        raw = self._SHAPES.get(self.utype, self._DEFAULT_SHAPE)
+        pts = [(sx + dx, sy - 8 + dy) for dx, dy in raw]
+        pygame.draw.polygon(surf, col, pts)
+        pygame.draw.polygon(surf, (0, 0, 0), pts, 1)
 
         # Direction pip
         angle = [225, 315, 45, 135][self.facing] * math.pi / 180
-        px = sx + int(math.cos(angle) * 9)
-        py = sy - 8 + int(math.sin(angle) * 9)
+        px = sx + int(math.cos(angle) * 10)
+        py = sy - 8 + int(math.sin(angle) * 10)
         pygame.draw.circle(surf, (255, 255, 255), (px, py), 2)
 
         # HP bar
         self._draw_hp_bar(surf, sx, sy)
 
-        # Unit type label (tiny)
+        # Suppression — "RED TAPE" bar
+        if self.suppressed:
+            tape_w = 28
+            tape_rect = pygame.Rect(sx - tape_w // 2, sy - 30, tape_w, 5)
+            pygame.draw.rect(surf, (180, 10, 10), tape_rect)
+            pct = self._suppress_timer / 5.0
+            pygame.draw.rect(surf, (255, 40, 40),
+                pygame.Rect(tape_rect.left, tape_rect.top, int(tape_w * min(1, pct)), 5))
+            f = pygame.font.SysFont("couriernew", 7)
+            lbl = f.render("RED TAPE", True, (255, 200, 200))
+            surf.blit(lbl, (sx - lbl.get_width() // 2, sy - 40))
+
+        # Unit type label when selected
         if self.selected:
             f = pygame.font.SysFont("couriernew", 8)
-            lbl = f.render(self.utype[:8].upper(), True, (200, 200, 200))
-            surf.blit(lbl, (sx - lbl.get_width() // 2, sy - 24))
+            lbl = f.render(self.utype[:10].upper().replace("_", " "), True, (200, 200, 200))
+            surf.blit(lbl, (sx - lbl.get_width() // 2, sy - 26))
 
     def _draw_hp_bar(self, surf, sx, sy):
         bar_w = 18

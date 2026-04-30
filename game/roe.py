@@ -46,13 +46,10 @@ class ROEManager:
             if world:
                 for c in world.civilians.values():
                     c.panic()
-                # Apply suppression to non-player units
+                player_f = getattr(world, "player_faction", "regency")
                 for u in world.units.values():
-                    if u.faction != "regency":
-                        # We don't have a suppression system yet, 
-                        # but we could reduce their damage or speed
-                        u.speed *= 0.5
-                        u.damage *= 0.5
+                    if u.faction != player_f:
+                        u.suppress(8.0)
             
     def get_damage_mult(self):
         return DAMAGE_MULTS[self.current_roe - 1]

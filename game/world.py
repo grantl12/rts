@@ -89,6 +89,9 @@ class World:
         "oligarchy": "frontline",
     }
 
+    # Units blocked from production at SANCTIONED infamy tier
+    _HEAVY_TIER = {"contractor", "drone_assault", "unmarked_van"}
+
     def __init__(self, player_faction="regency"):
         self.player_faction   = player_faction
         self.units            = {}   # uid -> Unit
@@ -103,6 +106,7 @@ class World:
 
         self.unit_queues      = {}   # bld_instance_id -> ProductionQueue
         self._income_timer    = 0.0
+        self._surveilled_timer = 0.0  # cooldown for SURVEILLED drone spawns
 
         enemy = self._ENEMY_MAP.get(player_faction, "sovereign")
         self.ai_factions = {enemy: AIFaction(enemy)}
@@ -216,7 +220,8 @@ class World:
     def update(self, dt_ms: int, player_faction="regency"):
         dt = dt_ms / 1000.0
         self.roe_manager.update(dt)
-        
+        self._apply_infamy_consequences(dt, player_faction)
+
         for ai in self.ai_factions.values():
             ai.update(dt, self)
 
@@ -231,11 +236,19 @@ class World:
                     u.order_attack(enemy.uid)
             u.update(dt, self)
 
-        # Civilians
+        # Civilians + runner arrival check
         for c in list(self.civilians.values()):
             if c.state == "dead":
                 continue
             c.update(dt, self)
+            # Runner HVP reached destination — spawn enemy ambush
+            if (c.ctype == "runner" and getattr(c, "_reached_dest", False)
+                    and not getattr(c, "_ambush_spawned", False)):
+                c._ambush_spawned = True
+                enemy = self._ENEMY_MAP.get(player_faction, "sovereign")
+                for i in range(3):
+                    self.spawn_unit("proxy", enemy, c.gx + i * 0.8, c.gy)
+                self.roe_manager.add_infamy(25)
         
         # Cleanup dead civs
         dead_civs = [cid for cid, c in self.civilians.items() if c.state == "dead"]
@@ -312,10 +325,16 @@ class World:
                 continue
             completed = queue.update(dt, self.BUILD_TIME_UNIT)
             if completed:
-                # Spawn near building exit
-                ex = pb.gx + pb.bdef["w"] // 2
-                ey = pb.gy + pb.bdef["h"]
-                self.spawn_unit(completed, pb.faction, ex, ey)
+                # SANCTIONED: freeze heavy-tier production for player
+                if (self.roe_manager.infamy >= 750
+                        and pb.faction == player_faction
+                        and completed in self._HEAVY_TIER):
+                    queue.items.insert(0, completed)
+                    queue.progress = 0.95
+                else:
+                    ex = pb.gx + pb.bdef["w"] // 2
+                    ey = pb.gy + pb.bdef["h"]
+                    self.spawn_unit(completed, pb.faction, ex, ey)
 
     def _tick_income(self, player_faction):
         # Passive building income
@@ -331,6 +350,19 @@ class World:
             if income:
                 self.credits[player_faction] = \
                     self.credits.get(player_faction, 0) + income
+
+    def _apply_infamy_consequences(self, dt, player_faction):
+        infamy = self.roe_manager.infamy
+        if infamy < 400:
+            self._surveilled_timer = 0.0
+            return
+        # SURVEILLED (≥400): Frontline drone harasses player every 30s
+        self._surveilled_timer += dt
+        if self._surveilled_timer >= 30.0:
+            self._surveilled_timer = 0.0
+            # Spawn near map center so player sees it approaching
+            self.spawn_unit("drone_scout", "frontline",
+                            14 + random.uniform(-3, 3), 12 + random.uniform(-3, 3))
 
     # ── Map pre-placement ─────────────────────────────────────────────────────
 
