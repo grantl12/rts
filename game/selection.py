@@ -36,9 +36,9 @@ class SelectionManager:
         mx, my = pos
 
         if self._drag_rect and (self._drag_rect.width > 4 or self._drag_rect.height > 4):
-            # Box select
+            # Box select — prefer player units
             hits = world.units_in_screen_rect(self._drag_rect, cam)
-            player_units = [u for u in hits if u.faction == "regency"]
+            player_units = [u for u in hits if u.faction == world.player_faction]
             if player_units:
                 hits = player_units
             self._set_selection(hits, world)
@@ -135,7 +135,8 @@ class SelectionManager:
 
     def select_all_of_type(self, utype, world):
         units = [u for u in world.units.values()
-                 if u.utype == utype and u.faction == "regency" and u.state != STATE_DEAD]
+                 if u.utype == utype and u.faction == world.player_faction
+                 and u.state != STATE_DEAD]
         self._set_selection(units, world)
 
     # ── Draw ──────────────────────────────────────────────────────────────────

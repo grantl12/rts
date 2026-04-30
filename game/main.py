@@ -54,6 +54,7 @@ def main():
     placing_ghost  = None   # (gx, gy) of ghost
     click_zones    = []     # updated each draw by sidebar
     roe5_confirm   = False  # waiting for Y/N confirmation before ROE 5
+    show_help      = False  # ? key toggles keybind overlay
 
     while True:
         dt = clock.tick(FPS)
@@ -137,6 +138,11 @@ def main():
                         if event.key == pygame.K_5:
                             if world.roe_manager.current_roe < 5:
                                 roe5_confirm = True
+                    # ? = toggle help overlay
+                    if event.key == pygame.K_SLASH and pygame.key.get_pressed()[pygame.K_LSHIFT]:
+                        show_help = not show_help
+                    if event.key == pygame.K_h:
+                        show_help = not show_help
                     # Tab = end mission early → post-op screen
                     if event.key == pygame.K_TAB and not roe5_confirm:
                         detained = sum(pb.civs_held for pb in world.placed_buildings.values()
@@ -164,6 +170,18 @@ def main():
                         elif event.button == 3:
                             placing_bid   = None
                             placing_ghost = None
+                    elif event.button == 1 and hud.minimap_rect.collidepoint(event.pos):
+                        # Minimap click → pan camera
+                        from game.map_data import W, H
+                        mr = hud.minimap_rect
+                        rel_x = (event.pos[0] - mr.left) / mr.width
+                        rel_y = (event.pos[1] - mr.top) / mr.height
+                        cam.gx = rel_x * W - cam.w / (2 * 64)
+                        cam.gy = rel_y * H - cam.h / (2 * 32)
+                        # Recalculate screen offset
+                        from game.iso import TILE_W, TILE_H
+                        cam.ox = cam.w // 2 - int((cam.gx - cam.gy) * TILE_W * cam.zoom // 2)
+                        cam.oy = 80 - int((cam.gx + cam.gy) * TILE_H * cam.zoom // 2)
                     else:
                         # Check sidebar click zones
                         result = sidebar.handle_click(event.pos, click_zones, world, PLAYER_FACTION)
@@ -283,6 +301,10 @@ def main():
         if roe5_confirm:
             _draw_roe5_confirm(screen, font_sm, WIN_W, WIN_H)
 
+        # Help overlay (? / H key)
+        if show_help:
+            _draw_help_overlay(screen, WIN_W, WIN_H)
+
         pygame.display.flip()
 
 
@@ -363,27 +385,152 @@ def _draw_selection_info(surf, selection, world, font, screen_h, panel_w):
     units = [world.units[uid] for uid in selection.selected_uids if uid in world.units]
     if not units:
         return
-    bar_h = 32
-    bar   = pygame.Rect(0, screen_h - bar_h, panel_w, bar_h)
-    pygame.draw.rect(surf, (10, 20, 16), bar)
-    pygame.draw.line(surf, (0, 50, 38), (0, screen_h - bar_h), (panel_w, screen_h - bar_h))
+
+    from game.unit_entity import FACTION_COLORS, Unit
 
     if len(units) == 1:
+        bar_h = 48
+        bar   = pygame.Rect(0, screen_h - bar_h, panel_w, bar_h)
+        pygame.draw.rect(surf, (10, 20, 16), bar)
+        pygame.draw.line(surf, (0, 50, 38), (0, screen_h - bar_h), (panel_w, screen_h - bar_h))
+
         u = units[0]
-        txt = f"{u.utype.upper().replace('_',' ')}  HP {u.hp}/{u.max_hp}  [{u.state.upper()}]"
-        lbl = font.render(txt, True, (0, 200, 140))
-        surf.blit(lbl, (10, screen_h - bar_h + 10))
+        f_med = pygame.font.SysFont("couriernew", 12, bold=True)
+        f_sm  = font
+
+        # Name + rank stars
+        rank_str = "★" * u.rank + "☆" * (5 - u.rank)
+        name_lbl = f_med.render(
+            f"{u.utype.upper().replace('_',' ')}  {rank_str}",
+            True, FACTION_COLORS.get(u.faction, (0, 200, 140)))
+        surf.blit(name_lbl, (10, screen_h - bar_h + 4))
+
+        # State + suppression
+        state_txt = u.state.upper()
+        if u.suppressed:
+            state_txt += "  [SUPPRESSED]"
+        state_lbl = f_sm.render(state_txt, True, (0, 160, 100))
+        surf.blit(state_lbl, (10, screen_h - bar_h + 22))
+
+        # HP bar
+        bw = min(200, panel_w // 3)
+        bx = 220
+        by = screen_h - bar_h + 8
+        pct = u.hp / u.max_hp
+        bar_col = (40, 200, 60) if pct > 0.6 else (220, 180, 0) if pct > 0.3 else (220, 40, 40)
+        pygame.draw.rect(surf, (30, 30, 30), (bx - 1, by - 1, bw + 2, 8))
+        pygame.draw.rect(surf, bar_col, (bx, by, int(bw * pct), 6))
+        hp_lbl = f_sm.render(f"HP  {u.hp}/{u.max_hp}", True, (0, 160, 100))
+        surf.blit(hp_lbl, (bx, by + 10))
+
+        # XP bar
+        if u.rank < 5:
+            xp_pct = u.xp / u.xp_to_next
+            pygame.draw.rect(surf, (20, 20, 40), (bx - 1, by + 22, bw + 2, 5))
+            pygame.draw.rect(surf, (60, 60, 220), (bx, by + 23, int(bw * xp_pct), 3))
+            xp_lbl = f_sm.render(
+                f"XP  {int(u.xp)}/{int(u.xp_to_next)}  [{Unit.RANK_NAMES[u.rank - 1]}]",
+                True, (80, 80, 180))
+            surf.blit(xp_lbl, (bx, by + 28))
+
+        # Stats
+        st_lbl = f_sm.render(
+            f"DMG {u.damage}  RNG {u.attack_range:.1f}  SPD {u.speed:.1f}  ARMOR {u.armor_type.upper()}",
+            True, (0, 100, 70))
+        surf.blit(st_lbl, (bx + bw + 16, screen_h - bar_h + 14))
+
     else:
-        # Show icons for each selected unit
+        bar_h = 38
+        bar   = pygame.Rect(0, screen_h - bar_h, panel_w, bar_h)
+        pygame.draw.rect(surf, (10, 20, 16), bar)
+        pygame.draw.line(surf, (0, 50, 38), (0, screen_h - bar_h), (panel_w, screen_h - bar_h))
+
+        count_lbl = pygame.font.SysFont("couriernew", 10).render(
+            f"{len(units)} UNITS SELECTED", True, (0, 160, 100))
+        surf.blit(count_lbl, (10, screen_h - bar_h + 4))
+
         x = 10
-        for u in units[:20]:
-            from game.unit_entity import FACTION_COLORS
+        for u in units[:30]:
             col = FACTION_COLORS.get(u.faction, (128, 128, 128))
-            pygame.draw.circle(surf, col, (x + 8, screen_h - bar_h + 16), 7)
+            pygame.draw.circle(surf, col, (x + 7, screen_h - bar_h + 24), 6)
             pct = u.hp / u.max_hp
-            bar_col = (40,200,60) if pct>0.6 else (220,180,0) if pct>0.3 else (220,40,40)
-            pygame.draw.rect(surf, bar_col, (x + 2, screen_h - bar_h + 24, 12, 3))
-            x += 22
+            bar_col = (40, 200, 60) if pct > 0.6 else (220, 180, 0) if pct > 0.3 else (220, 40, 40)
+            pygame.draw.rect(surf, bar_col, (x + 1, screen_h - bar_h + 31, 12, 3))
+            x += 16
+
+
+def _draw_help_overlay(surf, sw, sh):
+    overlay = pygame.Surface((sw, sh), pygame.SRCALPHA)
+    overlay.fill((0, 10, 8, 210))
+    surf.blit(overlay, (0, 0))
+
+    f_title = pygame.font.SysFont("couriernew", 20, bold=True)
+    f_med   = pygame.font.SysFont("couriernew", 11, bold=True)
+    f_sm    = pygame.font.SysFont("couriernew", 10)
+
+    TEAL   = (0, 255, 204)
+    ORANGE = (255, 102, 0)
+    DIM    = (0, 120, 90)
+
+    title = f_title.render("FIELD OPERATIONS — KEYBINDING REFERENCE", True, TEAL)
+    surf.blit(title, (sw // 2 - title.get_width() // 2, 60))
+    pygame.draw.line(surf, DIM, (60, 88), (sw - 60, 88))
+
+    KEYS = [
+        ("SELECTION",  [
+            ("Left-Click",        "Select unit / building"),
+            ("Left-Drag",         "Box select units"),
+            ("Shift + Click",     "Add to selection"),
+            ("Ctrl + A",          "Select ALL friendly units"),
+        ]),
+        ("ORDERS",  [
+            ("Right-Click unit",  "Attack order"),
+            ("Right-Click ground","Move order (formation)"),
+            ("Right-Click bldg", "Garrison order"),
+            ("S",                 "Stop all selected"),
+        ]),
+        ("CAMERA",  [
+            ("WASD / Arrow keys", "Pan camera"),
+            ("Mouse edge",        "Pan camera"),
+            ("Scroll Wheel",      "Zoom in / out"),
+            ("Minimap click",     "Jump to location"),
+        ]),
+        ("ROE",  [
+            ("1 – 4",             "Set Rules of Engagement"),
+            ("5",                 "Request ABSOLUTE IMMUNITY (confirm)"),
+            ("Y / N",             "Confirm / abort ROE 5"),
+        ]),
+        ("MISSION",  [
+            ("Tab",               "End mission → post-op debrief"),
+            ("H or ?",            "Toggle this help overlay"),
+            ("Escape",            "Cancel placement / exit"),
+        ]),
+    ]
+
+    col_w = (sw - 120) // 2
+    cx = [70, 70 + col_w + 20]
+    cy = 106
+    col_i = 0
+    y = cy
+
+    for section, binds in KEYS:
+        x = cx[col_i]
+        sec_lbl = f_med.render(f"▸ {section}", True, ORANGE)
+        surf.blit(sec_lbl, (x, y))
+        y += 18
+        for key, desc in binds:
+            k = f_sm.render(key.ljust(22), True, TEAL)
+            d = f_sm.render(desc, True, DIM)
+            surf.blit(k, (x, y))
+            surf.blit(d, (x + 190, y))
+            y += 15
+        y += 10
+        if y > sh - 80:
+            col_i = min(col_i + 1, 1)
+            y = cy
+
+    close = f_sm.render("[ H / ? — CLOSE ]", True, DIM)
+    surf.blit(close, (sw // 2 - close.get_width() // 2, sh - 40))
 
 
 def _draw_roe5_confirm(surf, font_sm, sw, sh):
