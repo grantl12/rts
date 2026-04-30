@@ -23,13 +23,19 @@ FACTION_BUILD_MENU = {
             "reg_pen", "reg_tower", "reg_wall",
             "reg_propaganda", "reg_relay",
         ],
-        "units": [
-            "gravy_seal", "ice_agent", "unmarked_van",
-        ],
+        "units": ["gravy_seal", "ice_agent", "unmarked_van"],
     },
     "frontline": {
         "structures": ["fl_drone", "fl_press"],
         "units": ["proxy", "drone_scout", "drone_assault"],
+    },
+    "sovereign": {
+        "structures": ["sov_safehouse", "sov_cache"],
+        "units": ["proxy", "contractor"],
+    },
+    "oligarchy": {
+        "structures": ["olig_hq", "olig_salvage"],
+        "units": ["contractor", "gravy_seal"],
     },
 }
 

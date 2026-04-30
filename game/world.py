@@ -81,6 +81,10 @@ class World:
     PASSIVE_INCOME_TICK = 1.0   # seconds between credit ticks
     PEN_INCOME_RATE = 5          # §/sec per detained civilian
 
+    GAME_OVER_NONE    = 0
+    GAME_OVER_DEFEAT  = 1   # player HQ destroyed
+    GAME_OVER_VICTORY = 2   # enemy HQ destroyed
+
     # Enemy faction chosen based on player faction
     _ENEMY_MAP = {
         "regency":   "sovereign",
@@ -107,6 +111,7 @@ class World:
         self.unit_queues      = {}   # bld_instance_id -> ProductionQueue
         self._income_timer    = 0.0
         self._surveilled_timer = 0.0  # cooldown for SURVEILLED drone spawns
+        self.game_over        = self.GAME_OVER_NONE
 
         enemy = self._ENEMY_MAP.get(player_faction, "sovereign")
         self.ai_factions = {enemy: AIFaction(enemy)}
@@ -313,6 +318,18 @@ class World:
                             # Reward for capture?
                             self.credits[pb.faction] = self.credits.get(pb.faction, 0) + 25
 
+        # Win/loss detection
+        if self.game_over == self.GAME_OVER_NONE:
+            enemy = self._ENEMY_MAP.get(player_faction, "sovereign")
+            player_hq_alive = any(pb.faction == player_faction and "command" in pb.bdef.get("flags", [])
+                                  for pb in self.placed_buildings.values())
+            enemy_hq_alive  = any(pb.faction == enemy and "command" in pb.bdef.get("flags", [])
+                                  for pb in self.placed_buildings.values())
+            if not player_hq_alive:
+                self.game_over = self.GAME_OVER_DEFEAT
+            elif not enemy_hq_alive:
+                self.game_over = self.GAME_OVER_VICTORY
+
         # Production queues
         self._income_timer += dt
         if self._income_timer >= self.PASSIVE_INCOME_TICK:
@@ -337,19 +354,29 @@ class World:
                     self.spawn_unit(completed, pb.faction, ex, ey)
 
     def _tick_income(self, player_faction):
-        # Passive building income
         for pb in self.placed_buildings.values():
             if pb.faction != player_faction:
                 continue
             income = pb.bdef.get("passive_income", 0)
-            
-            # Civilian income from holding pens
             if pb.civs_held > 0:
                 income += pb.civs_held * self.PEN_INCOME_RATE
-                
             if income:
                 self.credits[player_faction] = \
                     self.credits.get(player_faction, 0) + income
+
+        # Building auras: propaganda (infamy reduce), medical (unit heal)
+        for pb in self.placed_buildings.values():
+            flags = pb.bdef.get("flags", [])
+            cx = pb.gx + pb.bdef["w"] / 2
+            cy = pb.gy + pb.bdef["h"] / 2
+            if "infamy_reduce" in flags and pb.faction == player_faction:
+                # -2 infamy per second in 8-tile radius (ticked every PASSIVE_INCOME_TICK)
+                self.roe_manager.add_infamy(-2)
+            if "heal_aura" in flags:
+                for u in self.units.values():
+                    if u.faction == pb.faction and u.state != STATE_DEAD:
+                        if math.dist((u.gx, u.gy), (cx, cy)) <= 8.0:
+                            u.hp = min(u.max_hp, u.hp + 2)
 
     def _apply_infamy_consequences(self, dt, player_faction):
         infamy = self.roe_manager.infamy

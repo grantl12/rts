@@ -42,12 +42,15 @@ class FogManager:
         # Buildings
         for pb in world.placed_buildings.values():
             if pb.faction == player_faction:
-                # Buildings give vision
-                rad = 12
-                if pb.bdef.get("produces") == "sensor": # Sensor towers
-                    rad = 20
-                # Center of building
-                sources.append((pb.gx + pb.bdef["w"]/2, pb.gy + pb.bdef["h"]/2, rad))
+                flags = pb.bdef.get("flags", [])
+                if "vision" in flags:
+                    rad = 28  # surveillance tower
+                elif "command" in flags:
+                    rad = 16
+                else:
+                    rad = 10
+                sources.append((pb.gx + pb.bdef["w"] / 2,
+                                pb.gy + pb.bdef["h"] / 2, rad))
                 
         # 3. Apply VISION
         for vx, vy, vrad in sources:

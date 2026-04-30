@@ -179,6 +179,16 @@ def main():
         cam.update()
         world.update(dt, PLAYER_FACTION)
 
+        # Game over detection → post-op screen
+        if intro_state == "end" and world.game_over != 0:
+            detained = sum(pb.civs_held for pb in world.placed_buildings.values()
+                           if pb.faction == PLAYER_FACTION)
+            _postop_mod.run(screen, clock, detained,
+                            world.roe_manager.infamy,
+                            hud.mission_time,
+                            world.credits.get(PLAYER_FACTION, 0))
+            pygame.quit(); sys.exit()
+
         extra_v = []
         if intro_state != "end":
             extra_v.append((*KIRK_RALLY, 12))
