@@ -24,6 +24,7 @@ class HUD:
         self.infamy        = 0
         self.roe_name      = "STANDARD"
         self.roe_col       = (209, 209, 209)
+        self.power_balance = 0
         self.selected_bld  = None
         self.mission_time  = 0   # seconds
         self._tick         = 0
@@ -65,9 +66,14 @@ class HUD:
         cred   = self._font_med.render(f"§{self.credits:,}", True, TEAL)
         clock  = self._font_sm.render(ts, True, TEAL)
 
+        pwr_col  = (60, 200, 80) if self.power_balance >= 0 else (220, 40, 40)
+        pwr_sign = "+" if self.power_balance >= 0 else ""
+        pwr      = self._font_sm.render(f"PWR {pwr_sign}{self.power_balance}", True, pwr_col)
+
         surf.blit(title, (12, 9))
         surf.blit(op,    (190, 12))
         surf.blit(roe,   (190, 24))
+        surf.blit(pwr,   (self.sw - SIDEBAR_W - 280, 22))
         surf.blit(clock, (self.sw - SIDEBAR_W - 90, 11))
         surf.blit(cred,  (self.sw - SIDEBAR_W - 190, 9))
 

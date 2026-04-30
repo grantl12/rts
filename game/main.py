@@ -134,6 +134,38 @@ def main():
                         for uid in selection.selected_uids:
                             if uid in world.units:
                                 world.units[uid].order_stop()
+
+                    # F = focus camera on selected units
+                    if event.key == pygame.K_f:
+                        sel_units = [world.units[uid] for uid in selection.selected_uids
+                                     if uid in world.units]
+                        if sel_units:
+                            cx = sum(u.gx for u in sel_units) / len(sel_units)
+                            cy = sum(u.gy for u in sel_units) / len(sel_units)
+                            cam.pan_to(cx, cy)
+
+                    # G = garrison selected into nearest suitable building
+                    if event.key == pygame.K_g:
+                        sel_units = [world.units[uid] for uid in selection.selected_uids
+                                     if uid in world.units and not world.units[uid].garrisoned_in]
+                        if sel_units:
+                            from game.pathfinding import find_path
+                            for u in sel_units:
+                                # Find nearest friendly garrisonable building with space
+                                best_pb, best_dist = None, 999.0
+                                for pb in world.placed_buildings.values():
+                                    if (pb.faction == u.faction
+                                            and pb.bdef.get("garrison", 0) > 0
+                                            and len(pb.garrison) < pb.bdef["garrison"]):
+                                        d = math.dist((u.gx, u.gy), (pb.gx, pb.gy))
+                                        if d < best_dist:
+                                            best_pb, best_dist = pb, d
+                                if best_pb:
+                                    blocked = world.blocked_tiles()
+                                    wp = find_path((u.gx, u.gy),
+                                                   (best_pb.gx + best_pb.bdef["w"] / 2,
+                                                    best_pb.gy + best_pb.bdef["h"] / 2), blocked)
+                                    u.order_garrison(best_pb.bid, wp[1:])
                     
                     # ROE keys
                     if roe5_confirm:
@@ -293,6 +325,10 @@ def main():
                     _alert_flash = 0.4
             elif ev_type == "building_destroyed" and payload["faction"] == PLAYER_FACTION:
                 _alert_flash = 0.6
+            elif ev_type == "salvage":
+                notifs.add(f"SALVAGE — +§{payload['credits']}", (200, 160, 30))
+            elif ev_type == "power_low":
+                pass  # don't spam; power shown in HUD
         world.events.clear()
 
         for k in _ability_cd:
@@ -300,10 +336,11 @@ def main():
 
         notifs.update(dt_sec)
 
-        hud.credits      = world.credits.get(PLAYER_FACTION, 0)
-        hud.infamy       = world.roe_manager.infamy
-        hud.roe_name     = world.roe_manager.get_name()
-        hud.roe_col      = world.roe_manager.get_color()
+        hud.credits       = world.credits.get(PLAYER_FACTION, 0)
+        hud.infamy        = world.roe_manager.infamy
+        hud.roe_name      = world.roe_manager.get_name()
+        hud.roe_col       = world.roe_manager.get_color()
+        hud.power_balance = world.power_balance
         hud.mission_time += dt // 1000 if dt >= 1000 else 0
         hud.update(dt)
 

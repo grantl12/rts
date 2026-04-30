@@ -111,6 +111,7 @@ class World:
         self.unit_queues      = {}   # bld_instance_id -> ProductionQueue
         self._income_timer    = 0.0
         self._surveilled_timer = 0.0
+        self.power_balance    = 0    # net power (negative = underpowered)
         self.game_over        = self.GAME_OVER_NONE
         self.events           = []   # [(event_type, payload)] consumed each frame by main
         self.wrecks           = []   # [(gx, gy, timer)] visual wreck markers
@@ -365,6 +366,8 @@ class World:
             pb = self.placed_buildings.get(iid)
             if not pb:
                 continue
+            if pb.faction == player_faction and self.power_balance < 0:
+                continue  # No production when underpowered
             completed = queue.update(dt, self.BUILD_TIME_UNIT)
             if completed:
                 # SANCTIONED: freeze heavy-tier production for player
@@ -379,6 +382,14 @@ class World:
                     self.spawn_unit(completed, pb.faction, ex, ey)
 
     def _tick_income(self, player_faction):
+        # Power balance
+        net_power = 0
+        for pb in self.placed_buildings.values():
+            if pb.faction == player_faction:
+                net_power += pb.bdef.get("power_draw", 0)
+        self.power_balance = net_power
+        underpowered = net_power < 0
+
         for pb in self.placed_buildings.values():
             if pb.faction != player_faction:
                 continue
@@ -389,19 +400,33 @@ class World:
                 self.credits[player_faction] = \
                     self.credits.get(player_faction, 0) + income
 
-        # Building auras: propaganda (infamy reduce), medical (unit heal)
+        # Building auras: propaganda (infamy reduce), medical (unit heal), salvage
         for pb in self.placed_buildings.values():
             flags = pb.bdef.get("flags", [])
             cx = pb.gx + pb.bdef["w"] / 2
             cy = pb.gy + pb.bdef["h"] / 2
             if "infamy_reduce" in flags and pb.faction == player_faction:
-                # -2 infamy per second in 8-tile radius (ticked every PASSIVE_INCOME_TICK)
                 self.roe_manager.add_infamy(-2)
             if "heal_aura" in flags:
                 for u in self.units.values():
                     if u.faction == pb.faction and u.state != STATE_DEAD:
                         if math.dist((u.gx, u.gy), (cx, cy)) <= 8.0:
                             u.hp = min(u.max_hp, u.hp + 2)
+            if "salvage" in flags and pb.faction == player_faction:
+                # Oligarchy salvage yard: consume nearby wrecks for credits
+                consumed = []
+                for i, (wx, wy, _t) in enumerate(self.wrecks):
+                    if math.dist((wx, wy), (cx, cy)) <= 10.0:
+                        consumed.append(i)
+                for i in reversed(consumed):
+                    self.wrecks.pop(i)
+                    self.credits[player_faction] = \
+                        self.credits.get(player_faction, 0) + 200
+                    self.events.append(("salvage", {"credits": 200}))
+
+        # Underpowered: stall production queues for player (skip progress)
+        if underpowered:
+            self.events.append(("power_low", {"balance": net_power}))
 
     def _apply_infamy_consequences(self, dt, player_faction):
         infamy = self.roe_manager.infamy
