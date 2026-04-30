@@ -14,6 +14,7 @@ from game.map_data  import KIRK_RALLY, BUILDINGS as MAP_BLDS
 from game.fog       import FogManager
 from game import menu as _menu_mod
 from game import postop as _postop_mod
+from game.notifications import NotificationManager
 
 TITLE    = "DEEP STATE RTS — OP: WOLVERINE"
 WIN_W, WIN_H = 1280, 800
@@ -35,7 +36,8 @@ def main():
     sidebar   = BuildSidebar(PLAYER_FACTION)
     hud       = HUD(WIN_W, WIN_H)
 
-    font_sm = pygame.font.SysFont("couriernew", 9)
+    font_sm  = pygame.font.SysFont("couriernew", 9)
+    notifs   = NotificationManager()
 
     # ── Intro State ──
     intro_state = "rally" # rally, shot, panic, end
@@ -55,6 +57,7 @@ def main():
     click_zones    = []     # updated each draw by sidebar
     roe5_confirm   = False  # waiting for Y/N confirmation before ROE 5
     show_help      = False  # ? key toggles keybind overlay
+    _prev_infamy   = 0
 
     while True:
         dt = clock.tick(FPS)
@@ -214,10 +217,23 @@ def main():
 
         completed_struct, completed_unit = sidebar.update(dt, world, PLAYER_FACTION)
         if completed_struct:
-            placing_bid = completed_struct   # enter placement mode
+            placing_bid = completed_struct
+            notifs.add(f"STRUCTURE READY — PLACE {completed_struct.upper().replace('_',' ')}", (0, 255, 100))
         if completed_unit:
-            # Auto-spawn near barracks
             world.spawn_unit(completed_unit, PLAYER_FACTION, 13, 19)
+            notifs.add(f"UNIT DEPLOYED — {completed_unit.upper().replace('_',' ')}", (0, 220, 180))
+
+        # Infamy threshold notifications
+        cur_inf = world.roe_manager.infamy
+        if _prev_infamy < 200 <= cur_inf:
+            notifs.add("!! SCRUTINIZED — OVERSIGHT ACTIVE", (220, 180, 0))
+        elif _prev_infamy < 400 <= cur_inf:
+            notifs.add("!! SURVEILLED — FRONTLINE DRONES INCOMING", (255, 140, 0))
+        elif _prev_infamy < 750 <= cur_inf:
+            notifs.add("!! SANCTIONED — HEAVY PRODUCTION FROZEN", (220, 40, 30))
+        _prev_infamy = cur_inf
+
+        notifs.update(dt_sec)
 
         hud.credits      = world.credits.get(PLAYER_FACTION, 0)
         hud.infamy       = world.roe_manager.infamy
@@ -282,13 +298,18 @@ def main():
         if placing_bid and placing_ghost:
             _draw_ghost_building(screen, cam, placing_bid, placing_ghost, world)
 
+        # Capture progress bars on buildings
+        _draw_capture_bars(screen, cam, world, PLAYER_FACTION, font_sm)
+
         # Selection box + order marker
         selection.draw(screen)
         selection.draw_unit_selection(screen, world, cam)
         selection.draw_order_marker(screen)
 
         # HUD
-        minimap_fn = lambda s: draw_minimap(s, cam, hud.minimap_rect)
+        minimap_fn = lambda s: draw_minimap(s, cam, hud.minimap_rect,
+                                            world=world, fog=fog,
+                                            player_faction=PLAYER_FACTION)
         hud.draw(screen, minimap_draw_fn=minimap_fn)
 
         # Sidebar build menu
@@ -300,6 +321,9 @@ def main():
         # ROE 5 confirmation overlay (drawn last, over everything)
         if roe5_confirm:
             _draw_roe5_confirm(screen, font_sm, WIN_W, WIN_H)
+
+        # Notifications (bottom-left, above selection info)
+        notifs.draw(screen, x=8, bottom_y=WIN_H - 55)
 
         # Help overlay (? / H key)
         if show_help:
@@ -457,6 +481,26 @@ def _draw_selection_info(surf, selection, world, font, screen_h, panel_w):
             bar_col = (40, 200, 60) if pct > 0.6 else (220, 180, 0) if pct > 0.3 else (220, 40, 40)
             pygame.draw.rect(surf, bar_col, (x + 1, screen_h - bar_h + 31, 12, 3))
             x += 16
+
+
+def _draw_capture_bars(surf, cam, world, player_faction, font):
+    from game.unit_entity import FACTION_COLORS
+    for pb in world.placed_buildings.values():
+        if pb._capture_progress <= 0:
+            continue
+        cx, cy = cam.world_to_screen(pb.gx + pb.bdef["w"] / 2,
+                                     pb.gy + pb.bdef["h"] / 2,
+                                     pb.bdef["floors"] + 0.5)
+        bw = 28
+        bx = int(cx) - bw // 2
+        by = int(cy) - 10
+        pct = min(1.0, pb._capture_progress / 100.0)
+        pygame.draw.rect(surf, (20, 20, 20), (bx - 1, by - 1, bw + 2, 6))
+        cap_col = (255, 200, 0)
+        pygame.draw.rect(surf, cap_col, (bx, by, int(bw * pct), 4))
+        pygame.draw.rect(surf, (80, 80, 0), (bx - 1, by - 1, bw + 2, 6), 1)
+        lbl = font.render("CAPTURING", True, (255, 220, 80))
+        surf.blit(lbl, (bx - lbl.get_width() // 2 + bw // 2, by - 10))
 
 
 def _draw_help_overlay(surf, sw, sh):

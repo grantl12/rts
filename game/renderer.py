@@ -98,10 +98,19 @@ def _draw_building(surf, cam, bx, by, bw, bh, floors, pal, hw, hh, wh, highlight
         pygame.draw.line(surf, line_col, ra, rb, 1)
 
 
-def draw_minimap(surf: pygame.Surface, cam, rect: pygame.Rect):
+_FACTION_MINI_COLORS = {
+    "regency":   (28,  80, 180),
+    "frontline": (80, 140,  40),
+    "sovereign": (140, 40, 200),
+    "oligarchy": ( 40,  40,  40),
+    "neutral":   (100, 100,  80),
+}
+
+
+def draw_minimap(surf: pygame.Surface, cam, rect: pygame.Rect,
+                 world=None, fog=None, player_faction=None):
     """Draw a top-down minimap into rect."""
     pygame.draw.rect(surf, (3, 8, 6), rect)
-    pygame.draw.rect(surf, TEAL_DIM, rect, 1)
 
     sx = rect.width  / W
     sy = rect.height / H
@@ -111,16 +120,56 @@ def draw_minimap(surf: pygame.Surface, cam, rect: pygame.Rect):
             t = TERRAIN[gy][gx]
             if t == 0:
                 continue
-            col = TILE_COLORS[t]
+            col = list(TILE_COLORS[t])
+            if fog:
+                fstate = fog.grid[gy][gx]
+                if fstate == 0:   # SHROUD
+                    col = [8, 8, 8]
+                elif fstate == 1: # FOG
+                    col = [c // 2 for c in col]
             pygame.draw.rect(surf, col,
                 (rect.x + int(gx * sx), rect.y + int(gy * sy),
                  max(1, int(sx)), max(1, int(sy))))
 
+    # Static map buildings (neutral/pre-placed)
     for bld in BUILDINGS:
         _, _, _, bx, by, bw, bh, *_ = bld
         pygame.draw.rect(surf, TEAL_DIM,
             (rect.x + int(bx * sx), rect.y + int(by * sy),
              max(2, int(bw * sx)), max(2, int(bh * sy))))
-        pygame.draw.rect(surf, TEAL,
-            (rect.x + int(bx * sx), rect.y + int(by * sy),
-             max(2, int(bw * sx)), max(2, int(bh * sy))), 1)
+
+    # Dynamic placed buildings (faction-colored)
+    if world:
+        for pb in world.placed_buildings.values():
+            col = _FACTION_MINI_COLORS.get(pb.faction, (80, 80, 80))
+            pygame.draw.rect(surf, col,
+                (rect.x + int(pb.gx * sx), rect.y + int(pb.gy * sy),
+                 max(2, int(pb.bdef["w"] * sx)), max(2, int(pb.bdef["h"] * sy))))
+
+        # Unit dots
+        for u in world.units.values():
+            from game.unit_entity import STATE_DEAD
+            if u.state == STATE_DEAD or u.garrisoned_in:
+                continue
+            if fog and not fog.is_visible(u.gx, u.gy) and u.faction != player_faction:
+                continue
+            col = _FACTION_MINI_COLORS.get(u.faction, (128, 128, 128))
+            ux = rect.x + int(u.gx * sx)
+            uy = rect.y + int(u.gy * sy)
+            pygame.draw.rect(surf, col, (ux, uy, max(2, int(sx)), max(2, int(sy))))
+
+    # Camera viewport rectangle
+    from game.iso import TILE_W, TILE_H
+    def cam_to_mini(gx, gy):
+        return rect.x + int(gx * sx), rect.y + int(gy * sy)
+    # Approximate viewport corners in world space
+    vp_corners = [
+        cam.screen_to_world(0, 0),
+        cam.screen_to_world(cam.w, 0),
+        cam.screen_to_world(cam.w, cam.h),
+        cam.screen_to_world(0, cam.h),
+    ]
+    mini_pts = [cam_to_mini(gx, gy) for gx, gy in vp_corners]
+    pygame.draw.polygon(surf, (0, 255, 204), mini_pts, 1)
+
+    pygame.draw.rect(surf, TEAL_DIM, rect, 1)
