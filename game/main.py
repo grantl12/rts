@@ -12,11 +12,11 @@ from game.renderer  import draw_terrain, draw_buildings, draw_minimap, DARK
 from game.hud       import HUD, TOPBAR_H, SIDEBAR_W
 from game.map_data  import KIRK_RALLY, BUILDINGS as MAP_BLDS
 from game.fog       import FogManager
+from game import menu as _menu_mod
 
-TITLE          = "DEEP STATE RTS — OP: WOLVERINE"
-WIN_W, WIN_H   = 1280, 800
-FPS            = 60
-PLAYER_FACTION = "regency"
+TITLE    = "DEEP STATE RTS — OP: WOLVERINE"
+WIN_W, WIN_H = 1280, 800
+FPS      = 60
 
 
 def main():
@@ -25,8 +25,10 @@ def main():
     pygame.display.set_caption(TITLE)
     clock  = pygame.time.Clock()
 
+    PLAYER_FACTION = _menu_mod.run(screen, clock, FPS)
+
     cam       = Camera(WIN_W, WIN_H)
-    world     = World()
+    world     = World(PLAYER_FACTION)
     fog       = FogManager()
     selection = SelectionManager()
     sidebar   = BuildSidebar(PLAYER_FACTION)
@@ -71,14 +73,22 @@ def main():
                         c.panic()
             elif intro_state == "panic" and intro_timer <= 0:
                 intro_state = "end"
-                # Spawn a starter squad for the player
+                # Starter squads keyed by faction
+                _STARTER = {
+                    "regency":   [("gravy_seal",3),("ice_agent",2)],
+                    "frontline": [("drone_scout",3),("proxy",2)],
+                    "sovereign": [("proxy",3),("contractor",1)],
+                    "oligarchy": [("contractor",2),("gravy_seal",2)],
+                }
+                sx0, sy0 = 13, 19
+                for utype, count in _STARTER.get(PLAYER_FACTION, [("gravy_seal",3)]):
+                    for i in range(count):
+                        world.spawn_unit(utype, PLAYER_FACTION, sx0 + i * 0.8, sy0)
+                    sy0 += 1
+                # Enemy scouts emerge from their base
+                enemy = world._ENEMY_MAP.get(PLAYER_FACTION, "sovereign")
                 for i in range(3):
-                    world.spawn_unit("gravy_seal", PLAYER_FACTION, 13 + i * 0.8, 19)
-                for i in range(2):
-                    world.spawn_unit("ice_agent",  PLAYER_FACTION, 13 + i * 0.8, 20)
-                # Enemy scout units
-                for i in range(3):
-                    world.spawn_unit("proxy", "sovereign", 12 + i, 5)
+                    world.spawn_unit("proxy", enemy, 6 + i, 5)
 
         # ── Events ────────────────────────────────────────────────────────────
         for event in pygame.event.get():

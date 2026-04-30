@@ -174,10 +174,9 @@ class SelectionManager:
         if not self._order_marker:
             return
         mx, my, timer = self._order_marker
-        if timer <= 0:
+        self._order_marker = (mx, my, timer - 0.02)
+        r = int(timer * 20)
+        if r <= 0:
             self._order_marker = None
             return
-        r = int(timer * 20)
-        alpha = int(timer * 500)
         pygame.draw.circle(surf, (0, 255, 100), (mx, my), r, 1)
-        self._order_marker = (mx, my, timer - 0.02)

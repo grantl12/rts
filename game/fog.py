@@ -14,8 +14,9 @@ class FogManager:
     def __init__(self, width=W, height=H):
         self.w = width
         self.h = height
-        # grid stores the current visibility state
-        self.grid = [[SHROUD for _ in range(width)] for _ in range(height)]
+        # Start fully explored (FOG) so map layout is always visible;
+        # VISION requires active unit/building line-of-sight.
+        self.grid = [[FOG for _ in range(width)] for _ in range(height)]
         # last_vision stores which tiles were visible in the last update to update FOG
         self.vision_sources = [] # list of (gx, gy, radius)
         

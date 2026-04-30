@@ -27,8 +27,9 @@ class Camera:
         mx, my = pygame.mouse.get_pos()
         spd = SCROLL_SPEED
 
-        left  = keys[pygame.K_LEFT]  or keys[pygame.K_a] or mx < SCROLL_MARGIN
-        right = keys[pygame.K_RIGHT] or keys[pygame.K_d] or mx > self.w - SCROLL_MARGIN
+        ctrl  = keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]
+        left  = keys[pygame.K_LEFT]  or (keys[pygame.K_a] and not ctrl) or mx < SCROLL_MARGIN
+        right = keys[pygame.K_RIGHT] or (keys[pygame.K_d] and not ctrl) or mx > self.w - SCROLL_MARGIN
         up    = keys[pygame.K_UP]    or keys[pygame.K_w] or my < SCROLL_MARGIN
         down  = keys[pygame.K_DOWN]  or keys[pygame.K_s] or my > self.h - SCROLL_MARGIN
 

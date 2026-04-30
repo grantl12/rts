@@ -81,7 +81,16 @@ class World:
     PASSIVE_INCOME_TICK = 1.0   # seconds between credit ticks
     PEN_INCOME_RATE = 5          # §/sec per detained civilian
 
-    def __init__(self):
+    # Enemy faction chosen based on player faction
+    _ENEMY_MAP = {
+        "regency":   "sovereign",
+        "frontline": "oligarchy",
+        "sovereign": "regency",
+        "oligarchy": "frontline",
+    }
+
+    def __init__(self, player_faction="regency"):
+        self.player_faction   = player_faction
         self.units            = {}   # uid -> Unit
         self.civilians        = {}   # uid -> Civilian
         self.placed_buildings = {}   # bid_instance_id -> PlacedBuilding
@@ -90,18 +99,15 @@ class World:
         self.credits          = {"regency": 5000, "frontline": 3000,
                                   "sovereign": 5000, "oligarchy": 4000}
         self.roe_manager      = ROEManager()
-        self.power            = {"regency": 100}
+        self.power            = {player_faction: 100}
 
         self.unit_queues      = {}   # bld_instance_id -> ProductionQueue
         self._income_timer    = 0.0
-        
-        # AI Factions
-        self.ai_factions = {
-            "sovereign": AIFaction("sovereign"),
-            "oligarchy": AIFaction("oligarchy")
-        }
 
-        # Spawn some initial civilians at Kirk Rally
+        enemy = self._ENEMY_MAP.get(player_faction, "sovereign")
+        self.ai_factions = {enemy: AIFaction(enemy)}
+
+        # Spawn civilians at Kirk Rally
         from game.map_data import KIRK_RALLY
         kx, ky = KIRK_RALLY
         for i in range(25):
@@ -109,10 +115,10 @@ class World:
 
         # Pre-place map buildings as neutral/capturable
         self._place_map_buildings()
-        
-        # Spawn an enemy base for the AI to use
-        self.place_building("reg_hq", "sovereign", 5, 5)
-        self.place_building("reg_barracks", "sovereign", 10, 5)
+
+        # Enemy base (upper-left corner)
+        self.place_building("reg_hq",       enemy, 3,  2)
+        self.place_building("reg_barracks",  enemy, 8,  2)
 
 
     # ── Spawn ─────────────────────────────────────────────────────────────────
