@@ -113,6 +113,7 @@ class World:
         self._surveilled_timer = 0.0
         self.game_over        = self.GAME_OVER_NONE
         self.events           = []   # [(event_type, payload)] consumed each frame by main
+        self.wrecks           = []   # [(gx, gy, timer)] visual wreck markers
 
         enemy = self._ENEMY_MAP.get(player_faction, "sovereign")
         self.ai_factions = {enemy: AIFaction(enemy)}
@@ -269,7 +270,7 @@ class World:
         for cid in dead_civs:
             del self.civilians[cid]
 
-        # Remove dead units after a delay (keep for death render)
+        # Remove dead units — leave wrecks for heavy units
         dead = [uid for uid, u in self.units.items() if u.state == STATE_DEAD]
         for uid in dead:
             u = self.units[uid]
@@ -277,7 +278,12 @@ class World:
                 pb = self.placed_buildings.get(u.garrisoned_in)
                 if pb and uid in pb.garrison:
                     pb.garrison.remove(uid)
+            if u.armor_type in ("heavy", "medium"):
+                self.wrecks.append([u.gx, u.gy, 30.0])  # 30s wreck marker
             del self.units[uid]
+
+        # Tick + cull wrecks
+        self.wrecks = [[gx, gy, t - dt] for gx, gy, t in self.wrecks if t - dt > 0]
 
         # Buildings (Capture + Income)
         for iid in list(self.placed_buildings.keys()):

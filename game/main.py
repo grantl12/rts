@@ -60,6 +60,7 @@ def main():
     show_help      = False  # ? key toggles keybind overlay
     _prev_infamy   = 0
     _ability_cd    = {"q": 0.0, "e": 0.0}  # seconds remaining on cooldown
+    _alert_flash   = 0.0   # seconds of red border flash remaining
 
     while True:
         dt = clock.tick(FPS)
@@ -261,11 +262,15 @@ def main():
         cur_inf = world.roe_manager.infamy
         if _prev_infamy < 200 <= cur_inf:
             notifs.add("!! SCRUTINIZED — OVERSIGHT ACTIVE", (220, 180, 0))
+            _alert_flash = 0.5
         elif _prev_infamy < 400 <= cur_inf:
             notifs.add("!! SURVEILLED — FRONTLINE DRONES INCOMING", (255, 140, 0))
+            _alert_flash = 0.8
         elif _prev_infamy < 750 <= cur_inf:
             notifs.add("!! SANCTIONED — HEAVY PRODUCTION FROZEN", (220, 40, 30))
+            _alert_flash = 1.2
         _prev_infamy = cur_inf
+        _alert_flash = max(0.0, _alert_flash - dt_sec)
 
         # Consume world events → notifications
         for ev_type, payload in world.events:
@@ -285,6 +290,9 @@ def main():
                     notifs.add("!! BOLO TARGET SECURED — +§500 BONUS", (0, 255, 100))
                 else:
                     notifs.add("!! BOLO TARGET ACQUIRED BY ENEMY", (255, 80, 30))
+                    _alert_flash = 0.4
+            elif ev_type == "building_destroyed" and payload["faction"] == PLAYER_FACTION:
+                _alert_flash = 0.6
         world.events.clear()
 
         for k in _ability_cd:
@@ -319,6 +327,17 @@ def main():
             pygame.draw.circle(screen, (220, 50, 50), (int(kx), int(ky)), 16, 1)
             lbl = font_sm.render("KIRK RALLY", True, (220, 50, 50))
             screen.blit(lbl, (int(kx) - lbl.get_width() // 2, int(ky) - 20))
+
+        # Draw wrecks (persistent markers for dead heavy/medium units)
+        for gx, gy, timer in world.wrecks:
+            wx, wy = cam.world_to_screen(gx, gy)
+            alpha = min(255, int(timer * 12))
+            col = tuple(int(c * alpha / 255) for c in (80, 60, 40))
+            # X wreck symbol
+            pygame.draw.line(screen, col, (wx - 6, wy - 10), (wx + 6, wy - 2), 2)
+            pygame.draw.line(screen, col, (wx + 6, wy - 10), (wx - 6, wy - 2), 2)
+            pygame.draw.ellipse(screen, (int(40 * alpha / 255), 8, 6),
+                                (wx - 8, wy - 2, 16, 5))
 
         # Draw units
         for u in sorted(world.units.values(), key=lambda u: u.gy):
@@ -374,6 +393,13 @@ def main():
 
         # Selection info strip (bottom of screen, above sidebar bottom)
         _draw_selection_info(screen, selection, world, font_sm, WIN_H, WIN_W - SIDEBAR_W)
+
+        # Alert flash — red border when bad things happen
+        if _alert_flash > 0:
+            alpha = min(200, int(_alert_flash * 300))
+            border_col = (220, 30, 30)
+            bw = max(2, int(_alert_flash * 8))
+            pygame.draw.rect(screen, border_col, (0, 0, WIN_W, WIN_H), bw)
 
         # ROE 5 confirmation overlay (drawn last, over everything)
         if roe5_confirm:
