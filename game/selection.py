@@ -12,7 +12,9 @@ class SelectionManager:
         self.selected_uids  = set()
         self._drag_start    = None
         self._drag_rect     = None
-        self.attack_move    = False   # A key held = attack-move order
+        self.attack_move    = False
+        self._last_click_uid = None   # for double-click detection
+        self._last_click_time = 0
 
     # ── Input ─────────────────────────────────────────────────────────────────
 
@@ -43,11 +45,24 @@ class SelectionManager:
                 hits = player_units
             self._set_selection(hits, world)
         else:
-            # Single click
+            # Single click (or double-click for type-select)
             if not hud.hit_sidebar(pos):
                 u = world.unit_at_screen(mx, my, cam)
                 if u:
-                    if pygame.key.get_pressed()[pygame.K_LSHIFT]:
+                    now = pygame.time.get_ticks()
+                    is_double = (u.uid == self._last_click_uid
+                                 and now - self._last_click_time < 400)
+                    self._last_click_uid  = u.uid
+                    self._last_click_time = now
+                    if is_double:
+                        # Select all visible units of same type and faction
+                        same = [v for v in world.units.values()
+                                if v.utype == u.utype
+                                and v.faction == u.faction
+                                and v.state != STATE_DEAD
+                                and not v.garrisoned_in]
+                        self._set_selection(same, world)
+                    elif pygame.key.get_pressed()[pygame.K_LSHIFT]:
                         self._toggle(u.uid, world)
                     else:
                         self._set_selection([u], world)

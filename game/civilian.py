@@ -110,7 +110,7 @@ class Civilian:
             self.gx += dx / dist * min(step, dist)
             self.gy += dy / dist * min(step, dist)
 
-    def take_damage(self, amount, world):
+    def take_damage(self, amount, world, attacker=None):
         self.hp -= amount
         if self.hp <= 0:
             self.state = "dead"

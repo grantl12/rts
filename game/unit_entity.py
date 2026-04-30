@@ -227,7 +227,7 @@ class Unit:
             elif self.armor_type == "medium":
                 mod = ARMOR_MOD.get(("medium", target.armor_type), 1.0)
             
-            target.take_damage(int(atk_dmg * mod), world)
+            target.take_damage(int(atk_dmg * mod), world, attacker=self)
             self._gain_xp(5.0)
             
             self.atk_timer = self.atk_cooldown_max
@@ -251,14 +251,15 @@ class Unit:
             # Heal on rank up
             self.hp = min(self.max_hp, self.hp + self.max_hp * 0.2)
 
-    def take_damage(self, amount, world=None):
+    def take_damage(self, amount, world=None, attacker=None):
         self.hp = max(0, self.hp - amount)
         self.flash_timer = 0.12
         if self.hp == 0:
             self.state = STATE_DEAD
+            if attacker:
+                attacker._gain_xp(25.0)  # kill bonus XP
             if world and self.faction == "neutral":
                 world.roe_manager.add_infamy(10)
-                # Press bureau amplifies infamy when watching collateral damage
                 for pb in world.placed_buildings.values():
                     if "infamy_amplify" in pb.bdef.get("flags", []):
                         if math.dist((self.gx, self.gy), (pb.gx, pb.gy)) < 12.0:
