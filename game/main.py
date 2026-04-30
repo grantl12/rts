@@ -27,17 +27,23 @@ def main():
     pygame.display.set_caption(TITLE)
     clock  = pygame.time.Clock()
 
-    PLAYER_FACTION = _menu_mod.run(screen, clock, FPS)
+    while True:
+        PLAYER_FACTION = _menu_mod.run(screen, clock, FPS)
+        _run_mission(screen, clock, PLAYER_FACTION)
 
+
+def _run_mission(screen, clock, PLAYER_FACTION):
+    MAP_PHASE = 0   # 0=pristine 1=scarred 2=shattered — wire to campaign save later
     cam       = Camera(WIN_W, WIN_H)
-    world     = World(PLAYER_FACTION)
-    fog       = FogManager()
+    world     = World(PLAYER_FACTION, map_phase=MAP_PHASE)
+    fog       = FogManager(map_phase=MAP_PHASE)
     selection = SelectionManager()
     sidebar   = BuildSidebar(PLAYER_FACTION)
     hud       = HUD(WIN_W, WIN_H)
 
     font_sm  = pygame.font.SysFont("couriernew", 9)
     notifs   = NotificationManager()
+    _deepfake_overlay = 0.0   # seconds remaining on deepfake reveal overlay
 
     # ── Intro State ──
     intro_state = "rally" # rally, shot, panic, end
@@ -95,6 +101,15 @@ def main():
                     "sovereign": [("proxy",3),("contractor",1)],
                     "oligarchy": [("contractor",2),("gravy_seal",2)],
                 }
+                # Place player starting HQ before win/loss check runs
+                _HQ_BID = {
+                    "regency":   "reg_hq",
+                    "frontline": "reg_hq",
+                    "sovereign": "sov_hq",
+                    "oligarchy": "oli_hq",
+                }
+                world.place_building(_HQ_BID.get(PLAYER_FACTION, "reg_hq"),
+                                     PLAYER_FACTION, 12, 21)
                 sx0, sy0 = 13, 19
                 for utype, count in _STARTER.get(PLAYER_FACTION, [("gravy_seal",3)]):
                     for i in range(count):
@@ -218,7 +233,7 @@ def main():
                                 world.credits[PLAYER_FACTION] -= 200
                                 _ability_cd["e"] = 45.0
                                 notifs.add("E — BACKUP CALLED (−§200)", (0, 255, 100))
-                    # Tab = end mission early → post-op screen
+                    # Tab = end mission early → post-op screen → return to menu
                     if event.key == pygame.K_TAB and not roe5_confirm:
                         detained = sum(pb.civs_held for pb in world.placed_buildings.values()
                                        if pb.faction == PLAYER_FACTION)
@@ -226,6 +241,7 @@ def main():
                                         world.roe_manager.infamy,
                                         hud.mission_time,
                                         world.credits.get(PLAYER_FACTION, 0))
+                        return
 
             cam.handle_event(event)
 
@@ -267,7 +283,7 @@ def main():
         cam.update()
         world.update(dt, PLAYER_FACTION)
 
-        # Game over detection → post-op screen
+        # Game over detection → post-op screen → return to menu
         if intro_state == "end" and world.game_over != 0:
             detained = sum(pb.civs_held for pb in world.placed_buildings.values()
                            if pb.faction == PLAYER_FACTION)
@@ -275,7 +291,7 @@ def main():
                             world.roe_manager.infamy,
                             hud.mission_time,
                             world.credits.get(PLAYER_FACTION, 0))
-            pygame.quit(); sys.exit()
+            return
 
         extra_v = []
         if intro_state != "end":
@@ -325,6 +341,16 @@ def main():
                     _alert_flash = 0.4
             elif ev_type == "building_destroyed" and payload["faction"] == PLAYER_FACTION:
                 _alert_flash = 0.6
+            elif ev_type == "bus_unloaded":
+                notifs.add(f"BUS DELIVERED: {payload['count']} DETAINEES — +§{payload['credits']}", (0, 200, 160))
+            elif ev_type == "runner_arrived":
+                notifs.add("!! HVP REACHED EXTRACTION — ENEMY REINFORCEMENTS INBOUND", (255, 60, 30))
+                _alert_flash = 1.2
+                cam.pan_to(payload["gx"], payload["gy"])
+            elif ev_type == "deepfake_live":
+                notifs.add("!! KIRK AI DEEPFAKE DEPLOYED — +50 INFAMY", (180, 40, 255))
+                _deepfake_overlay = 6.0
+                _alert_flash = 1.5
             elif ev_type == "salvage":
                 notifs.add(f"SALVAGE — +§{payload['credits']}", (200, 160, 30))
             elif ev_type == "power_low":
@@ -333,6 +359,7 @@ def main():
 
         for k in _ability_cd:
             _ability_cd[k] = max(0.0, _ability_cd[k] - dt_sec)
+        _deepfake_overlay = max(0.0, _deepfake_overlay - dt_sec)
 
         notifs.update(dt_sec)
 
@@ -341,13 +368,13 @@ def main():
         hud.roe_name      = world.roe_manager.get_name()
         hud.roe_col       = world.roe_manager.get_color()
         hud.power_balance = world.power_balance
-        hud.mission_time += dt // 1000 if dt >= 1000 else 0
+        hud.mission_time = int(world._mission_elapsed)
         hud.update(dt)
 
         # ── Draw ──────────────────────────────────────────────────────────────
         screen.fill(DARK)
 
-        draw_terrain(screen, cam, fog)
+        draw_terrain(screen, cam, fog, map_phase=world.map_phase)
 
         # Draw placed buildings (world buildings + map static)
         _draw_placed_buildings(screen, cam, world, font_sm, selection, fog)
@@ -448,6 +475,10 @@ def main():
 
         # Notifications (bottom-left, above selection info)
         notifs.draw(screen, x=8, bottom_y=WIN_H - 55)
+
+        # Deepfake reveal overlay
+        if _deepfake_overlay > 0:
+            _draw_deepfake_overlay(screen, WIN_W, WIN_H, _deepfake_overlay)
 
         # Help overlay (? / H key)
         if show_help:
@@ -758,6 +789,54 @@ def _draw_roe5_confirm(surf, font_sm, sw, sh):
         col = (255, 166, 25) if "Y]" in line else (200, 200, 200)
         lbl = f_med.render(line, True, col)
         surf.blit(lbl, (sw // 2 - lbl.get_width() // 2, sh // 2 - 20 + i * 22))
+
+
+def _draw_deepfake_overlay(surf, sw, sh, timer):
+    fade = min(1.0, timer) * min(1.0, (timer - 0.0) / 0.3)  # fade in fast, hold, fade out at end
+    if timer < 1.5:
+        fade = timer / 1.5
+    alpha = int(fade * 210)
+
+    overlay = pygame.Surface((sw, sh), pygame.SRCALPHA)
+    overlay.fill((20, 0, 40, alpha))
+    surf.blit(overlay, (0, 0))
+
+    if alpha < 30:
+        return
+
+    f_title = pygame.font.SysFont("couriernew", 30, bold=True)
+    f_med   = pygame.font.SysFont("couriernew", 13, bold=True)
+    f_sm    = pygame.font.SysFont("couriernew", 10)
+
+    PURPLE = (180, 40, 255)
+    DIM    = (100, 20, 160)
+
+    # Glitch offset — shifts slightly over time
+    glitch = int(math.sin(pygame.time.get_ticks() * 0.03) * 3)
+
+    t = f_title.render("BREAKING: KIRK AI DEEPFAKE DEPLOYED", True, PURPLE)
+    surf.blit(t, (sw // 2 - t.get_width() // 2 + glitch, sh // 2 - 80))
+
+    lines = [
+        "TECH-STATE HAS RELEASED A SYNTHETIC RECONSTRUCTION OF KIRK.",
+        "THE AI IS CURRENTLY LIVESTREAMING ON ALL PLATFORMS.",
+        "INITIAL ENGAGEMENT: 4.2M VIEWERS. INFAMY COST: +50.",
+        "",
+        "THE OFFICIAL VERSION IS NOW CONTESTED.",
+    ]
+    for i, line in enumerate(lines):
+        col = (220, 180, 255) if line else DIM
+        lbl = f_sm.render(line, True, col)
+        surf.blit(lbl, (sw // 2 - lbl.get_width() // 2, sh // 2 - 30 + i * 18))
+
+    # Tech-State watermark
+    wm = f_med.render("[ TECH-STATE MEDIA DIVISION — UNAUTHORIZED REDISTRIBUTION PROHIBITED ]",
+                       True, DIM)
+    surf.blit(wm, (sw // 2 - wm.get_width() // 2, sh // 2 + 80))
+
+    # Scanline effect — every 4px
+    for y in range(0, sh, 4):
+        pygame.draw.line(surf, (0, 0, 0, 30), (0, y), (sw, y))
 
 
 def _point_in_poly(px, py, pts):

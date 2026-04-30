@@ -3,7 +3,7 @@ World state — units, placed buildings, production queues, game logic tick.
 """
 import math
 from typing import Optional
-from game.unit_entity import Unit, STATE_DEAD
+from game.unit_entity import Unit, ComplianceBus, STATE_DEAD
 from game.building_defs import BUILDINGS as BDEF
 from game.map_data import BUILDINGS as MAP_BLDS
 from game.roe import ROEManager
@@ -96,8 +96,9 @@ class World:
     # Units blocked from production at SANCTIONED infamy tier
     _HEAVY_TIER = {"contractor", "drone_assault", "unmarked_van"}
 
-    def __init__(self, player_faction="regency"):
+    def __init__(self, player_faction="regency", map_phase=0):
         self.player_faction   = player_faction
+        self.map_phase        = map_phase
         self.units            = {}   # uid -> Unit
         self.civilians        = {}   # uid -> Civilian
         self.placed_buildings = {}   # bid_instance_id -> PlacedBuilding
@@ -113,6 +114,7 @@ class World:
         self._surveilled_timer = 0.0
         self.power_balance    = 0    # net power (negative = underpowered)
         self._deepfake_fired  = False  # Kirk Deepfake mid-game reveal
+        self._mission_elapsed = 0.0   # seconds since intro ended
         self.game_over        = self.GAME_OVER_NONE
         self.events           = []   # [(event_type, payload)] consumed each frame by main
         self.wrecks           = []   # [(gx, gy, timer)] visual wreck markers
@@ -141,11 +143,20 @@ class World:
             bolo.is_bolo = True
             self._bolo_uid = bolo.uid
 
+        # Pre-place wreck markers for scarred/shattered phases
+        if map_phase >= 1:
+            _rng = random.Random(map_phase * 7 + 13)  # deterministic per phase
+            count = 10 if map_phase == 1 else 22
+            for _ in range(count):
+                wx = _rng.uniform(4, 23)
+                wy = _rng.uniform(3, 20)
+                self.wrecks.append([wx, wy, 99999.0])  # permanent phase wrecks
+
 
     # ── Spawn ─────────────────────────────────────────────────────────────────
 
     def spawn_unit(self, utype, faction, gx, gy) -> Unit:
-        u = Unit(utype, faction, gx, gy)
+        u = ComplianceBus(gx, gy, faction) if utype == "compliance_bus" else Unit(utype, faction, gx, gy)
         self.units[u.uid] = u
         return u
 
@@ -236,8 +247,15 @@ class World:
 
     def update(self, dt_ms: int, player_faction="regency"):
         dt = dt_ms / 1000.0
+        self._mission_elapsed += dt
         self.roe_manager.update(dt)
         self._apply_infamy_consequences(dt, player_faction)
+
+        # Kirk Deepfake reveal at 5 minutes
+        if not self._deepfake_fired and self._mission_elapsed >= 300.0:
+            self._deepfake_fired = True
+            self.roe_manager.add_infamy(50)
+            self.events.append(("deepfake_live", {}))
 
         for ai in self.ai_factions.values():
             ai.update(dt, self)
@@ -266,7 +284,34 @@ class World:
                 for i in range(3):
                     self.spawn_unit("proxy", enemy, c.gx + i * 0.8, c.gy)
                 self.roe_manager.add_infamy(25)
+                self.events.append(("runner_arrived", {"gx": c.gx, "gy": c.gy}))
         
+        # Compliance Bus — board nearby civs, unload at friendly pen/HQ
+        for u in self.units.values():
+            if not isinstance(u, ComplianceBus) or u.state == STATE_DEAD:
+                continue
+            if not u.is_full:
+                for c in list(self.civilians.values()):
+                    if c.state == "dead":
+                        continue
+                    if math.dist((u.gx, u.gy), (c.gx, c.gy)) < ComplianceBus.BOARD_RANGE:
+                        u.board(c)
+                        c.state = "dead"
+                        if u.is_full:
+                            break
+            if u.passengers:
+                for pb in self.placed_buildings.values():
+                    if pb.faction != player_faction:
+                        continue
+                    flags = pb.bdef.get("flags", [])
+                    if "holding_pen" not in flags and "command" not in flags:
+                        continue
+                    cx = pb.gx + pb.bdef["w"] / 2
+                    cy = pb.gy + pb.bdef["h"] / 2
+                    if math.dist((u.gx, u.gy), (cx, cy)) < ComplianceBus.UNLOAD_RANGE:
+                        self._unload_bus(u, pb, player_faction)
+                        break
+
         # Cleanup dead civs
         dead_civs = [cid for cid, c in self.civilians.items() if c.state == "dead"]
         for cid in dead_civs:
@@ -345,8 +390,10 @@ class World:
                             c.state = "dead"
                             self.credits[pb.faction] = self.credits.get(pb.faction, 0) + reward
 
-        # Win/loss detection
-        if self.game_over == self.GAME_OVER_NONE:
+        # Win/loss detection — skip until player has units (intro still running)
+        has_player_units = any(u.faction == player_faction and u.state != STATE_DEAD
+                               for u in self.units.values())
+        if self.game_over == self.GAME_OVER_NONE and has_player_units:
             enemy = self._ENEMY_MAP.get(player_faction, "sovereign")
             player_hq_alive = any(pb.faction == player_faction and "command" in pb.bdef.get("flags", [])
                                   for pb in self.placed_buildings.values())
@@ -441,6 +488,20 @@ class World:
             # Spawn near map center so player sees it approaching
             self.spawn_unit("drone_scout", "frontline",
                             14 + random.uniform(-3, 3), 12 + random.uniform(-3, 3))
+
+    def _unload_bus(self, bus: "ComplianceBus", pen: PlacedBuilding, player_faction: str):
+        count   = len(bus.passengers)
+        payout  = count * ComplianceBus.DELIVERY_RATE
+        cap     = pen.bdef.get("garrison", 999)
+        pen.civs_held = min(cap, pen.civs_held + count)
+        if bus.bolo_aboard:
+            payout += 500
+            self._bolo_uid = None
+            self.events.append(("bolo_captured", {"faction": player_faction}))
+            bus.bolo_aboard = False
+        self.credits[player_faction] = self.credits.get(player_faction, 0) + payout
+        self.events.append(("bus_unloaded", {"count": count, "credits": payout}))
+        bus.passengers = []
 
     # ── Map pre-placement ─────────────────────────────────────────────────────
 

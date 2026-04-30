@@ -14,7 +14,24 @@ def _scaled(cam, tw, th, wh):
     return int(tw * cam.zoom), int(th * cam.zoom), int(wh * cam.zoom)
 
 
-def draw_terrain(surf: pygame.Surface, cam, fog=None):
+def _phase_color(col, map_phase):
+    """Shift terrain color toward burnt/ruined based on map phase."""
+    r, g, b = col
+    if map_phase >= 1:
+        # Scarred: darken + slight brown tint
+        r = min(255, int(r * 0.72 + 18))
+        g = int(g * 0.62)
+        b = int(b * 0.55)
+    if map_phase >= 2:
+        # Shattered: heavy desaturation toward ash grey
+        avg = (r + g + b) // 3
+        r = int(r * 0.35 + avg * 0.65)
+        g = int(g * 0.35 + avg * 0.65)
+        b = int(b * 0.35 + avg * 0.65)
+    return (max(0, min(255, r)), max(0, min(255, g)), max(0, min(255, b)))
+
+
+def draw_terrain(surf: pygame.Surface, cam, fog=None, map_phase=0):
     tw, th, _ = _scaled(cam, TILE_W, TILE_H, WALL_H)
     hw, hh = tw // 2, th // 2
 
@@ -23,26 +40,25 @@ def draw_terrain(surf: pygame.Surface, cam, fog=None):
             t = TERRAIN[gy][gx]
             if t == VOID:
                 continue
-            
+
             # Fog of War check
             fstate = VISION
             if fog:
                 fstate = fog.grid[gy][gx]
-            
+
             if fstate == SHROUD:
                 continue
-                
+
             cx, cy = cam.world_to_screen(gx + 0.5, gy + 0.5)
             pts = [(cx, cy - hh), (cx + hw, cy), (cx, cy + hh), (cx - hw, cy)]
-            
-            col = list(TILE_COLORS[t])
-            edge_col = list(TEAL_DIM)
-            
+
+            col = _phase_color(list(TILE_COLORS[t]), map_phase)
+            edge_col = _phase_color(list(TEAL_DIM), map_phase)
+
             if fstate == FOG:
-                # Dim the color
-                col = [c // 1.5 for c in col]
-                edge_col = [c // 1.5 for c in edge_col]
-                
+                col      = tuple(int(c * 0.65) for c in col)
+                edge_col = tuple(int(c * 0.65) for c in edge_col)
+
             pygame.draw.polygon(surf, col, pts)
             pygame.draw.polygon(surf, edge_col, pts, 1)
 

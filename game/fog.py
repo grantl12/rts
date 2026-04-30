@@ -11,14 +11,26 @@ FOG    = 1  # Grey (explored but no vision)
 VISION = 2  # Clear
 
 class FogManager:
-    def __init__(self, width=W, height=H):
+    def __init__(self, width=W, height=H, map_phase=0):
         self.w = width
         self.h = height
-        # Start fully explored (FOG) so map layout is always visible;
-        # VISION requires active unit/building line-of-sight.
         self.grid = [[FOG for _ in range(width)] for _ in range(height)]
-        # last_vision stores which tiles were visible in the last update to update FOG
-        self.vision_sources = [] # list of (gx, gy, radius)
+        self.vision_sources = []
+
+        if map_phase >= 2:
+            # Shattered — 60% SHROUD; only a corridor around the center starts explored
+            cx, cy = width // 2, height // 2
+            for y in range(height):
+                for x in range(width):
+                    if abs(x - cx) > 9 or abs(y - cy) > 7:
+                        self.grid[y][x] = SHROUD
+        elif map_phase >= 1:
+            # Scarred — outer border tiles are SHROUD
+            border = 4
+            for y in range(height):
+                for x in range(width):
+                    if x < border or x >= width - border or y < border or y >= height - border:
+                        self.grid[y][x] = SHROUD
         
     def update(self, world, player_faction, extra_sources=None):
         # 1. Turn current VISION into FOG

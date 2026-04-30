@@ -23,7 +23,7 @@ FACTION_BUILD_MENU = {
             "reg_pen", "reg_tower", "reg_wall",
             "reg_propaganda", "reg_relay",
         ],
-        "units": ["gravy_seal", "ice_agent", "unmarked_van"],
+        "units": ["gravy_seal", "ice_agent", "unmarked_van", "compliance_bus"],
     },
     "frontline": {
         "structures": ["fl_drone", "fl_press"],

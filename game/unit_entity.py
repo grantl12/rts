@@ -12,6 +12,7 @@ UNIT_DEFS = {
     "drone_scout":   ( 80, 5.0, 10,  6.0, 0.8,  "light",     "frontline", 300),
     "drone_assault": (200, 3.5, 28,  5.5, 1.2,  "medium",    "frontline", 550),
     "unmarked_van":  (400, 3.0, 20,  4.0, 1.5,  "medium",    "regency",   450),
+    "compliance_bus":(350, 2.5,  0,  0.0, 0.0,  "medium",    "regency",   800),
 }
 
 FACTION_COLORS = {
@@ -299,6 +300,8 @@ class Unit:
         "drone_assault": [(0,-11),(4,-4),(11,-4),(5,3),(7,11),(0,7),(-7,11),(-5,3),(-11,-4),(-4,-4)],
         # Unmarked Van — wide flat rectangle
         "unmarked_van":  [(-12,-6),(12,-6),(12,6),(-12,6)],
+        # Compliance Bus — longer than the van, rounded front hint
+        "compliance_bus":[(-16,-8),(-12,-10),(12,-10),(16,-8),(16,8),(12,10),(-12,10),(-16,8)],
     }
     _DEFAULT_SHAPE = [(-7,-7),(7,-7),(7,7),(-7,7)]  # square fallback
 
@@ -363,3 +366,68 @@ class Unit:
     @property
     def tile(self):
         return (int(self.gx), int(self.gy))
+
+
+class ComplianceBus(Unit):
+    MAX_PASSENGERS = 30
+    BOARD_RANGE    = 2.5   # tiles — civs within this are auto-boarded
+    UNLOAD_RANGE   = 2.0   # tiles from pen/HQ center to trigger unload
+    DELIVERY_RATE  = 75    # § per passenger delivered (3× the standard 25)
+
+    def __init__(self, gx, gy, faction="regency"):
+        super().__init__("compliance_bus", faction, gx, gy)
+        self.passengers  = []    # civilian uids currently aboard
+        self.bolo_aboard = False
+
+    @property
+    def is_full(self):
+        return len(self.passengers) >= self.MAX_PASSENGERS
+
+    def board(self, civ):
+        if self.is_full:
+            return False
+        self.passengers.append(civ.uid)
+        if getattr(civ, "is_bolo", False):
+            self.bolo_aboard = True
+        return True
+
+    def update(self, dt_sec, world):
+        # Slow down when heavily loaded
+        self.speed = 2.0 if len(self.passengers) > 15 else 2.5
+        super().update(dt_sec, world)
+
+    def draw(self, surf: pygame.Surface, cam):
+        if self.state == STATE_DEAD or self.garrisoned_in:
+            return
+
+        sx, sy = cam.world_to_screen(self.gx, self.gy)
+        col = (255, 255, 255) if self.flash_timer > 0 else (28, 80, 180)
+
+        pygame.draw.ellipse(surf, (0, 8, 6), (sx - 18, sy - 3, 36, 8))
+
+        if self.selected:
+            pygame.draw.circle(surf, (0, 255, 100), (sx, sy - 8), 20, 2)
+
+        raw = self._SHAPES["compliance_bus"]
+        pts = [(sx + dx, sy - 8 + dy) for dx, dy in raw]
+        pygame.draw.polygon(surf, col, pts)
+        pygame.draw.polygon(surf, (0, 0, 0), pts, 1)
+
+        # Yellow side stripe
+        stripe_pts = [(sx - 12, sy - 10), (sx + 12, sy - 10),
+                      (sx + 12, sy - 7),  (sx - 12, sy - 7)]
+        pygame.draw.polygon(surf, (255, 220, 0), stripe_pts)
+
+        # Passenger count badge — always visible
+        f = pygame.font.SysFont("couriernew", 8, bold=True)
+        pax = len(self.passengers)
+        badge_col = (0, 200, 100) if pax < 20 else (255, 180, 0) if pax < 28 else (255, 60, 60)
+        badge = f.render(f"{pax}/{self.MAX_PASSENGERS}", True, badge_col)
+        surf.blit(badge, (sx - badge.get_width() // 2, sy - 26))
+
+        if self.selected:
+            f2 = pygame.font.SysFont("couriernew", 7)
+            lbl = f2.render("SAFE HARBOR EXPRESS", True, (200, 220, 255))
+            surf.blit(lbl, (sx - lbl.get_width() // 2, sy - 36))
+
+        self._draw_hp_bar(surf, sx, sy)

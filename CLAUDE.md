@@ -168,21 +168,22 @@ All 4 factions have `FACTION_BUILD_MENU` entries:
 ## 🚧 Pending / Next Up
 
 ### Near-term gameplay
-- [ ] Double-click unit to select all of that type visible on screen
-- [ ] Unit kill grant extra XP (currently only attack XP, not kill XP)
-- [ ] Press briefing mini-game after post-op (Gaslight/Double Down/Redact spin tree)
-- [ ] BOLO mechanic — per-mission civilian target, ALPR Scout unit
-- [ ] Compliance Bus — 30-seat escort objective, 3× credit multiplier
+- [x] Compliance Bus — `ComplianceBus(Unit)` subclass; auto-boards civs within 2.5 tiles; 3× payout (§75/pax) on delivery to pen/HQ; BOLO bonus preserved on delivery
+- [x] Runner ambush notification — `runner_arrived` event fires camera pan + red alert flash + notification
+- [x] Kirk Deepfake reveal — at 5 min (`world._mission_elapsed >= 300`): +50 infamy, 6s purple overlay, `deepfake_live` event
+- [x] Mission timer fixed — `hud.mission_time = int(world._mission_elapsed)`; postop receives correct int seconds
+- [x] Return-to-menu after post-op — `main()` outer loop + `_run_mission()` helper; no more `sys.exit()`
+- [x] Player starting HQ — placed at `(12, 21)` when intro ends; prevents instant defeat condition
 
-### Vehicle Systems (planned)
-- Vehicle_Base: Idle/Audited/Moving/Wrecked states
-- Sovereign VBIED — civilian car paranoia mechanic
-- Wrecks persistent; Oligarchy can salvage them
+### Vehicle Systems (planned) — see `docs/VEHICLE_LOGIC.md`
+- [ ] Vehicle_Base class: Idle/Audited/Moving/Wrecked states
+- [ ] Sovereign VBIED — civilian car paranoia mechanic
+- [ ] Wrecks persistent; Oligarchy Salvage Yard harvests them for credits
 
 ### Architecture
-- [ ] Multiple map phases (map_phase: pristine/scarred/shattered visual variants)
+- [ ] Multiple map phases — `map_phase` int on World; pristine/scarred/shattered visual variants; see `docs/MAP_EVOLUTION.md`
 - [ ] Main menu satellite thermal view background
-- [ ] Supabase world_state persistence (razed buildings, wreck positions)
+- [ ] Campaign save state — 3-slot system (one per faction); see `docs/CAMPAIGN_STRUCTURE.md`
 
 ---
 

@@ -5,7 +5,7 @@
 ---
 
 ## STATUS KEY
-- ✅ Designed & Greyboxed
+- ✅ Implemented & Playable (Python/pygame)
 - 🔵 Designed, Not Built
 - 🟡 Concept Only
 - 🔴 Backlog / Scope Question
@@ -13,8 +13,11 @@
 ---
 
 ## THEATER 1: The Quad of Compliance ✅
-**Setting:** University plaza. Site of The Incident (assassination of the Martyr).
-**Geometry:** Central Memorial, Admin Block (West Wing), Parking Garage (East).
+**Setting:** UVU campus plaza. Site of The Incident (Kirk assassination).
+**Geometry:** 28×24 tile isometric grid. KIRK_RALLY center (~14, 12). Player spawns (13, 19). Enemy base (3, 2).
+**Implemented buildings:** Campus Café, Student Library, Medical Center, Delta/Sigma Houses, Audit Points, Clock Tower (sensor), Parking (depot), Admin, Engineering, Sorensen (command), Woodbury (resource), Losee (barracks), Fulton Library (intel).
+**Civilians:** 25 spawned at KIRK_RALLY with ±4 tile scatter. 3 Runner HVPs. 1 BOLO target.
+**AI factions:** Sovereign + Oligarchy (active production + order ticks).
 
 ### Campaign A — THE REGENCY: "The Official Version"
 - **Vibe:** Daytime, sterile, bright. Neon grid is clean blue.
@@ -220,7 +223,7 @@ High priority for replayability. Random map gen with:
 - **Helicopters:** Same — flag for v2, don't architect around them.
 
 ### Base Builder (C&C Style)
-- Already partially in codebase (building_base.tscn, building.gd, suburban_house.gd)
+- Partially implemented: `building_defs.py` has 40+ buildings; `sidebar.py` has per-faction build menus; `world.py` handles placement.
 - **Target flow:** Each faction starts with an HQ structure. Buildings unlock unit tiers. Resources fund construction.
-- **Faction economies are already differentiated** (Federal Grants, Crowdfunding, Kickback, Black Market) — wire these to the build queue.
-- **Priority:** After skirmish loop is playable.
+- **Faction economies are already differentiated** (Administrative Credits, Fundraising Windows, Kickback, Staffing Agency pens) — wire these to build queue gating.
+- **Priority:** After skirmish loop is stable.
