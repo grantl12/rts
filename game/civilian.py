@@ -10,6 +10,7 @@ NORMIE      = "normie"
 PURPLE_HAIR = "purple_hair" # Higher threat/value
 RIOT_GEAR   = "riot_gear"   # Self-taught tactician
 RUNNER      = "runner"      # HVP (High Value Person)
+KIRK        = "kirk"        # The Kirk Catalyst — special render
 
 class Civilian:
     _next_id = 0

@@ -74,9 +74,27 @@ class AIFaction:
                 u.order_move(wp[1:] if len(wp)>1 else [])
             return
 
-        # 2. Find player units or buildings to attack
+        # 2. Attack nearest player unit
         player_faction = "regency"
-...
+        player_units = [u for u in world.units.values() if u.faction == player_faction]
+        if player_units:
+            target_unit = random.choice(player_units)
+            for u in idle_units:
+                from game.pathfinding import find_path
+                blocked = world.blocked_tiles()
+                wp = find_path((u.gx, u.gy), (target_unit.gx, target_unit.gy), blocked)
+                u.order_move(wp[1:] if len(wp) > 1 else [])
+            return
+
+        # 3. Attack player HQ as last resort
+        player_hq = next((pb for pb in world.placed_buildings.values()
+                          if pb.faction == player_faction and "command" in pb.bdef.get("flags", [])), None)
+        if player_hq:
+            for u in idle_units:
+                from game.pathfinding import find_path
+                blocked = world.blocked_tiles()
+                wp = find_path((u.gx, u.gy), (player_hq.gx, player_hq.gy), blocked)
+                u.order_move(wp[1:] if len(wp) > 1 else [])
 
     def _do_raids(self, world):
         # Target player holding pens specifically

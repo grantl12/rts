@@ -349,14 +349,5 @@ class World:
             pb.display_name = name
             pb.display_sub  = sub
             self.placed_buildings[iid] = pb
- pb
-     self.placed_buildings[iid] = pb
- pb
-= max_hp
-            # Override display name from map data
-            pb.display_name = name
-            pb.display_sub  = sub
-            self.placed_buildings[iid] = pb
- pb
-     self.placed_buildings[iid] = pb
- pb
+            if bdef.get("produces"):
+                self.unit_queues[iid] = ProductionQueue()

@@ -139,7 +139,7 @@ BUILDINGS = {
         "roof_style":  "hangar",
     },
 
-    "reg_pen": {
+    "reg_detention": {
         "name":        "COMPLIANCE CENTER",
         "sub":         "DETENTION FACILITY",
         "category":    "base",
