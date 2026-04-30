@@ -13,7 +13,7 @@ RUNNER      = "runner"      # HVP (High Value Person)
 KIRK        = "kirk"        # The Kirk Catalyst — special render
 
 # Fixed map zones runners flee to (trigger enemy ambush on arrival)
-RUNNER_DESTINATIONS = [(2, 2), (25, 3), (26, 20)]
+RUNNER_DESTINATIONS = [(55.0, 55.0), (10.0, 55.0), (32.0, 15.0)]
 
 
 class Civilian:
