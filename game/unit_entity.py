@@ -318,7 +318,19 @@ class Unit:
 
         # Selection ring
         if self.selected:
-            pygame.draw.circle(surf, (0, 255, 100), (sx, sy - 8), 13, 2)
+                   # Glitched Selection Outline (simulating 16-bit effect)
+        if self.selected:
+            # Main outline - slightly thicker, same base color
+            base_draw_color = base_col if self.flash_timer <= 0 else col
+            main_outline_pts = [(sx + dx, sy - 8 + dy) for dx, dy in raw]
+            pygame.draw.polygon(surf, base_draw_color, main_outline_pts, 2)
+
+            # Glitch effect: two offset, slightly colored outlines
+            offset1_pts = [(sx + dx - 2, sy - 8 + dy - 1) for dx, dy in raw]
+            pygame.draw.polygon(surf, (255, 50, 50), offset1_pts, 1) # Red offset
+
+            offset2_pts = [(sx + dx + 1, sy - 8 + dy + 2) for dx, dy in raw]
+            pygame.draw.polygon(surf, (50, 50, 255), offset2_pts, 1) # Blue offset
 
         # Unit body — distinct polygon per type
         raw = self._SHAPES.get(self.utype, self._DEFAULT_SHAPE)
