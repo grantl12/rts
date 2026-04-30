@@ -112,6 +112,7 @@ class World:
         self._income_timer    = 0.0
         self._surveilled_timer = 0.0
         self.power_balance    = 0    # net power (negative = underpowered)
+        self._deepfake_fired  = False  # Kirk Deepfake mid-game reveal
         self.game_over        = self.GAME_OVER_NONE
         self.events           = []   # [(event_type, payload)] consumed each frame by main
         self.wrecks           = []   # [(gx, gy, timer)] visual wreck markers

@@ -129,6 +129,20 @@ class Unit:
         else:
             self.suppressed = False
 
+        # Panic retreat at <10% HP — flee toward nearest friendly building
+        if (self.hp > 0 and self.hp / self.max_hp < 0.10
+                and self.state != STATE_MOVING and not self.waypoints
+                and not self.garrisoned_in):
+            hq = next((pb for pb in world.placed_buildings.values()
+                       if pb.faction == self.faction
+                       and "command" in pb.bdef.get("flags", [])), None)
+            if hq:
+                from game.pathfinding import find_path
+                blocked = world.blocked_tiles()
+                wp = find_path((self.gx, self.gy), (hq.gx, hq.gy), blocked)
+                if wp:
+                    self.order_move(wp[1:])
+
         # ── Garrisoned Logic ──
         if self.garrisoned_in:
             pb = world.placed_buildings.get(self.garrisoned_in)
