@@ -123,12 +123,20 @@ class World:
         for i in range(25):
             self.spawn_civilian(kx + random.uniform(-4, 4), ky + random.uniform(-4, 4))
 
+        self._bolo_uid = None   # uid of the BOLO target civilian
+
         # Pre-place map buildings as neutral/capturable
         self._place_map_buildings()
 
         # Enemy base (upper-left corner)
         self.place_building("reg_hq",       enemy, 3,  2)
         self.place_building("reg_barracks",  enemy, 8,  2)
+
+        # Designate one random civilian as BOLO target
+        if self.civilians:
+            bolo = random.choice(list(self.civilians.values()))
+            bolo.is_bolo = True
+            self._bolo_uid = bolo.uid
 
 
     # ── Spawn ─────────────────────────────────────────────────────────────────
@@ -316,14 +324,18 @@ class World:
 
             # Pull civilians into holding pens
             if pb.bdef.get("garrison", 0) > 0 and pb.faction != "neutral":
-                # Check for nearby civs
                 for c in list(self.civilians.values()):
                     if math.dist((c.gx, c.gy), (pb.gx + pb.bdef["w"]/2, pb.gy + pb.bdef["h"]/2)) < 3.0:
                         if pb.civs_held < pb.bdef["garrison"]:
                             pb.civs_held += 1
-                            c.state = "dead" # Captured
-                            # Reward for capture?
-                            self.credits[pb.faction] = self.credits.get(pb.faction, 0) + 25
+                            reward = 25
+                            if c.uid == self._bolo_uid:
+                                reward = 500
+                                self._bolo_uid = None
+                                self.events.append(("bolo_captured",
+                                                    {"faction": pb.faction}))
+                            c.state = "dead"
+                            self.credits[pb.faction] = self.credits.get(pb.faction, 0) + reward
 
         # Win/loss detection
         if self.game_over == self.GAME_OVER_NONE:

@@ -37,10 +37,10 @@ class Civilian:
         self._wander_timer = 0.0
         self._panic_timer = 0.0
 
-        # Runner-specific
-        self._destination = None     # (gx, gy) target zone for RUNNER type
+        self._destination = None
         self._reached_dest = False
         self._ambush_spawned = False
+        self.is_bolo = False
 
     def set_destination(self, gx, gy):
         self._destination = (int(gx), int(gy))
@@ -134,6 +134,16 @@ class Civilian:
 
         # Shadow (no alpha needed)
         pygame.draw.ellipse(surf, (0, 8, 6), (sx - 5, sy - 2, 10, 4))
+
+        # BOLO target indicator — pulsing red crosshair
+        if self.is_bolo:
+            r = int(10 + math.sin(pygame.time.get_ticks() * 0.006) * 2)
+            pygame.draw.circle(surf, (220, 30, 30), (sx, sy - 6), r, 1)
+            pygame.draw.line(surf, (220, 30, 30), (sx - r, sy - 6), (sx + r, sy - 6), 1)
+            pygame.draw.line(surf, (220, 30, 30), (sx, sy - 6 - r), (sx, sy - 6 + r), 1)
+            f = pygame.font.SysFont("couriernew", 7)
+            lbl = f.render("BOLO", True, (255, 80, 80))
+            surf.blit(lbl, (sx - lbl.get_width() // 2, sy - 22))
 
         if self.ctype == KIRK:
             pygame.draw.rect(surf, (60, 60, 60), (sx - 8, sy - 4, 16, 6))

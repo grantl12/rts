@@ -43,8 +43,9 @@ def main():
     intro_state = "rally" # rally, shot, panic, end
     intro_timer = 5.0
     kirk_obj = world.spawn_civilian(*KIRK_RALLY, ctype="kirk")
-    # Camera start centered on rally point
-    cam.pan_to(*KIRK_RALLY)
+    # Intro pan: start far top-left, smoothly move to rally over 5s
+    cam.pan_to(KIRK_RALLY[0] - 14, KIRK_RALLY[1] - 14)
+    _intro_cam_start = (cam.ox, cam.oy)
 
     # Build sidebar rect (bottom portion of right sidebar)
     def sidebar_rect():
@@ -58,6 +59,7 @@ def main():
     roe5_confirm   = False  # waiting for Y/N confirmation before ROE 5
     show_help      = False  # ? key toggles keybind overlay
     _prev_infamy   = 0
+    _ability_cd    = {"q": 0.0, "e": 0.0}  # seconds remaining on cooldown
 
     while True:
         dt = clock.tick(FPS)
@@ -66,6 +68,12 @@ def main():
         # ── Intro Logic ──
         if intro_state != "end":
             intro_timer -= dt_sec
+            # Smooth camera pan during rally (lerp from offset start to rally center)
+            if intro_state == "rally":
+                cam.pan_to(*KIRK_RALLY)
+                target_ox, target_oy = cam.ox, cam.oy
+                cam.ox = int(_intro_cam_start[0] + (target_ox - _intro_cam_start[0]) * (1 - intro_timer / 5.0))
+                cam.oy = int(_intro_cam_start[1] + (target_oy - _intro_cam_start[1]) * (1 - intro_timer / 5.0))
             if intro_state == "rally" and intro_timer <= 0:
                 intro_state = "shot"
                 intro_timer = 0.5
@@ -141,11 +149,42 @@ def main():
                         if event.key == pygame.K_5:
                             if world.roe_manager.current_roe < 5:
                                 roe5_confirm = True
-                    # ? = toggle help overlay
+                    # ? / H = toggle help overlay
                     if event.key == pygame.K_SLASH and pygame.key.get_pressed()[pygame.K_LSHIFT]:
                         show_help = not show_help
                     if event.key == pygame.K_h:
                         show_help = not show_help
+
+                    # Q = Suppress Burst (suppress all enemies in range of selected units)
+                    if event.key == pygame.K_q and _ability_cd["q"] <= 0:
+                        sel_units = [world.units[uid] for uid in selection.selected_uids
+                                     if uid in world.units]
+                        if sel_units:
+                            for su in sel_units:
+                                enemies = [u for u in world.units.values()
+                                           if u.faction in world.enemies_of(su.faction)
+                                           and u.state != "dead"
+                                           and math.dist((su.gx, su.gy), (u.gx, u.gy)) <= su.attack_range * 2]
+                                for e in enemies:
+                                    e.suppress(4.0)
+                            _ability_cd["q"] = 20.0
+                            notifs.add("Q — SUPPRESS BURST ACTIVATED", (0, 200, 255))
+
+                    # E = Call Backup (spawn 2 friendly units near selection centroid)
+                    if event.key == pygame.K_e and _ability_cd["e"] <= 0:
+                        if world.credits.get(PLAYER_FACTION, 0) >= 200:
+                            sel_units = [world.units[uid] for uid in selection.selected_uids
+                                         if uid in world.units]
+                            if sel_units:
+                                cx = sum(u.gx for u in sel_units) / len(sel_units)
+                                cy = sum(u.gy for u in sel_units) / len(sel_units)
+                                btype = "gravy_seal" if PLAYER_FACTION == "regency" else \
+                                        "drone_scout" if PLAYER_FACTION == "frontline" else "proxy"
+                                world.spawn_unit(btype, PLAYER_FACTION, cx + 1, cy)
+                                world.spawn_unit(btype, PLAYER_FACTION, cx - 1, cy)
+                                world.credits[PLAYER_FACTION] -= 200
+                                _ability_cd["e"] = 45.0
+                                notifs.add("E — BACKUP CALLED (−§200)", (0, 255, 100))
                     # Tab = end mission early → post-op screen
                     if event.key == pygame.K_TAB and not roe5_confirm:
                         detained = sum(pb.civs_held for pb in world.placed_buildings.values()
@@ -241,7 +280,15 @@ def main():
                 notifs.add(f"DESTROYED: {payload['name']}", (220, 40, 30))
             elif ev_type == "press_amplify":
                 notifs.add("PRESS BUREAU RECORDING — +5 INFAMY", (255, 140, 0))
+            elif ev_type == "bolo_captured":
+                if payload["faction"] == PLAYER_FACTION:
+                    notifs.add("!! BOLO TARGET SECURED — +§500 BONUS", (0, 255, 100))
+                else:
+                    notifs.add("!! BOLO TARGET ACQUIRED BY ENEMY", (255, 80, 30))
         world.events.clear()
+
+        for k in _ability_cd:
+            _ability_cd[k] = max(0.0, _ability_cd[k] - dt_sec)
 
         notifs.update(dt_sec)
 
@@ -331,6 +378,10 @@ def main():
         # ROE 5 confirmation overlay (drawn last, over everything)
         if roe5_confirm:
             _draw_roe5_confirm(screen, font_sm, WIN_W, WIN_H)
+
+        # Ability cooldown indicators (bottom center)
+        if intro_state == "end":
+            _draw_ability_hud(screen, _ability_cd, font_sm, WIN_W, WIN_H)
 
         # Notifications (bottom-left, above selection info)
         notifs.draw(screen, x=8, bottom_y=WIN_H - 55)
@@ -491,6 +542,40 @@ def _draw_selection_info(surf, selection, world, font, screen_h, panel_w):
             bar_col = (40, 200, 60) if pct > 0.6 else (220, 180, 0) if pct > 0.3 else (220, 40, 40)
             pygame.draw.rect(surf, bar_col, (x + 1, screen_h - bar_h + 31, 12, 3))
             x += 16
+
+
+def _draw_ability_hud(surf, ability_cd, font, sw, sh):
+    from game.hud import SIDEBAR_W, TOPBAR_H
+    abilities = [
+        ("Q", "SUPPRESS",  ability_cd.get("q", 0), 20.0, (0, 200, 255)),
+        ("E", "BACKUP",    ability_cd.get("e", 0), 45.0, (0, 255, 100)),
+    ]
+    btn_w, btn_h = 64, 44
+    gap = 8
+    total_w = len(abilities) * btn_w + (len(abilities) - 1) * gap
+    x0 = (sw - SIDEBAR_W) // 2 - total_w // 2
+    y0 = sh - btn_h - 2
+
+    for i, (key, name, cd, max_cd, col) in enumerate(abilities):
+        bx = x0 + i * (btn_w + gap)
+        brect = pygame.Rect(bx, y0, btn_w, btn_h)
+        ready = cd <= 0
+        bg = (10, 22, 18) if ready else (14, 10, 10)
+        pygame.draw.rect(surf, bg, brect)
+        pygame.draw.rect(surf, col if ready else (40, 40, 40), brect, 1)
+
+        key_lbl = pygame.font.SysFont("couriernew", 16, bold=True).render(
+            f"[{key}]", True, col if ready else (60, 60, 60))
+        surf.blit(key_lbl, (bx + btn_w // 2 - key_lbl.get_width() // 2, y0 + 4))
+
+        nm_lbl = font.render(name, True, col if ready else (50, 50, 50))
+        surf.blit(nm_lbl, (bx + btn_w // 2 - nm_lbl.get_width() // 2, y0 + 24))
+
+        if not ready:
+            # Cooldown progress bar
+            pct = 1.0 - (cd / max_cd)
+            pygame.draw.rect(surf, (20, 40, 30), (bx + 2, y0 + btn_h - 6, btn_w - 4, 4))
+            pygame.draw.rect(surf, col, (bx + 2, y0 + btn_h - 6, int((btn_w - 4) * pct), 4))
 
 
 def _draw_capture_bars(surf, cam, world, player_faction, font):
