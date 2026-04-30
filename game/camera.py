@@ -54,6 +54,14 @@ class Camera:
         gy = ry / th - rx / tw
         return gx, gy
 
+    def pan_to(self, gx, gy):
+        """Center the camera on world tile (gx, gy)."""
+        from game.iso import TILE_W, TILE_H
+        tw = int(TILE_W * self.zoom)
+        th = int(TILE_H * self.zoom)
+        self.ox = self.w // 2 - (gx - gy) * tw // 2
+        self.oy = self.h // 2 - (gx + gy) * th // 2
+
     def tile_diamond(self, gx, gy):
         cx, cy = self.world_to_screen(gx + 0.5, gy + 0.5)
         from game.iso import TILE_W, TILE_H

@@ -110,8 +110,9 @@ class World:
 
         self.unit_queues      = {}   # bld_instance_id -> ProductionQueue
         self._income_timer    = 0.0
-        self._surveilled_timer = 0.0  # cooldown for SURVEILLED drone spawns
+        self._surveilled_timer = 0.0
         self.game_over        = self.GAME_OVER_NONE
+        self.events           = []   # [(event_type, payload)] consumed each frame by main
 
         enemy = self._ENEMY_MAP.get(player_faction, "sovereign")
         self.ai_factions = {enemy: AIFaction(enemy)}
@@ -274,12 +275,14 @@ class World:
         for iid in list(self.placed_buildings.keys()):
             pb = self.placed_buildings[iid]
             if pb.hp <= 0:
-                # Eject garrisoned units
                 for uid in pb.garrison:
                     if uid in self.units:
                         u = self.units[uid]
                         u.garrisoned_in = None
-                        u.take_damage(20) # Collapse damage
+                        u.take_damage(20)
+                self.events.append(("building_destroyed",
+                                    {"name": getattr(pb, "display_name", pb.bdef["name"]),
+                                     "faction": pb.faction}))
                 del self.placed_buildings[iid]
                 continue
                 
@@ -300,10 +303,14 @@ class World:
                     strongest = f
             
             if strongest and strongest != pb.faction:
-                pb._capture_progress += dt * 20.0 * max_n # Rate
+                pb._capture_progress += dt * 20.0 * max_n
                 if pb._capture_progress >= 100.0:
+                    old_faction = pb.faction
                     pb.faction = strongest
                     pb._capture_progress = 0.0
+                    self.events.append(("building_captured",
+                                        {"name": getattr(pb, "display_name", pb.bdef["name"]),
+                                         "by": strongest, "from": old_faction}))
             elif pb._capture_progress > 0:
                 pb._capture_progress = max(0, pb._capture_progress - dt * 10.0)
 

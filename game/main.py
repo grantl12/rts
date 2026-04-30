@@ -43,8 +43,8 @@ def main():
     intro_state = "rally" # rally, shot, panic, end
     intro_timer = 5.0
     kirk_obj = world.spawn_civilian(*KIRK_RALLY, ctype="kirk")
-    # Camera start at rally
-    cam.gx, cam.gy = KIRK_RALLY[0] - 8, KIRK_RALLY[1] - 8
+    # Camera start centered on rally point
+    cam.pan_to(*KIRK_RALLY)
 
     # Build sidebar rect (bottom portion of right sidebar)
     def sidebar_rect():
@@ -179,12 +179,7 @@ def main():
                         mr = hud.minimap_rect
                         rel_x = (event.pos[0] - mr.left) / mr.width
                         rel_y = (event.pos[1] - mr.top) / mr.height
-                        cam.gx = rel_x * W - cam.w / (2 * 64)
-                        cam.gy = rel_y * H - cam.h / (2 * 32)
-                        # Recalculate screen offset
-                        from game.iso import TILE_W, TILE_H
-                        cam.ox = cam.w // 2 - int((cam.gx - cam.gy) * TILE_W * cam.zoom // 2)
-                        cam.oy = 80 - int((cam.gx + cam.gy) * TILE_H * cam.zoom // 2)
+                        cam.pan_to(rel_x * W, rel_y * H)
                     else:
                         # Check sidebar click zones
                         result = sidebar.handle_click(event.pos, click_zones, world, PLAYER_FACTION)
@@ -232,6 +227,21 @@ def main():
         elif _prev_infamy < 750 <= cur_inf:
             notifs.add("!! SANCTIONED — HEAVY PRODUCTION FROZEN", (220, 40, 30))
         _prev_infamy = cur_inf
+
+        # Consume world events → notifications
+        for ev_type, payload in world.events:
+            if ev_type == "building_captured":
+                by = payload["by"]
+                name = payload["name"]
+                if by == PLAYER_FACTION:
+                    notifs.add(f"CAPTURED: {name}", (0, 255, 100))
+                else:
+                    notifs.add(f"LOST: {name} → {by.upper()}", (255, 100, 40))
+            elif ev_type == "building_destroyed":
+                notifs.add(f"DESTROYED: {payload['name']}", (220, 40, 30))
+            elif ev_type == "press_amplify":
+                notifs.add("PRESS BUREAU RECORDING — +5 INFAMY", (255, 140, 0))
+        world.events.clear()
 
         notifs.update(dt_sec)
 

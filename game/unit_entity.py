@@ -258,6 +258,13 @@ class Unit:
             self.state = STATE_DEAD
             if world and self.faction == "neutral":
                 world.roe_manager.add_infamy(10)
+                # Press bureau amplifies infamy when watching collateral damage
+                for pb in world.placed_buildings.values():
+                    if "infamy_amplify" in pb.bdef.get("flags", []):
+                        if math.dist((self.gx, self.gy), (pb.gx, pb.gy)) < 12.0:
+                            world.roe_manager.add_infamy(5)
+                            world.events.append(("press_amplify",
+                                                 {"building": pb.bdef["name"]}))
 
     # ── Draw ──────────────────────────────────────────────────────────────────
 
