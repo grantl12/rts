@@ -119,6 +119,16 @@ class World:
         self.events           = []   # [(event_type, payload)] consumed each frame by main
         self.wrecks           = []   # [(gx, gy, timer)] visual wreck markers
 
+        # Narrative leak events: (trigger_sec, event_type, infamy_hit, effect)
+        # effect: None | "raid" | "reinforce"
+        self._narrative_events = [
+            (90,  "leak_comms",    25, None),
+            (180, "leak_footage",  35, "reinforce"),
+            (240, "leak_assets",   20, "raid"),
+            (420, "leak_defector", 15, "reinforce"),
+        ]
+        self._narrative_fired = set()
+
         enemy = self._ENEMY_MAP.get(player_faction, "sovereign")
         self.ai_factions = {enemy: AIFaction(enemy)}
 
@@ -134,8 +144,8 @@ class World:
         self._place_map_buildings()
 
         # Enemy base (upper-left corner)
-        self.place_building("reg_hq",       enemy, 3,  2)
-        self.place_building("reg_barracks",  enemy, 8,  2)
+        self.place_building("reg_hq",       enemy, 4,  3)
+        self.place_building("reg_barracks",  enemy, 10, 3)
 
         # Designate one random civilian as BOLO target
         if self.civilians:
@@ -256,6 +266,22 @@ class World:
             self._deepfake_fired = True
             self.roe_manager.add_infamy(50)
             self.events.append(("deepfake_live", {}))
+
+        # Narrative leak events
+        enemy = self._ENEMY_MAP.get(player_faction, "sovereign")
+        for i, (t, etype, infamy_hit, effect) in enumerate(self._narrative_events):
+            if i not in self._narrative_fired and self._mission_elapsed >= t:
+                self._narrative_fired.add(i)
+                self.roe_manager.add_infamy(infamy_hit)
+                self.events.append((etype, {"infamy": infamy_hit}))
+                if effect == "raid":
+                    for ai in self.ai_factions.values():
+                        ai._raid_timer = 0.0
+                elif effect == "reinforce":
+                    spawn_x = 14 + random.uniform(-6, 6)
+                    spawn_y = 20 + random.uniform(-4, 4)
+                    self.spawn_unit("proxy", enemy, spawn_x, spawn_y)
+                    self.spawn_unit("proxy", enemy, spawn_x + 1.2, spawn_y)
 
         for ai in self.ai_factions.values():
             ai.update(dt, self)

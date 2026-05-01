@@ -316,25 +316,19 @@ class Unit:
         # Ground shadow (solid dark ellipse — no alpha needed)
         pygame.draw.ellipse(surf, (0, 8, 6), (sx - 10, sy - 2, 20, 6))
 
-        # Selection ring
-        if self.selected:
-                   # Glitched Selection Outline (simulating 16-bit effect)
-        if self.selected:
-            # Main outline - slightly thicker, same base color
-            base_draw_color = base_col if self.flash_timer <= 0 else col
-            main_outline_pts = [(sx + dx, sy - 8 + dy) for dx, dy in raw]
-            pygame.draw.polygon(surf, base_draw_color, main_outline_pts, 2)
-
-            # Glitch effect: two offset, slightly colored outlines
-            offset1_pts = [(sx + dx - 2, sy - 8 + dy - 1) for dx, dy in raw]
-            pygame.draw.polygon(surf, (255, 50, 50), offset1_pts, 1) # Red offset
-
-            offset2_pts = [(sx + dx + 1, sy - 8 + dy + 2) for dx, dy in raw]
-            pygame.draw.polygon(surf, (50, 50, 255), offset2_pts, 1) # Blue offset
-
         # Unit body — distinct polygon per type
         raw = self._SHAPES.get(self.utype, self._DEFAULT_SHAPE)
         pts = [(sx + dx, sy - 8 + dy) for dx, dy in raw]
+
+        # Glitch selection outline (drawn behind unit body)
+        if self.selected:
+            base_draw_color = base_col if self.flash_timer <= 0 else col
+            pygame.draw.polygon(surf, base_draw_color, pts, 2)
+            pygame.draw.polygon(surf, (255, 50, 50),
+                                [(sx + dx - 2, sy - 8 + dy - 1) for dx, dy in raw], 1)
+            pygame.draw.polygon(surf, (50, 50, 255),
+                                [(sx + dx + 1, sy - 8 + dy + 2) for dx, dy in raw], 1)
+
         pygame.draw.polygon(surf, col, pts)
         pygame.draw.polygon(surf, (0, 0, 0), pts, 1)
 

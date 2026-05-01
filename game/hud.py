@@ -27,6 +27,7 @@ class HUD:
         self.power_balance = 0
         self.selected_bld  = None
         self.mission_time  = 0   # seconds
+        self.map_phase     = 0
         self._tick         = 0
 
         self._font_sm  = None
@@ -60,8 +61,13 @@ class HUD:
         t = self.mission_time
         ts = f"{t//3600:02d}:{(t%3600)//60:02d}:{t%60:02d}"
 
+        _PHASE_NAMES = ["PHASE I — THE INCIDENT", "PHASE II — THE OCCUPATION", "PHASE III — THE REDACTION"]
+        _PHASE_COLS  = [(0, 200, 140), (220, 140, 40), (160, 40, 220)]
+        phase_name = _PHASE_NAMES[min(self.map_phase, 2)]
+        phase_col  = _PHASE_COLS[min(self.map_phase, 2)]
+
         title  = self._font_med.render("DEEP STATE RTS", True, ORANGE)
-        op     = self._font_sm.render("OP: WOLVERINE  ·  UVU VALLEY SECTOR — OREM, UTAH", True, TEAL_DIM)
+        op     = self._font_sm.render(f"OP: WOLVERINE  ·  {phase_name}", True, phase_col)
         roe    = self._font_med.render(f"ROE: {self.roe_name}", True, self.roe_col)
         cred   = self._font_med.render(f"§{self.credits:,}", True, TEAL)
         clock  = self._font_sm.render(ts, True, TEAL)
