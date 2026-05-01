@@ -87,12 +87,12 @@ class ObjectiveManager:
 
     def draw(self, surf, sw, sh):
         if self._font_hdr is None:
-            self._font_hdr = pygame.font.SysFont("couriernew", 9, bold=True)
-            self._font_sm  = pygame.font.SysFont("couriernew", 8)
+            self._font_hdr = pygame.font.SysFont("couriernew", 11, bold=True)
+            self._font_sm  = pygame.font.SysFont("couriernew", 10)
 
         from game.hud import TOPBAR_H, SIDEBAR_W
-        obj_h   = 17
-        panel_w = 230
+        obj_h   = 20
+        panel_w = 260
         total_h = 13 + obj_h * (1 + len(self.secondaries)) + 6
         x = sw - SIDEBAR_W - panel_w - 8
         y = TOPBAR_H + 8

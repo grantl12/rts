@@ -131,6 +131,7 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
             elif intro_state == "shot" and intro_timer <= 0:
                 intro_state = "panic"
                 intro_timer = 2.5
+                world.spawn_tape(*KIRK_RALLY)
                 for c in world.civilians.values():
                     if math.dist((c.gx, c.gy), KIRK_RALLY) < 15:
                         c.panic(world)
@@ -462,6 +463,20 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
                 _alert_flash = 1.0
             elif ev_type == "power_low":
                 pass
+            elif ev_type == "rank_5_promotion":
+                name = payload.get("hero_name", "UNKNOWN OPERATIVE")
+                utype = payload.get("utype", "").replace("_", " ").upper()
+                notifs.add("★ EXECUTIVE RANK: {} — {}".format(name, utype), (220, 180, 40))
+                _alert_flash = 0.5
+            elif ev_type == "tape_acquired":
+                faction = payload["faction"].upper()
+                notifs.add("!! EPSTEIN TAPE ACQUIRED BY {} — INTEL BUFF ACTIVE".format(faction), (80, 200, 255))
+                _alert_flash = 0.8
+            elif ev_type == "tape_lost":
+                notifs.add("!! EPSTEIN TAPE DROPPED — CONTEST IT NOW", (255, 140, 0))
+                _alert_flash = 0.5
+            elif ev_type == "cease_desist":
+                notifs.add("PATRIOT LAWYER: CEASE & DESIST FILED — AREA SUPPRESSED", (28, 80, 180))
         world.events.clear()
 
         for k in _ability_cd:
@@ -515,6 +530,19 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
             pygame.draw.line(screen, col, (wx + 6, wy - 10), (wx - 6, wy - 2), 2)
             pygame.draw.ellipse(screen, (int(40 * alpha / 255), 8, 6),
                                 (wx - 8, wy - 2, 16, 5))
+
+        # Tape MacGuffin
+        if world.tape["active"]:
+            tx, ty = cam.world_to_screen(world.tape["gx"], world.tape["gy"])
+            t_ms = pygame.time.get_ticks()
+            pulse = int(8 + math.sin(t_ms * 0.008) * 3)
+            col_tape = (80, 200, 255) if world.tape["holder_uid"] is None else (220, 180, 40)
+            pygame.draw.circle(screen, col_tape, (int(tx), int(ty) - 8), pulse, 2)
+            pygame.draw.rect(screen, col_tape, (int(tx) - 5, int(ty) - 13, 10, 8), 1)
+            f_tape = pygame.font.SysFont("couriernew", 8, bold=True)
+            if world.tape["holder_uid"] is None:
+                lbl_tape = f_tape.render("TAPE", True, col_tape)
+                screen.blit(lbl_tape, (int(tx) - lbl_tape.get_width() // 2, int(ty) - 24))
 
         # Units
         for u in sorted(world.units.values(), key=lambda u: u.gy):
@@ -638,7 +666,27 @@ def _end_mission(screen, clock, world, hud, player_faction,
                               hud.mission_time,
                               world.credits.get(player_faction, 0))
     lp = _eb_mod.compute_lp(result, hud.mission_time)
-    _eb_mod.run(screen, clock, lp)
+
+    # Collect rank-5 heroes for Hall of Heroes
+    heroes = []
+    for u in world.units.values():
+        if u.rank >= 5 and u.hero_name and u.faction == player_faction:
+            heroes.append({
+                "name": u.hero_name,
+                "utype": u.utype,
+                "kills": getattr(u, "kills", 0),
+                "faction": u.faction,
+            })
+    if slot_data is not None:
+        existing = slot_data.get("hall_of_heroes", [])
+        existing_names = {h["name"] for h in existing}
+        for h in heroes:
+            if h["name"] not in existing_names:
+                existing.append(h)
+        slot_data["hall_of_heroes"] = existing
+
+    _eb_mod.run(screen, clock, lp,
+                hall_of_heroes=slot_data.get("hall_of_heroes", []) if slot_data else [])
 
     if slot_num is not None and slot_data is not None:
         updated = _save_mod.apply_postop(
@@ -650,6 +698,7 @@ def _end_mission(screen, clock, world, hud, player_faction,
         # Carry forward executive board upgrades
         updated["upgrades"]  = _eb_mod._load().get("upgrades", {})
         updated["lp"]        = _eb_mod._load().get("lp", updated.get("lp", 0))
+        updated["hall_of_heroes"] = slot_data.get("hall_of_heroes", [])
         _save_mod.save(slot_num, updated)
 
 

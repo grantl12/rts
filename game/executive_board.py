@@ -73,13 +73,13 @@ def get_upgrades() -> dict:
     return _load().get("upgrades", {})
 
 
-def run(screen, clock, lp_earned: int, fps: int = 60):
+def run(screen, clock, lp_earned: int, fps: int = 60, hall_of_heroes=None):
     """Show Executive Board. Blocks until player continues."""
     data = _load()
     data["lp"] += lp_earned
     _save(data)
 
-    board = _Board(data, lp_earned)
+    board = _Board(data, lp_earned, hall_of_heroes=hall_of_heroes or [])
     while not board.done:
         clock.tick(fps)
         for event in pygame.event.get():
@@ -91,16 +91,17 @@ def run(screen, clock, lp_earned: int, fps: int = 60):
 
 
 class _Board:
-    def __init__(self, data: dict, lp_earned: int):
-        self.data      = data
-        self.lp_earned = lp_earned
-        self._done     = False
-        self._hover    = None
-        self._notify   = ""
-        self._notify_t = 0.0
-        self._card_rects = []
-        self._back_rect  = None
-        self._fonts      = {}
+    def __init__(self, data: dict, lp_earned: int, hall_of_heroes=None):
+        self.data           = data
+        self.lp_earned      = lp_earned
+        self.hall_of_heroes = hall_of_heroes or []
+        self._done          = False
+        self._hover         = None
+        self._notify        = ""
+        self._notify_t      = 0.0
+        self._card_rects    = []
+        self._back_rect     = None
+        self._fonts         = {}
 
     @property
     def done(self):
@@ -246,3 +247,22 @@ class _Board:
             "CLICK UPGRADE TO PURCHASE  ·  ENTER / ESC — CONTINUE TO MENU",
             True, TEAL_D)
         surf.blit(foot, (sw // 2 - foot.get_width() // 2, sh - 16))
+
+        # Hall of Heroes panel
+        if self.hall_of_heroes:
+            hoh_x = sw - 280
+            hoh_y = btn_y + btn_h + 8
+            hoh_w = 260
+            hoh_h = 16 + len(self.hall_of_heroes) * 14 + 6
+            hoh_rect = pygame.Rect(hoh_x, hoh_y, hoh_w, hoh_h)
+            pygame.draw.rect(surf, PANEL, hoh_rect)
+            pygame.draw.rect(surf, (0, 180, 140), hoh_rect, 1)
+            hdr = self._fonts["px"].render("★ HALL OF HEROES", True, (0, 220, 180))
+            surf.blit(hdr, (hoh_x + hoh_w // 2 - hdr.get_width() // 2, hoh_y + 3))
+            for idx, hero in enumerate(self.hall_of_heroes):
+                hy = hoh_y + 16 + idx * 14
+                utype_str = hero.get("utype", "").replace("_", " ").upper()
+                kills_str = str(hero.get("kills", 0))
+                line = "{} — {} — {} KIA".format(hero.get("name", "?"), utype_str, kills_str)
+                lbl = self._fonts["px"].render(line, True, (220, 180, 40))
+                surf.blit(lbl, (hoh_x + 6, hy))

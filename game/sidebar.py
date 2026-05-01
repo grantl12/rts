@@ -23,11 +23,11 @@ FACTION_BUILD_MENU = {
             "reg_pen", "reg_tower", "reg_wall",
             "reg_propaganda", "reg_relay",
         ],
-        "units": ["gravy_seal", "ice_agent", "unmarked_van", "compliance_bus"],
+        "units": ["gravy_seal", "ice_agent", "unmarked_van", "compliance_bus", "patriot_lawyer"],
     },
     "frontline": {
         "structures": ["fl_drone", "fl_press"],
-        "units": ["proxy", "drone_scout", "drone_assault"],
+        "units": ["proxy", "drone_scout", "drone_assault", "news_van"],
     },
     "sovereign": {
         "structures": ["sov_safehouse", "sov_cache"],

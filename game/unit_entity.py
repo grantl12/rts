@@ -19,6 +19,8 @@ UNIT_DEFS = {
     "vbied":         ( 80, 5.5,  0,  1.8, 99.0, "light",     "sovereign", 350),
     "civilian_car":  (120, 3.5,  0,  0.0, 0.0,  "light",     "neutral",     0),
     "militia":       ( 45, 2.5,  8,  2.0, 1.2,  "unarmored", "sovereign",   0),
+    "news_van":      (200, 1.5,  0,  0.0, 0.0,  "light",     "frontline", 450),
+    "patriot_lawyer":(  80, 2.0, 0,  0.0, 0.0,  "unarmored", "regency",   300),
 }
 
 FACTION_COLORS = {
@@ -56,6 +58,16 @@ class Unit:
     RANK_STAT_BONUS = 0.08
     RANK_NAMES = ["AGENT", "FIELD AGENT", "SR. OPERATIVE", "DEPT. HEAD", "EXECUTIVE"]
 
+    _HERO_NAMES = {
+        "regency":   (["Chad","Brad","Todd","Dale","Keith","Wayne","Gary","Larry"],
+                      ["Morrison","Henderson","Jenkins","Tucker","Patterson","Thompson"]),
+        "frontline": (["Alex","Jordan","Sam","Riley","Morgan","Taylor","Casey","Jamie"],
+                      ["Chen","Williams","Okafor","Reyes","Kowalski","Baptiste","Kim"]),
+        "sovereign": (None, ["The Prepper","Ghost Cell","Red Fox","Black Flag","Iron Gate","Cipher","Static"]),
+        "oligarchy": (["Preston","Sterling","Reginald","Clifford","Montgomery","Beaumont"],
+                      ["Worthington","Bancroft","Hartwell","Pemberton","Ashcroft","Windsor"]),
+    }
+
     def __init__(self, utype: str, faction: str, gx: float, gy: float):
         Unit._next_id += 1
         self.uid     = Unit._next_id
@@ -77,6 +89,8 @@ class Unit:
         self.rank         = 1
         self.xp           = 0.0
         self.xp_to_next   = 100.0
+        self.kills        = 0
+        self.hero_name    = None
 
         self.state        = STATE_IDLE
         self.waypoints    = []          # list of (gx,gy) ints
@@ -256,7 +270,7 @@ class Unit:
                 mod = ARMOR_MOD.get(("medium", target.armor_type), 1.0)
             
             target.take_damage(int(atk_dmg * mod), world, attacker=self)
-            self._gain_xp(5.0)
+            self._gain_xp(5.0, world)
             
             self.atk_timer = self.atk_cooldown_max
             # face the target
@@ -268,7 +282,7 @@ class Unit:
             elif   45 <= angle < 135:  self.facing = 3
             else:                       self.facing = 0
 
-    def _gain_xp(self, amount):
+    def _gain_xp(self, amount, world=None):
         if self.rank >= 5:
             return
         self.xp += amount
@@ -278,6 +292,21 @@ class Unit:
             self.xp_to_next *= 1.5
             # Heal on rank up
             self.hp = min(self.max_hp, self.hp + self.max_hp * 0.2)
+            if self.rank == 5 and self.hero_name is None:
+                import random as _rnd
+                pool = self._HERO_NAMES.get(self.faction, (None, ["Unknown"]))
+                firsts, lasts = pool
+                if firsts:
+                    self.hero_name = "{} {}".format(_rnd.choice(firsts), _rnd.choice(lasts))
+                else:
+                    self.hero_name = _rnd.choice(lasts)
+                if world is not None:
+                    world.events.append(("rank_5_promotion", {
+                        "uid": self.uid,
+                        "utype": self.utype,
+                        "faction": self.faction,
+                        "hero_name": self.hero_name,
+                    }))
 
     def take_damage(self, amount, world=None, attacker=None):
         self.hp = max(0, self.hp - amount)
@@ -285,7 +314,8 @@ class Unit:
         if self.hp == 0:
             self.state = STATE_DEAD
             if attacker:
-                attacker._gain_xp(25.0)  # kill bonus XP
+                attacker.kills += 1
+                attacker._gain_xp(25.0, world)  # kill bonus XP
             if world and self.faction == "neutral":
                 world.roe_manager.add_infamy(10)
                 for pb in world.placed_buildings.values():
@@ -319,6 +349,10 @@ class Unit:
         "mrap":          [(-10,-13),(-5,-15),(5,-15),(10,-13),(13,-6),(13,8),(10,12),(-10,12),(-13,8),(-13,-6)],
         # VBIED — small car silhouette
         "vbied":         [(-8,-5),(8,-5),(9,0),(8,5),(-8,5),(-9,0)],
+        # News Van — wide box with antenna nub
+        "news_van":      [(-13,-7),(-11,-10),(11,-10),(13,-7),(13,7),(-13,7)],
+        # Patriot Lawyer — slim upright rectangle (briefcase silhouette)
+        "patriot_lawyer":[(-5,-12),(5,-12),(6,6),(3,10),(-3,10),(-6,6)],
     }
     _DEFAULT_SHAPE = [(-7,-7),(7,-7),(7,7),(-7,7)]  # square fallback
 
@@ -395,6 +429,12 @@ class Unit:
 
         # HP bar
         self._draw_hp_bar(surf, sx, sy)
+
+        # Hero name for rank-5 units
+        if self.rank >= 5 and self.hero_name:
+            f_hero = pygame.font.SysFont("couriernew", 8, bold=True)
+            hlbl = f_hero.render(self.hero_name, True, (220, 180, 40))
+            surf.blit(hlbl, (sx - hlbl.get_width() // 2, sy - 46))
 
         # Suppression — "RED TAPE" bar
         if self.suppressed:

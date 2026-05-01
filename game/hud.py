@@ -37,9 +37,9 @@ class HUD:
     def _load_fonts(self):
         if self._font_sm:
             return
-        self._font_sm  = pygame.font.SysFont("couriernew", 10)
-        self._font_med = pygame.font.SysFont("couriernew", 13, bold=True)
-        self._font_px  = pygame.font.SysFont("couriernew", 9)
+        self._font_sm  = pygame.font.SysFont("couriernew", 11)
+        self._font_med = pygame.font.SysFont("couriernew", 14, bold=True)
+        self._font_px  = pygame.font.SysFont("couriernew", 10)
 
     def update(self, dt_ms):
         self._tick += dt_ms

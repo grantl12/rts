@@ -117,7 +117,8 @@ class AdvisorSystem:
         if not self._current:
             return
         if self._font is None:
-            self._font = pygame.font.SysFont("couriernew", 10, bold=True)
+            self._font        = pygame.font.SysFont("couriernew", 13, bold=True)
+            self._font_prefix = pygame.font.SysFont("couriernew", 11, bold=True)
 
         if self._timer > self.DISPLAY_DURATION - self.FADE_IN:
             alpha = int(255 * (self.DISPLAY_DURATION - self._timer) / self.FADE_IN)
@@ -128,20 +129,27 @@ class AdvisorSystem:
         alpha = max(0, min(255, alpha))
 
         from game.hud import TOPBAR_H, SIDEBAR_W
-        bar_h = 20
-        y     = TOPBAR_H + 4
-        w     = sw - SIDEBAR_W - 16
+        bar_h = 32
+        y     = TOPBAR_H + 6
+        w     = sw - SIDEBAR_W - 20
 
+        # Solid dark panel — fully opaque so text is always readable
         panel = pygame.Surface((w, bar_h), pygame.SRCALPHA)
-        panel.fill((0, 20, 15, int(alpha * 0.82)))
+        panel.fill((2, 14, 10, min(235, int(alpha * 0.95))))
         surf.blit(panel, (8, y))
+        # Teal left accent bar
+        accent = pygame.Surface((3, bar_h), pygame.SRCALPHA)
+        accent.fill((0, 220, 160, alpha))
+        surf.blit(accent, (8, y))
+        pygame.draw.rect(surf, (0, 60, 45), (8, y, w, bar_h), 1)
 
         glitch = int(math.sin(pygame.time.get_ticks() * 0.04) * 1)
+        ty = y + bar_h // 2 - self._font.get_height() // 2
 
-        prefix = self._font.render("// AUDITOR : ", True, (0, 200, 140))
+        prefix = self._font_prefix.render("// AUDITOR :", True, (0, 210, 150))
         prefix.set_alpha(alpha)
-        surf.blit(prefix, (12 + glitch, y + 4))
+        surf.blit(prefix, (16 + glitch, ty + 2))
 
-        body = self._font.render(self._current, True, (180, 255, 200))
+        body = self._font.render(self._current, True, (230, 255, 230))
         body.set_alpha(alpha)
-        surf.blit(body, (12 + prefix.get_width() + glitch, y + 4))
+        surf.blit(body, (16 + prefix.get_width() + 8 + glitch, ty))

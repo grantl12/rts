@@ -29,6 +29,7 @@ _SHEET_MAP = {
     "drone_assault":  ("ScoutandAssaultDrones.jpg", 2, 4),
     "vbied":          ("coloredcars.jpg",           0, 2),
     "civilian_car":   ("cars.jpg",                 0, 2),
+    "patriot_lawyer": ("MAGAmericaFirst.jpg",       0, 2),
 }
 
 _TARGET_W = 44    # rendered sprite width  (px)

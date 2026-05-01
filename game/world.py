@@ -145,6 +145,13 @@ class World:
         self.vehicles  = {}      # uid -> CivilianCar
         self._vbied_timer = 45.0  # seconds until next Sovereign VBIED attempt
 
+        self.tape = {
+            "active": False,
+            "gx": 0.0, "gy": 0.0,
+            "holder_uid": None,
+            "holder_faction": None,
+        }
+
         # Pre-place map buildings as neutral/capturable
         self._place_map_buildings()
 
@@ -487,6 +494,12 @@ class World:
         # Witness War
         self._tick_witness_war(dt, player_faction)
 
+        # Tape MacGuffin
+        self._tick_tape(dt, player_faction)
+
+        # Special unit abilities
+        self._tick_special_units(dt)
+
         # Production queues
         self._income_timer += dt
         if self._income_timer >= self.PASSIVE_INCOME_TICK:
@@ -523,7 +536,7 @@ class World:
                 continue
             if u.faction not in ("frontline", "sovereign", "oligarchy"):
                 continue
-            rng = _CONVERT_RANGE[u.faction]
+            rng = 6.0 if u.utype == "news_van" else _CONVERT_RANGE[u.faction]
             for c in self.civilians.values():
                 if c.state == "dead" or c.witness_state != "free":
                     continue
@@ -588,6 +601,7 @@ class World:
         self.power_balance = net_power
         underpowered = net_power < 0
 
+        tape_faction = self.tape_holder_faction
         for pb in self.placed_buildings.values():
             if pb.faction != player_faction:
                 continue
@@ -595,6 +609,8 @@ class World:
             if pb.civs_held > 0:
                 income += pb.civs_held * self.PEN_INCOME_RATE
             if income:
+                if tape_faction == player_faction:
+                    income = income * 1.15
                 self.credits[player_faction] = \
                     self.credits.get(player_faction, 0) + income
 
@@ -658,6 +674,72 @@ class World:
         self.credits[player_faction] = self.credits.get(player_faction, 0) + payout
         self.events.append(("bus_unloaded", {"count": count, "credits": payout}))
         bus.passengers = []
+
+    # ── Tape MacGuffin ────────────────────────────────────────────────────────
+
+    def spawn_tape(self, gx, gy):
+        self.tape["active"] = True
+        self.tape["gx"] = float(gx)
+        self.tape["gy"] = float(gy)
+        self.tape["holder_uid"] = None
+        self.tape["holder_faction"] = None
+
+    @property
+    def tape_holder_faction(self):
+        if self.tape["active"]:
+            return self.tape["holder_faction"]
+        return None
+
+    def _tick_tape(self, dt, player_faction):
+        if not self.tape["active"]:
+            return
+        holder_uid = self.tape["holder_uid"]
+        if holder_uid is not None:
+            u = self.units.get(holder_uid)
+            if u is None or u.state == STATE_DEAD:
+                old_faction = self.tape["holder_faction"]
+                if u is not None:
+                    self.tape["gx"] = u.gx
+                    self.tape["gy"] = u.gy
+                self.tape["holder_uid"] = None
+                self.tape["holder_faction"] = None
+                self.events.append(("tape_lost", {"faction": old_faction}))
+            else:
+                self.tape["gx"] = u.gx
+                self.tape["gy"] = u.gy
+        else:
+            best, best_dist = None, 1.5
+            for u in self.units.values():
+                if u.state == STATE_DEAD:
+                    continue
+                d = math.dist((u.gx, u.gy), (self.tape["gx"], self.tape["gy"]))
+                if d < best_dist:
+                    best, best_dist = u, d
+            if best is not None:
+                self.tape["holder_uid"] = best.uid
+                self.tape["holder_faction"] = best.faction
+                self.events.append(("tape_acquired", {
+                    "faction": best.faction,
+                    "utype": best.utype,
+                }))
+
+    # ── Special Unit Abilities ────────────────────────────────────────────────
+
+    def _tick_special_units(self, dt):
+        for u in self.units.values():
+            if u.state == STATE_DEAD:
+                continue
+            if u.utype == "patriot_lawyer":
+                if not hasattr(u, "_cd_timer"):
+                    u._cd_timer = 0.0
+                u._cd_timer -= dt
+                if u._cd_timer <= 0:
+                    u._cd_timer = 8.0
+                    for target in self.units.values():
+                        if target.faction != u.faction and target.state != STATE_DEAD:
+                            if math.dist((u.gx, u.gy), (target.gx, target.gy)) <= 3.5:
+                                target.suppress(3.5)
+                    self.events.append(("cease_desist", {"gx": u.gx, "gy": u.gy}))
 
     # ── Map pre-placement ─────────────────────────────────────────────────────
 
