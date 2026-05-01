@@ -16,6 +16,9 @@ from game import menu as _menu_mod
 from game import postop as _postop_mod
 from game import executive_board as _eb_mod
 from game.notifications import NotificationManager
+from game.advisor    import AdvisorSystem
+from game.objectives import ObjectiveManager
+from game.audio      import AudioManager
 
 TITLE    = "DEEP STATE RTS — OP: WOLVERINE"
 WIN_W, WIN_H = 1280, 800
@@ -23,6 +26,7 @@ FPS      = 60
 
 
 def main():
+    pygame.mixer.pre_init(22050, -16, 1, 256)
     pygame.init()
     screen = pygame.display.set_mode((WIN_W, WIN_H), pygame.RESIZABLE)
     pygame.display.set_caption(TITLE)
@@ -44,12 +48,18 @@ def _run_mission(screen, clock, PLAYER_FACTION):
 
     font_sm  = pygame.font.SysFont("couriernew", 9)
     notifs   = NotificationManager()
+    advisor  = AdvisorSystem()
+    audio    = AudioManager()
+    enemy_f  = world._ENEMY_MAP.get(PLAYER_FACTION, "sovereign")
+    objectives = ObjectiveManager(PLAYER_FACTION, enemy_f)
+    _combat_sound_timer = 0.0   # rate-limits per-frame combat sound checks
     _deepfake_overlay = 0.0   # seconds remaining on deepfake reveal overlay
     _leak_overlay     = None  # (title, body, timer) for narrative leak popups
 
     # ── Intro State ──
-    intro_state = "rally" # rally, shot, panic, end
+    intro_state = "rally" # rally, talk, wait, shot, panic, end
     intro_timer = 5.0
+    intro_text  = ""
     kirk_obj = world.spawn_civilian(*KIRK_RALLY, ctype="kirk")
     # Intro pan: start far top-left, smoothly move to rally over 5s
     cam.pan_to(KIRK_RALLY[0] - 14, KIRK_RALLY[1] - 14)
@@ -83,18 +93,35 @@ def _run_mission(screen, clock, PLAYER_FACTION):
                 target_ox, target_oy = cam.ox, cam.oy
                 cam.ox = int(_intro_cam_start[0] + (target_ox - _intro_cam_start[0]) * (1 - intro_timer / 5.0))
                 cam.oy = int(_intro_cam_start[1] + (target_oy - _intro_cam_start[1]) * (1 - intro_timer / 5.0))
-            if intro_state == "rally" and intro_timer <= 0:
-                intro_state = "shot"
-                intro_timer = 0.5
-                kirk_obj.state = "dead"
+                if intro_timer <= 0:
+                    intro_state = "talk"
+                    intro_timer = 4.0
+                    intro_text  = "Actually, the truth about Epstein is—"
+            
+            elif intro_state == "talk":
+                cam.pan_to(*KIRK_RALLY)
+                if intro_timer <= 0:
+                    intro_state = "wait"
+                    intro_timer = 1.2 # Dramatic pause after speaking
+            
+            elif intro_state == "wait":
+                cam.pan_to(*KIRK_RALLY)
+                if intro_timer <= 0:
+                    intro_state = "shot"
+                    intro_timer = 0.5
+                    kirk_obj.state = "dead"
+                    intro_text = ""
+                    audio.play("explosion") # The BANG
+            
             elif intro_state == "shot" and intro_timer <= 0:
                 intro_state = "panic"
                 intro_timer = 2.5
                 for c in world.civilians.values():
                     if math.dist((c.gx, c.gy), KIRK_RALLY) < 15:
-                        c.panic()
+                        c.panic(world)
             elif intro_state == "panic" and intro_timer <= 0:
                 intro_state = "end"
+                cam.pan_to(48, 37) # Snap to player start instead of following runners
                 _STARTER = {
                     "regency":   [("gravy_seal",3),("ice_agent",2)],
                     "frontline": [("drone_scout",3),("proxy",2)],
@@ -109,7 +136,7 @@ def _run_mission(screen, clock, PLAYER_FACTION):
                 }
                 world.place_building(_HQ_BID.get(PLAYER_FACTION, "reg_hq"),
                                      PLAYER_FACTION, 46, 37)
-                sx0, sy0 = 48, 37
+                sx0, sy0 = 43, 38
                 for utype, count in _STARTER.get(PLAYER_FACTION, [("gravy_seal",3)]):
                     for i in range(count):
                         world.spawn_unit(utype, PLAYER_FACTION, sx0 + i * 0.8, sy0)
@@ -178,6 +205,7 @@ def _run_mission(screen, clock, PLAYER_FACTION):
                     if roe5_confirm:
                         if event.key == pygame.K_y:
                             world.roe_manager.set_roe(5, world)
+                            advisor.trigger("roe_5")
                             roe5_confirm = False
                         elif event.key in (pygame.K_n, pygame.K_ESCAPE):
                             roe5_confirm = False
@@ -193,6 +221,9 @@ def _run_mission(screen, clock, PLAYER_FACTION):
                         show_help = not show_help
                     if event.key == pygame.K_h:
                         show_help = not show_help
+                    if event.key == pygame.K_m:
+                        audio.toggle_mute()
+                        notifs.add("AUDIO " + ("MUTED" if not audio._enabled else "UNMUTED"), (0, 160, 100))
 
                     # Q = Suppress Burst
                     if event.key == pygame.K_q and _ability_cd["q"] <= 0:
@@ -240,6 +271,8 @@ def _run_mission(screen, clock, PLAYER_FACTION):
                         placing_ghost = (int(gx), int(gy))
 
                 if event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 3 and not placing_bid and selection.selected_uids:
+                        audio.play("move_order")
                     if placing_bid:
                         if event.button == 1 and placing_ghost:
                             pb = world.place_building(placing_bid, PLAYER_FACTION, *placing_ghost)
@@ -285,46 +318,84 @@ def _run_mission(screen, clock, PLAYER_FACTION):
         if completed_unit:
             world.spawn_unit(completed_unit, PLAYER_FACTION, 13, 19)
             notifs.add(f"UNIT DEPLOYED — {completed_unit.upper().replace('_',' ')}", (0, 220, 180))
+            audio.play("spawn")
 
         # Infamy threshold notifications
         cur_inf = world.roe_manager.infamy
         if _prev_infamy < 200 <= cur_inf:
             notifs.add("!! SCRUTINIZED — OVERSIGHT ACTIVE", (220, 180, 0))
+            advisor.trigger("infamy_scrutinized")
+            audio.play("infamy_tick")
             _alert_flash = 0.5
         elif _prev_infamy < 400 <= cur_inf:
             notifs.add("!! SURVEILLED — FRONTLINE DRONES INCOMING", (255, 140, 0))
+            advisor.trigger("infamy_surveilled")
+            audio.play("alert")
             _alert_flash = 0.8
         elif _prev_infamy < 750 <= cur_inf:
             notifs.add("!! SANCTIONED — HEAVY PRODUCTION FROZEN", (220, 40, 30))
+            advisor.trigger("infamy_sanctioned")
+            audio.play("alert")
             _alert_flash = 1.2
         _prev_infamy = cur_inf
         _alert_flash = max(0.0, _alert_flash - dt_sec)
 
-        # Consume world events → notifications
+        if intro_state == "end":
+            objectives.update(world)
+        advisor.update(dt_sec)
+        audio.update(dt_sec)
+
+        # Rate-limited combat ambient sound
+        _combat_sound_timer = max(0.0, _combat_sound_timer - dt_sec)
+        if _combat_sound_timer <= 0 and intro_state == "end":
+            in_combat = any(u.state == "attacking" and u.faction == PLAYER_FACTION
+                            for u in world.units.values())
+            enemy_combat = any(u.state == "attacking"
+                               and u.faction != PLAYER_FACTION
+                               for u in world.units.values())
+            if in_combat or enemy_combat:
+                heavy = any(u.utype in ("mrap", "contractor", "drone_assault")
+                            for u in world.units.values() if u.state == "attacking")
+                audio.play_combat(heavy=heavy)
+                _combat_sound_timer = 0.22
+
+        # Consume world events → notifications + advisor
         for ev_type, payload in world.events:
             if ev_type == "building_captured":
                 by = payload["by"]
                 name = payload["name"]
                 if by == PLAYER_FACTION:
                     notifs.add(f"CAPTURED: {name}", (0, 255, 100))
+                    advisor.trigger("building_captured_player")
+                    audio.play("capture")
                 else:
                     notifs.add(f"LOST: {name} → {by.upper()}", (255, 100, 40))
+                    advisor.trigger("building_captured_enemy")
+                    audio.play("building_lost")
             elif ev_type == "building_destroyed":
                 notifs.add(f"DESTROYED: {payload['name']}", (220, 40, 30))
+                advisor.trigger("building_destroyed")
+                audio.play("explosion")
             elif ev_type == "press_amplify":
                 notifs.add("PRESS BUREAU RECORDING — +5 INFAMY", (255, 140, 0))
             elif ev_type == "bolo_captured":
                 if payload["faction"] == PLAYER_FACTION:
                     notifs.add("!! BOLO TARGET SECURED — +§500 BONUS", (0, 255, 100))
+                    advisor.trigger("bolo_captured_player")
+                    audio.play("capture")
                 else:
                     notifs.add("!! BOLO TARGET ACQUIRED BY ENEMY", (255, 80, 30))
+                    advisor.trigger("bolo_captured_enemy")
+                    audio.play("alert")
                     _alert_flash = 0.4
-            elif ev_type == "building_destroyed" and payload["faction"] == PLAYER_FACTION:
-                _alert_flash = 0.6
             elif ev_type == "bus_unloaded":
                 notifs.add(f"BUS DELIVERED: {payload['count']} DETAINEES — +§{payload['credits']}", (0, 200, 160))
+                advisor.trigger("bus_unloaded")
+                audio.play("bus_unload")
             elif ev_type == "runner_arrived":
                 notifs.add("!! HVP REACHED EXTRACTION — ENEMY REINFORCEMENTS INBOUND", (255, 60, 30))
+                advisor.trigger("runner_arrived")
+                audio.play("alert")
                 _alert_flash = 1.2
                 cam.pan_to(payload["gx"], payload["gy"])
             elif ev_type == "leak_comms":
@@ -353,10 +424,17 @@ def _run_mission(screen, clock, PLAYER_FACTION):
                 _alert_flash = 0.6
             elif ev_type == "deepfake_live":
                 notifs.add("!! KIRK AI DEEPFAKE DEPLOYED — +50 INFAMY", (180, 40, 255))
+                advisor.trigger("deepfake_live")
+                audio.play("infamy_tick")
                 _deepfake_overlay = 6.0
                 _alert_flash = 1.5
             elif ev_type == "salvage":
                 notifs.add(f"SALVAGE — +§{payload['credits']}", (200, 160, 30))
+            elif ev_type == "vbied_explode":
+                notifs.add("!! SOVEREIGN VBIED DETONATED — AREA COMPROMISED", (255, 60, 20))
+                advisor.trigger("vbied_explode")
+                audio.play("explosion")
+                _alert_flash = 1.0
             elif ev_type == "power_low":
                 pass
         world.events.clear()
@@ -399,6 +477,10 @@ def _run_mission(screen, clock, PLAYER_FACTION):
             lbl = font_sm.render("KIRK RALLY", True, (220, 50, 50))
             screen.blit(lbl, (int(kx) - lbl.get_width() // 2, int(ky) - 20))
 
+        # Civilian vehicles
+        for v in world.vehicles.values():
+            v.draw(screen, cam, fog)
+
         # Wreck markers
         for gx, gy, timer in world.wrecks:
             wx, wy = cam.world_to_screen(gx, gy)
@@ -436,6 +518,25 @@ def _run_mission(screen, clock, PLAYER_FACTION):
             rec_lbl = font_sm.render("● REC", True, (255, 0, 0))
             screen.blit(rec_lbl, (50, 50))
 
+        if intro_state == "talk":
+            # Draw talk text at bottom center
+            f_talk = pygame.font.SysFont("couriernew", 20, bold=True)
+            # Typewriter effect
+            chars_to_show = int(len(intro_text) * (1 - intro_timer / 4.0))
+            current_str = intro_text[:chars_to_show]
+            
+            # Simple typing sound logic
+            if chars_to_show > 0 and chars_to_show % 3 == 0:
+                 audio.play("infamy_tick") # Using infamy_tick as a placeholder typing sound
+
+            txt_surf = f_talk.render(current_str, True, (255, 255, 255))
+            tx = WIN_W // 2 - txt_surf.get_width() // 2
+            ty = WIN_H - 150
+            # Background bar for readability
+            bg_rect = pygame.Rect(tx - 10, ty - 5, txt_surf.get_width() + 20, txt_surf.get_height() + 10)
+            pygame.draw.rect(screen, (0, 0, 0, 150), bg_rect)
+            screen.blit(txt_surf, (tx, ty))
+
         # Ghost building preview
         if placing_bid and placing_ghost:
             _draw_ghost_building(screen, cam, placing_bid, placing_ghost, world)
@@ -456,6 +557,10 @@ def _run_mission(screen, clock, PLAYER_FACTION):
         click_zones = sidebar.draw(screen, sidebar_rect(), world, PLAYER_FACTION)
 
         _draw_selection_info(screen, selection, world, font_sm, WIN_H, WIN_W - SIDEBAR_W)
+
+        if intro_state == "end":
+            objectives.draw(screen, WIN_W, WIN_H)
+        advisor.draw(screen, WIN_W, WIN_H)
 
         if _alert_flash > 0:
             alpha = min(200, int(_alert_flash * 300))

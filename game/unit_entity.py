@@ -13,6 +13,8 @@ UNIT_DEFS = {
     "drone_assault": (200, 3.5, 28,  5.5, 1.2,  "medium",    "frontline", 550),
     "unmarked_van":  (400, 3.0, 20,  4.0, 1.5,  "medium",    "regency",   450),
     "compliance_bus":(350, 2.5,  0,  0.0, 0.0,  "medium",    "regency",   800),
+    "mrap":          (700, 1.6, 40,  4.5, 2.2,  "heavy",     "regency",   750),
+    "vbied":         ( 80, 5.5,  0,  1.8, 99.0, "light",     "sovereign", 350),
 }
 
 FACTION_COLORS = {
@@ -86,6 +88,11 @@ class Unit:
         self.suppressed      = False
         self._suppress_timer = 0.0      # counts down; >0 = suppressed
 
+        self.scanned_timer   = 0.0      # time remaining for "SCANNED" visual
+        self.is_bolo         = False    # True if identified by ALPR tower
+        import random, string
+        self.license_plate   = "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+
     # ── Orders ────────────────────────────────────────────────────────────────
 
     def order_move(self, waypoints):
@@ -122,8 +129,10 @@ class Unit:
         if self.state == STATE_DEAD:
             return
 
-        self.flash_timer = max(0.0, self.flash_timer - dt_sec)
-        self.atk_timer   = max(0.0, self.atk_timer - dt_sec)
+        self.flash_timer   = max(0.0, self.flash_timer - dt_sec)
+        self.atk_timer     = max(0.0, self.atk_timer - dt_sec)
+        self.scanned_timer = max(0.0, self.scanned_timer - dt_sec)
+
         if self._suppress_timer > 0:
             self._suppress_timer -= dt_sec
             self.suppressed = self._suppress_timer > 0
@@ -302,6 +311,10 @@ class Unit:
         "unmarked_van":  [(-12,-6),(12,-6),(12,6),(-12,6)],
         # Compliance Bus — longer than the van, rounded front hint
         "compliance_bus":[(-16,-8),(-12,-10),(12,-10),(16,-8),(16,8),(12,10),(-12,10),(-16,8)],
+        # MRAP — wide armored box with angled front
+        "mrap":          [(-10,-13),(-5,-15),(5,-15),(10,-13),(13,-6),(13,8),(10,12),(-10,12),(-13,8),(-13,-6)],
+        # VBIED — small car silhouette
+        "vbied":         [(-8,-5),(8,-5),(9,0),(8,5),(-8,5),(-9,0)],
     }
     _DEFAULT_SHAPE = [(-7,-7),(7,-7),(7,7),(-7,7)]  # square fallback
 
@@ -313,30 +326,68 @@ class Unit:
         base_col = FACTION_COLORS.get(self.faction, (128, 128, 128))
         col = (255, 255, 255) if self.flash_timer > 0 else base_col
 
-        # Ground shadow (solid dark ellipse — no alpha needed)
+        # ALPR Scanning Visuals
+        if self.scanned_timer > 0:
+            f_license = pygame.font.SysFont("couriernew", 9, bold=True)
+            txt = f_license.render(f"AUDITING: {self.license_plate}", True, (0, 255, 200))
+            surf.blit(txt, (sx - txt.get_width() // 2, sy - 45))
+            # Glitch lines
+            import random
+            for _ in range(2):
+                lx = sx + random.randint(-15, 15)
+                pygame.draw.line(surf, (0, 255, 200), (lx, sy - 45), (lx + 5, sy - 45), 1)
+
+        if self.is_bolo:
+            f_bolo = pygame.font.SysFont("couriernew", 10, bold=True)
+            txt = f_bolo.render("BOLO TARGET", True, (255, 30, 0))
+            # Shake effect for BOLO
+            off_x = int(math.sin(pygame.time.get_ticks() * 0.05) * 2)
+            surf.blit(txt, (sx - txt.get_width() // 2 + off_x, sy - 58))
+
+        # Ground shadow
         pygame.draw.ellipse(surf, (0, 8, 6), (sx - 10, sy - 2, 20, 6))
 
-        # Unit body — distinct polygon per type
+        # Try sprite sheet first
+        from game.sprites import get_manager
+        moving  = self.state == STATE_MOVING
+        frame   = get_manager().get_frame(self.utype, self.facing, moving)
+
         raw = self._SHAPES.get(self.utype, self._DEFAULT_SHAPE)
         pts = [(sx + dx, sy - 8 + dy) for dx, dy in raw]
 
-        # Glitch selection outline (drawn behind unit body)
-        if self.selected:
-            base_draw_color = base_col if self.flash_timer <= 0 else col
-            pygame.draw.polygon(surf, base_draw_color, pts, 2)
-            pygame.draw.polygon(surf, (255, 50, 50),
-                                [(sx + dx - 2, sy - 8 + dy - 1) for dx, dy in raw], 1)
-            pygame.draw.polygon(surf, (50, 50, 255),
-                                [(sx + dx + 1, sy - 8 + dy + 2) for dx, dy in raw], 1)
+        if frame:
+            # Selection outline using polygon footprint behind sprite
+            if self.selected:
+                pygame.draw.polygon(surf, base_col, pts, 2)
+                pygame.draw.polygon(surf, (255, 50, 50),
+                                    [(sx + dx - 2, sy - 8 + dy - 1) for dx, dy in raw], 1)
+                pygame.draw.polygon(surf, (50, 50, 255),
+                                    [(sx + dx + 1, sy - 8 + dy + 2) for dx, dy in raw], 1)
 
-        pygame.draw.polygon(surf, col, pts)
-        pygame.draw.polygon(surf, (0, 0, 0), pts, 1)
+            # Flash tint: blit white-modulated copy on hit
+            if self.flash_timer > 0:
+                flash = frame.copy()
+                flash.fill((255, 255, 255, 160), special_flags=pygame.BLEND_RGBA_MULT)
+                surf.blit(flash, (sx - frame.get_width() // 2, sy - frame.get_height() // 2 - 4))
+            else:
+                surf.blit(frame, (sx - frame.get_width() // 2, sy - frame.get_height() // 2 - 4))
+        else:
+            # Polygon fallback
+            if self.selected:
+                pygame.draw.polygon(surf, base_col if self.flash_timer <= 0 else col, pts, 2)
+                pygame.draw.polygon(surf, (255, 50, 50),
+                                    [(sx + dx - 2, sy - 8 + dy - 1) for dx, dy in raw], 1)
+                pygame.draw.polygon(surf, (50, 50, 255),
+                                    [(sx + dx + 1, sy - 8 + dy + 2) for dx, dy in raw], 1)
 
-        # Direction pip
-        angle = [225, 315, 45, 135][self.facing] * math.pi / 180
-        px = sx + int(math.cos(angle) * 10)
-        py = sy - 8 + int(math.sin(angle) * 10)
-        pygame.draw.circle(surf, (255, 255, 255), (px, py), 2)
+            pygame.draw.polygon(surf, col, pts)
+            pygame.draw.polygon(surf, (0, 0, 0), pts, 1)
+
+            # Direction pip (only shown for polygon units)
+            angle = [225, 315, 45, 135][self.facing] * math.pi / 180
+            px = sx + int(math.cos(angle) * 10)
+            py = sy - 8 + int(math.sin(angle) * 10)
+            pygame.draw.circle(surf, (255, 255, 255), (px, py), 2)
 
         # HP bar
         self._draw_hp_bar(surf, sx, sy)
@@ -435,5 +486,51 @@ class ComplianceBus(Unit):
             f2 = pygame.font.SysFont("couriernew", 7)
             lbl = f2.render("SAFE HARBOR EXPRESS", True, (200, 220, 255))
             surf.blit(lbl, (sx - lbl.get_width() // 2, sy - 36))
+
+        self._draw_hp_bar(surf, sx, sy)
+
+
+class VBIEDUnit(Unit):
+    """Sovereign suicide vehicle — drives at enemies and detonates on contact."""
+    BLAST_RADIUS = 3.5
+    BLAST_DAMAGE = 110
+
+    def __init__(self, faction, gx, gy):
+        super().__init__("vbied", faction, gx, gy)
+        self._detonated = False
+
+    def _do_attack(self, target, dt_sec, world):
+        if self._detonated:
+            return
+        self._detonated = True
+        for u in list(world.units.values()):
+            if u.state == STATE_DEAD or u is self:
+                continue
+            if math.dist((self.gx, self.gy), (u.gx, u.gy)) <= self.BLAST_RADIUS:
+                u.take_damage(self.BLAST_DAMAGE, world)
+        world.roe_manager.add_infamy(30)
+        world.events.append(("vbied_explode", {"gx": self.gx, "gy": self.gy}))
+        self.state = STATE_DEAD
+
+    def draw(self, surf: pygame.Surface, cam):
+        if self.state == STATE_DEAD or self.garrisoned_in:
+            return
+        sx, sy = cam.world_to_screen(self.gx, self.gy)
+
+        pulse = int(7 + math.sin(pygame.time.get_ticks() * 0.008) * 3)
+        pygame.draw.circle(surf, (180, 30, 30), (sx, sy - 8), pulse, 1)
+
+        pygame.draw.ellipse(surf, (0, 8, 6), (sx - 10, sy - 3, 20, 7))
+
+        raw = self._SHAPES.get("vbied", self._DEFAULT_SHAPE)
+        pts = [(sx + dx, sy - 8 + dy) for dx, dy in raw]
+        col = (220, 50, 50) if self.flash_timer <= 0 else (255, 255, 255)
+        pygame.draw.polygon(surf, col, pts)
+        pygame.draw.polygon(surf, (0, 0, 0), pts, 1)
+
+        if self.selected:
+            f = pygame.font.SysFont("couriernew", 7)
+            lbl = f.render("V-BIED", True, (255, 80, 80))
+            surf.blit(lbl, (sx - lbl.get_width() // 2, sy - 22))
 
         self._draw_hp_bar(surf, sx, sy)

@@ -107,13 +107,11 @@ class SelectionManager:
         if target_unit and target_unit.faction in world.enemies_of(selected_units[0].faction):
             # Attack order
             for u in selected_units:
-                from game.pathfinding import find_path
                 wp = find_path((u.gx, u.gy), (target_unit.gx, target_unit.gy), blocked)
                 u.order_attack(target_unit.uid, wp[1:-1] if len(wp) > 2 else [])
         elif target_pb and target_pb.bdef.get("garrison", 0) > 0 and target_pb.faction == selected_units[0].faction:
             # Garrison order
             for u in selected_units:
-                from game.pathfinding import find_path
                 wp = find_path((u.gx, u.gy), (target_pb.gx + target_pb.bdef["w"]/2, target_pb.gy + target_pb.bdef["h"]/2), blocked)
                 u.order_garrison(target_pb.bid, wp[1:])
         else:

@@ -30,3 +30,36 @@
 
 **[Objective: The Martyr Falls]**
 "He’s gone. But look at the grid! The glitch is spreading. His redaction is our greatest asset. Keep pushing! For the Cloud!"
+
+
+#Expanded Script 5/1/26
+
+Event,Script Line
+Unit Killed,Asset reclamation protocols initiated due to unscheduled biological cessation.
+,Individual unit productivity has flatlined to zero percent.
+,A temporary reduction in staffing overhead has been successfully achieved.
+,Bio-signature lost during a mandatory personnel restructuring event.
+Victory,Hostile administrative infrastructure has been permanently deregistered.
+,The competing narrative has reached its scheduled expiration date.
+,Corporate dominance metrics have reached the target threshold for total acquisition.
+,Local competition has been liquidated according to standard merger protocols.
+Defeat,Primary executive facility has undergone a catastrophic downsizing event.
+,Your leadership privileges have been revoked by the oversight committee.
+,Administrative continuity has been terminated by external market forces.
+,Strategic failure detected in all core leadership modules.
+Low Credits,Financial liquid assets are currently trending toward a non-existent state.
+,Operating budget is insufficient to sustain current growth projections.
+,Fiscal health warning: critical liquidity threshold breached.
+,Procurement capabilities are approaching a hard cap on expenditure.
+Civilian Escape,A unit of local interest has exited the monitored safety perimeter.
+,Unauthorized movement detected beyond the established compliance zone.
+,A gap in the protective custody pipeline has been identified.
+,Biological data point is currently operating outside of company oversight.
+Capture Start,On-site property appraisal and hostile takeover in progress.
+,Real estate acquisition protocols are currently seventy percent synchronized.
+,We are currently updating the deed of ownership for this facility.
+,Facility rebranding is currently being finalized by ground assets.
+Timer Expired,The window for strategic engagement has reached its hard deadline.
+,Project timeframe has concluded according to established oversight guidelines.
+,Administrative timeout enacted due to lack of timely objective completion.
+,The board of directors is withdrawing support for this initiative.

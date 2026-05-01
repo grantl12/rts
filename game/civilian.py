@@ -56,7 +56,7 @@ class Civilian:
             self.speed = 1.2 if self.ctype != RUNNER else 4.5
 
         if world.roe_manager.current_roe == 5:
-            self.panic()
+            self.panic(world)
 
         # Runner HVP logic — always chase destination
         if self.ctype == RUNNER and self._destination and not self._reached_dest:
@@ -74,26 +74,33 @@ class Civilian:
         else:
             self._wander_logic(dt_sec, world)
 
-    def panic(self):
+    def panic(self, world=None):
         self._panic_timer = 10.0
         angle = random.uniform(0, math.pi * 2)
-        dist = random.uniform(5, 10)
-        self.waypoints = [(int(self.gx + math.cos(angle) * dist),
-                          int(self.gy + math.sin(angle) * dist))]
+        dist  = random.uniform(5, 10)
+        from game.map_data import W, H
+        dx = max(1, min(W - 2, int(self.gx + math.cos(angle) * dist)))
+        dy = max(1, min(H - 2, int(self.gy + math.sin(angle) * dist)))
+        if world:
+            from game.pathfinding import find_path
+            path = find_path((int(self.gx), int(self.gy)), (dx, dy), world.blocked_tiles())
+            self.waypoints = path[1:] if len(path) > 1 else []
+        else:
+            self.waypoints = [(dx, dy)]
 
     def _wander_logic(self, dt_sec, world=None):
         self._wander_timer -= dt_sec
         if self._wander_timer <= 0:
             self._wander_timer = random.uniform(2, 6)
+            from game.map_data import W, H
             angle = random.uniform(0, math.pi * 2)
-            dist = random.uniform(1, 4)
-            dest = (int(self.gx + math.cos(angle) * dist),
-                    int(self.gy + math.sin(angle) * dist))
+            dist  = random.uniform(1, 4)
+            dest  = (max(1, min(W - 2, int(self.gx + math.cos(angle) * dist))),
+                     max(1, min(H - 2, int(self.gy + math.sin(angle) * dist))))
             if world:
                 from game.pathfinding import find_path
-                blocked = world.blocked_tiles()
-                path = find_path((int(self.gx), int(self.gy)), dest, blocked)
-                self.waypoints = path[1:] if len(path) > 1 else [dest]
+                path = find_path((int(self.gx), int(self.gy)), dest, world.blocked_tiles())
+                self.waypoints = path[1:] if len(path) > 1 else []
             else:
                 self.waypoints = [dest]
 
@@ -116,7 +123,7 @@ class Civilian:
             self.state = "dead"
             world.roe_manager.add_infamy(50)
         else:
-            self.panic()
+            self.panic(world)
 
     def draw(self, surf, cam):
         if self.state == "dead": return

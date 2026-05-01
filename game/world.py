@@ -3,11 +3,12 @@ World state — units, placed buildings, production queues, game logic tick.
 """
 import math
 from typing import Optional
-from game.unit_entity import Unit, ComplianceBus, STATE_DEAD
+from game.unit_entity import Unit, ComplianceBus, VBIEDUnit, STATE_DEAD
 from game.building_defs import BUILDINGS as BDEF
-from game.map_data import BUILDINGS as MAP_BLDS
+from game.map_data import BUILDINGS as MAP_BLDS, TERRAIN, PATH, W as MAP_W, H as MAP_H
 from game.roe import ROEManager
 from game.civilian import Civilian
+from game.vehicles import CivilianCar
 from game.ai import AIFaction
 import random
 
@@ -139,13 +140,32 @@ class World:
             self.spawn_civilian(kx + random.uniform(-4, 4), ky + random.uniform(-4, 4))
 
         self._bolo_uid = None   # uid of the BOLO target civilian
+        self.vehicles  = {}      # uid -> CivilianCar
+        self._vbied_timer = 45.0  # seconds until next Sovereign VBIED attempt
 
         # Pre-place map buildings as neutral/capturable
         self._place_map_buildings()
 
-        # Enemy base (upper-left corner)
-        self.place_building("reg_hq",       enemy, 4,  3)
-        self.place_building("reg_barracks",  enemy, 10, 3)
+        # Enemy base — faction-appropriate buildings
+        _ENEMY_BASE = {
+            "sovereign": [("sov_safehouse", 4, 3), ("sov_cache",    10, 3)],
+            "frontline": [("fl_hq",         4, 3), ("fl_drone",     10, 3)],
+            "regency":   [("reg_hq",        4, 3), ("reg_barracks", 10, 3)],
+            "oligarchy": [("olig_hq",       4, 3), ("reg_barracks", 10, 3)],
+        }
+        for bid, bx, by in _ENEMY_BASE.get(enemy, [("reg_hq", 4, 3), ("reg_barracks", 10, 3)]):
+            self.place_building(bid, enemy, bx, by)
+
+        # Spawn ambient civilian cars on road tiles
+        road_tiles = [(x, y) for y in range(MAP_H) for x in range(MAP_W)
+                      if TERRAIN[y][x] == PATH]
+        _rng_cars = random.Random(map_phase * 3 + 99)
+        for _ in range(12):
+            if road_tiles:
+                rx, ry = _rng_cars.choice(road_tiles)
+                car = CivilianCar(rx + _rng_cars.uniform(0.1, 0.9),
+                                  ry + _rng_cars.uniform(0.1, 0.9))
+                self.vehicles[car.uid] = car
 
         # Designate one random civilian as BOLO target
         if self.civilians:
@@ -166,7 +186,12 @@ class World:
     # ── Spawn ─────────────────────────────────────────────────────────────────
 
     def spawn_unit(self, utype, faction, gx, gy) -> Unit:
-        u = ComplianceBus(gx, gy, faction) if utype == "compliance_bus" else Unit(utype, faction, gx, gy)
+        if utype == "compliance_bus":
+            u = ComplianceBus(gx, gy, faction)
+        elif utype == "vbied":
+            u = VBIEDUnit(faction, gx, gy)
+        else:
+            u = Unit(utype, faction, gx, gy)
         self.units[u.uid] = u
         return u
 
@@ -338,6 +363,22 @@ class World:
                         self._unload_bus(u, pb, player_faction)
                         break
 
+        # Vehicles + VBIED trigger for Sovereign enemy
+        for v in self.vehicles.values():
+            v.update(dt, self)
+        if "sovereign" in self.ai_factions and player_faction != "sovereign":
+            self._vbied_timer -= dt
+            if self._vbied_timer <= 0:
+                self._vbied_timer = random.uniform(50.0, 80.0)
+                player_units = [u for u in self.units.values()
+                                if u.faction == player_faction and u.state != STATE_DEAD]
+                parked = [v for v in self.vehicles.values() if v.state == "parked"]
+                if player_units and parked:
+                    target_u = random.choice(player_units)
+                    car = min(parked,
+                              key=lambda v: math.dist((v.gx, v.gy), (target_u.gx, target_u.gy)))
+                    car.arm_vbied(target_u.gx, target_u.gy)
+
         # Cleanup dead civs
         dead_civs = [cid for cid, c in self.civilians.items() if c.state == "dead"]
         for cid in dead_civs:
@@ -429,6 +470,17 @@ class World:
                 self.game_over = self.GAME_OVER_DEFEAT
             elif not enemy_hq_alive:
                 self.game_over = self.GAME_OVER_VICTORY
+
+        # ALPR Scanner Logic
+        for pb in self.placed_buildings.values():
+            if "scanner" in pb.bdef.get("flags", []):
+                for u in self.units.values():
+                    if u.state == STATE_DEAD: continue
+                    if u.faction == "sovereign" and math.dist((pb.gx, pb.gy), (u.gx, u.gy)) < 8.0:
+                        u.scanned_timer = 2.0  # Show visual feedback
+                        if not u.is_bolo:
+                            u.is_bolo = True
+                            self.events.append(("bolo_identified", {"unit": u.utype, "uid": u.uid}))
 
         # Production queues
         self._income_timer += dt

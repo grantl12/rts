@@ -1,26 +1,42 @@
-"""
-AI Faction Controller.
-Handles production and strategic orders for non-player factions.
-"""
+"""AI Faction Controller — differentiated behavior per faction."""
 import random, math
-from game.unit_entity import UNIT_DEFS, STATE_IDLE, STATE_ATTACK, STATE_MOVING
+from game.unit_entity import UNIT_DEFS, STATE_IDLE, STATE_DEAD
+from game.pathfinding import find_path
+
+# Weighted production preferences per faction
+_PRODUCE_WEIGHTS = {
+    "sovereign": {"proxy": 3, "vbied": 1},
+    "frontline": {"drone_scout": 3, "drone_assault": 1},
+    "regency":   {"gravy_seal": 3, "ice_agent": 1},
+    "oligarchy": {"gravy_seal": 2, "ice_agent": 1},
+}
+
+# (produce_interval, order_interval, raid_interval) in seconds
+_INTERVALS = {
+    "sovereign": (25.0,  8.0, 60.0),   # Slower buildup, rare raids
+    "frontline": (20.0,  6.0, 75.0),   # Rapid response, light on raids
+    "regency":   (28.0, 10.0, 60.0),   # Methodical, holds ground
+    "oligarchy": (30.0, 12.0, 50.0),   # Slow buildup, heavy raid pens
+}
 
 
 class AIFaction:
     def __init__(self, faction):
         self.faction = faction
-        self.produce_timer = 0.0
-        self.order_timer = 0.0
-        self.raid_timer = 0.0
+        prod, order, raid = _INTERVALS.get(faction, (12.0, 6.0, 25.0))
+        self.produce_timer    = prod
+        self.order_timer      = order
+        self._raid_timer      = raid
+        self.PRODUCE_INTERVAL = prod
+        self.ORDER_INTERVAL   = order
+        self.RAID_INTERVAL    = raid
 
-        self.PRODUCE_INTERVAL = 12.0
-        self.ORDER_INTERVAL = 6.0
-        self.RAID_INTERVAL = 25.0
+    # ── Tick ──────────────────────────────────────────────────────────────────
 
     def update(self, dt_sec, world):
         self.produce_timer -= dt_sec
-        self.order_timer -= dt_sec
-        self.raid_timer -= dt_sec
+        self.order_timer   -= dt_sec
+        self._raid_timer   -= dt_sec
 
         if self.produce_timer <= 0:
             self.produce_timer = self.PRODUCE_INTERVAL
@@ -30,75 +46,177 @@ class AIFaction:
             self.order_timer = self.ORDER_INTERVAL
             self._do_orders(world)
 
-        if self.raid_timer <= 0:
-            self.raid_timer = self.RAID_INTERVAL
+        if self._raid_timer <= 0:
+            self._raid_timer = self.RAID_INTERVAL
             self._do_raids(world)
+
+    # ── Production ────────────────────────────────────────────────────────────
 
     def _do_production(self, world):
         factories = [pb for pb in world.placed_buildings.values()
                      if pb.faction == self.faction and pb.bdef.get("produces")]
         if not factories:
             return
-
         factory = random.choice(factories)
-        queue = world.unit_queues.get(factory.bid)
+        queue   = world.unit_queues.get(factory.bid)
         if not queue:
             return
-
         options = factory.bdef["produces"]
         if not options:
             return
 
-        choice = random.choice(options)
-        cost = UNIT_DEFS.get(choice, (0,)*8)[7]
+        weights = _PRODUCE_WEIGHTS.get(self.faction, {})
+        pool    = []
+        for utype in options:
+            pool.extend([utype] * weights.get(utype, 1))
+        choice = random.choice(pool)
 
+        cost = UNIT_DEFS.get(choice, (0,)*8)[7]
         if world.credits.get(self.faction, 0) >= cost:
-            queue.enqueue(choice, cost, world.credits[self.faction])
-            world.credits[self.faction] = world.credits.get(self.faction, 0) - cost
+            if queue.enqueue(choice, cost, world.credits[self.faction]):
+                world.credits[self.faction] -= cost
+
+    # ── Orders — dispatch by faction ──────────────────────────────────────────
 
     def _do_orders(self, world):
         player_faction = world.player_faction
-        idle_units = [u for u in world.units.values()
-                      if u.faction == self.faction and u.state == STATE_IDLE]
-        if not idle_units:
+        idle = [u for u in world.units.values()
+                if u.faction == self.faction and u.state == STATE_IDLE
+                and u.state != STATE_DEAD]
+        if not idle:
             return
 
-        # Priority 1: capture unclaimed objectives
-        objectives = [pb for pb in world.placed_buildings.values()
-                      if "objective" in pb.bdef.get("flags", [])
-                      and pb.faction != self.faction]
-        if objectives:
-            target = random.choice(objectives)
-            self._move_squad(idle_units, target.gx + target.bdef["w"] / 2,
-                             target.gy + target.bdef["h"] / 2, world)
+        dispatch = {
+            "sovereign": self._orders_sovereign,
+            "frontline": self._orders_frontline,
+            "regency":   self._orders_regency,
+            "oligarchy": self._orders_oligarchy,
+        }
+        dispatch.get(self.faction, self._orders_default)(idle, player_faction, world)
+
+    # ── Sovereign: disruption + split-squad flanking ──────────────────────────
+
+    def _orders_sovereign(self, idle, player_faction, world):
+        mid     = max(1, len(idle) // 2)
+        squad_a = idle[:mid]
+        squad_b = idle[mid:]
+
+        player_units = [u for u in world.units.values()
+                        if u.faction == player_faction and u.state != STATE_DEAD]
+        player_hq    = self._find_hq(player_faction, world)
+
+        if player_units and squad_a:
+            # Squad A hunts the nearest player unit
+            nearest = min(player_units,
+                          key=lambda u: math.dist((squad_a[0].gx, squad_a[0].gy),
+                                                  (u.gx, u.gy)))
+            self._move_squad(squad_a, nearest.gx, nearest.gy, world)
+
+        if player_hq and squad_b:
+            # Squad B approaches HQ from a randomised offset angle
+            jx = random.uniform(-5, 5)
+            jy = random.uniform(-5, 5)
+            self._move_squad(squad_b, player_hq.gx + jx, player_hq.gy + jy, world)
+
+    # ── Frontline: drone swarm + infamy pressure ──────────────────────────────
+
+    def _orders_frontline(self, idle, player_faction, world):
+        # Target audit/sensor nodes first to amplify infamy
+        sensors = [pb for pb in world.placed_buildings.values()
+                   if ("sensor" in pb.bdef.get("flags", [])
+                       or "infamy_amplify" in pb.bdef.get("flags", []))
+                   and pb.faction != self.faction]
+        if sensors:
+            target = min(sensors,
+                         key=lambda pb: math.dist((idle[0].gx, idle[0].gy),
+                                                  (pb.gx, pb.gy)))
+            self._move_squad(idle, target.gx, target.gy, world)
             return
 
-        # Priority 2: attack nearest player unit
-        player_units = [u for u in world.units.values() if u.faction == player_faction]
+        # Target the largest player cluster
+        player_units = [u for u in world.units.values()
+                        if u.faction == player_faction and u.state != STATE_DEAD]
         if player_units:
-            target_unit = min(player_units,
-                              key=lambda u: math.dist((idle_units[0].gx, idle_units[0].gy),
-                                                      (u.gx, u.gy)))
-            for u in idle_units:
-                from game.pathfinding import find_path
-                blocked = world.blocked_tiles()
-                wp = find_path((u.gx, u.gy), (target_unit.gx, target_unit.gy), blocked)
-                u.order_move(wp[1:] if len(wp) > 1 else [])
+            center = max(player_units,
+                         key=lambda u: sum(1 for v in player_units
+                                           if math.dist((u.gx, u.gy), (v.gx, v.gy)) < 5))
+            self._move_squad(idle, center.gx, center.gy, world)
             return
 
-        # Priority 3: attack player HQ
-        player_hq = next((pb for pb in world.placed_buildings.values()
-                          if pb.faction == player_faction
-                          and "command" in pb.bdef.get("flags", [])), None)
-        if player_hq:
-            self._move_squad(idle_units, player_hq.gx, player_hq.gy, world)
+        hq = self._find_hq(player_faction, world)
+        if hq:
+            self._move_squad(idle, hq.gx, hq.gy, world)
 
-    def _move_squad(self, units, tx, ty, world):
-        from game.pathfinding import find_path
-        blocked = world.blocked_tiles()
-        for u in units:
-            wp = find_path((u.gx, u.gy), (tx, ty), blocked)
-            u.order_move(wp[1:] if len(wp) > 1 else [])
+    # ── Regency: methodical capture-and-hold ──────────────────────────────────
+
+    def _orders_regency(self, idle, player_faction, world):
+        # Capture unclaimed or enemy buildings near our position
+        capturable = [pb for pb in world.placed_buildings.values()
+                      if pb.faction != self.faction]
+        if capturable and len(idle) >= 2:
+            target = min(capturable,
+                         key=lambda pb: math.dist((idle[0].gx, idle[0].gy),
+                                                  (pb.gx, pb.gy)))
+            cap_squad = idle[:len(idle) // 2 + 1]
+            self._move_squad(cap_squad, target.gx, target.gy, world)
+            return
+
+        player_units = [u for u in world.units.values()
+                        if u.faction == player_faction and u.state != STATE_DEAD]
+        if player_units:
+            nearest = min(player_units,
+                          key=lambda u: math.dist((idle[0].gx, idle[0].gy),
+                                                  (u.gx, u.gy)))
+            self._move_squad(idle, nearest.gx, nearest.gy, world)
+            return
+
+        hq = self._find_hq(player_faction, world)
+        if hq:
+            self._move_squad(idle, hq.gx, hq.gy, world)
+
+    # ── Oligarchy: economy-first, heavy assault when flush ────────────────────
+
+    def _orders_oligarchy(self, idle, player_faction, world):
+        # Prioritise income buildings
+        income_blds = [pb for pb in world.placed_buildings.values()
+                       if pb.bdef.get("passive_income", 0) > 0
+                       and pb.faction != self.faction]
+        if income_blds:
+            target = min(income_blds,
+                         key=lambda pb: math.dist((idle[0].gx, idle[0].gy),
+                                                  (pb.gx, pb.gy)))
+            self._move_squad(idle, target.gx, target.gy, world)
+            return
+
+        # Full assault only once credit reserves are comfortable
+        if world.credits.get(self.faction, 0) > 2000:
+            hq = self._find_hq(player_faction, world)
+            if hq:
+                self._move_squad(idle, hq.gx, hq.gy, world)
+                return
+
+        player_units = [u for u in world.units.values()
+                        if u.faction == player_faction and u.state != STATE_DEAD]
+        if player_units:
+            nearest = min(player_units,
+                          key=lambda u: math.dist((idle[0].gx, idle[0].gy),
+                                                  (u.gx, u.gy)))
+            self._move_squad(idle, nearest.gx, nearest.gy, world)
+
+    def _orders_default(self, idle, player_faction, world):
+        player_units = [u for u in world.units.values()
+                        if u.faction == player_faction and u.state != STATE_DEAD]
+        if player_units:
+            nearest = min(player_units,
+                          key=lambda u: math.dist((idle[0].gx, idle[0].gy),
+                                                  (u.gx, u.gy)))
+            self._move_squad(idle, nearest.gx, nearest.gy, world)
+            return
+        hq = self._find_hq(player_faction, world)
+        if hq:
+            self._move_squad(idle, hq.gx, hq.gy, world)
+
+    # ── Raids ─────────────────────────────────────────────────────────────────
 
     def _do_raids(self, world):
         player_faction = world.player_faction
@@ -106,11 +224,25 @@ class AIFaction:
                 if pb.faction == player_faction and pb.civs_held > 0]
         if not pens:
             return
-
-        target_pen = random.choice(pens)
-        my_units = [u for u in world.units.values() if u.faction == self.faction]
+        my_units = [u for u in world.units.values()
+                    if u.faction == self.faction and u.state != STATE_DEAD]
         if not my_units:
             return
 
-        raid_squad = random.sample(my_units, min(len(my_units), 3))
+        raid_size  = 4 if self.faction == "oligarchy" else 3
+        raid_squad = random.sample(my_units, min(len(my_units), raid_size))
+        target_pen = min(pens, key=lambda pb: pb.civs_held)  # hit the easiest pen
         self._move_squad(raid_squad, target_pen.gx, target_pen.gy, world)
+
+    # ── Utilities ─────────────────────────────────────────────────────────────
+
+    def _find_hq(self, faction, world):
+        return next((pb for pb in world.placed_buildings.values()
+                     if pb.faction == faction
+                     and "command" in pb.bdef.get("flags", [])), None)
+
+    def _move_squad(self, units, tx, ty, world):
+        blocked = world.blocked_tiles()
+        for u in units:
+            wp = find_path((u.gx, u.gy), (tx, ty), blocked)
+            u.order_move(wp[1:] if len(wp) > 1 else [])

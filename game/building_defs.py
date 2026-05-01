@@ -45,6 +45,12 @@ _CAMPUS_RED = _pal((130,55,45),  (92,38,30),   (112,48,38),  accent=(180,80,55),
 _GLASS_GRN  = _pal((35,75,60),   (24,54,44),   (30,65,52),   window=(80,200,160))
 
 
+# Regency palette (dark teal + neon cyan + red accents)
+_REG_PATRIOT = _pal((15,50,50),  (10,35,35),   (13,42,42),   accent=(220,30,20), window=(0,255,200))
+
+# Sovereign palette (darkest teal + shadow)
+_SOV_SHADOW  = _pal((10,25,25),  (5,15,15),    (8,20,20),    accent=(0,255,180))
+
 # ── CATALOG ───────────────────────────────────────────────────────────────────
 
 BUILDINGS = {
@@ -64,7 +70,7 @@ BUILDINGS = {
         "power_draw":  -40,
         "garrison":    0,
         "produces":    [],
-        "description": "Primary command node. Loss = mission failure.",
+        "description": "The nexus for all local narrative budgeting and population auditing. Loss = mission failure.",
         "palette":     _REG_BASE,
         "flags":       ["command", "required"],
         "roof_style":  "antenna",
@@ -81,7 +87,7 @@ BUILDINGS = {
         "power_draw":  -12,
         "garrison":    0,
         "produces":    ["gravy_seal", "ice_agent"],
-        "description": "Trains Gravy Seals and ICE Agents. Requires HQ.",
+        "description": "Orientation facility for citizens awaiting successful personality optimization.",
         "palette":     _REG_BASE,
         "flags":       ["production"],
         "roof_style":  "flat",
@@ -99,7 +105,7 @@ BUILDINGS = {
         "garrison":    12,
         "produces":    [],
         "passive_income": 0,
-        "description": "Harvests nearby Kirk Protesters. Generates credits per occupant.",
+        "description": "Secured orientation facility for citizens awaiting successful personality optimization.",
         "palette":     _REG_FORT,
         "flags":       ["holding_pen"],
         "roof_style":  "flat",
@@ -133,7 +139,7 @@ BUILDINGS = {
         "power_draw":  -20,
         "garrison":    0,
         "produces":    ["unmarked_van", "mrap"],
-        "description": "Produces vehicles. MRAP requires Depot + Barracks.",
+        "description": "Storage for community outreach vehicles designed for heavy urban stabilization.",
         "palette":     _REG_FORT,
         "flags":       ["production", "vehicle"],
         "roof_style":  "hangar",
@@ -201,7 +207,7 @@ BUILDINGS = {
         "power_draw":  -15,
         "garrison":    0,
         "produces":    [],
-        "description": "Reduces Infamy by 2/min in radius. Demoralises enemy units nearby.",
+        "description": "High-fidelity signal broadcast system for synchronizing the public perspective.",
         "palette":     _pal((60,28,20),(42,18,14),(52,24,18),accent=(220,50,30)),
         "flags":       ["aura", "infamy_reduce"],
         "roof_style":  "dish",
@@ -222,6 +228,40 @@ BUILDINGS = {
         "palette":     _REG_BASE,
         "flags":       ["relay"],
         "roof_style":  "dish",
+    },
+
+    "reg_patriot_hq": {
+        "name":        "PATRIOT TRAINING CENTER",
+        "sub":         "ELITE INFANTRY PRODUCTION",
+        "category":    "base",
+        "faction":     "regency",
+        "w": 4, "h": 3, "floors": 2,
+        "cost":        750,
+        "hp":          1200,
+        "power_draw":  -25,
+        "garrison":    0,
+        "produces":    ["gravy_seal"],
+        "description": "Trains elite Gravy Seal squads. Features a red-hat roof and neon 'AMERICA FIRST' signage.",
+        "palette":     _REG_PATRIOT,
+        "flags":       ["production", "elite"],
+        "roof_style":  "hat",
+    },
+
+    "reg_alpr_tower": {
+        "name":        "ALPR SCANNER ARRAY",
+        "sub":         "BOLO SENSOR NODE",
+        "category":    "base",
+        "faction":     "regency",
+        "w": 1, "h": 1, "floors": 5,
+        "cost":        300,
+        "hp":          400,
+        "power_draw":  -10,
+        "garrison":    0,
+        "produces":    [],
+        "description": "Automatically scans passing civilian vehicles. Identifies BOLO targets for +50§ bounty.",
+        "palette":     _REG_PATRIOT,
+        "flags":       ["vision", "scanner"],
+        "roof_style":  "antenna",
     },
 
     # ══════════════════════════════════════════════════════════════════
@@ -317,6 +357,23 @@ BUILDINGS = {
         "roof_style":  "flat",
     },
 
+    "sov_shadow_lab": {
+        "name":        "SHADOW LAB",
+        "sub":         "SOVEREIGN R&D",
+        "category":    "base",
+        "faction":     "sovereign",
+        "w": 3, "h": 2, "floors": 1,
+        "cost":        600,
+        "hp":          450,
+        "power_draw":  0,
+        "garrison":    4,
+        "produces":    [],
+        "description": "Unlocks advanced Sovereign abilities. Features hidden antennas and dark teal 'shadow' palette.",
+        "palette":     _SOV_SHADOW,
+        "flags":       ["tech", "garrisonable"],
+        "roof_style":  "dish",
+    },
+
     # ══════════════════════════════════════════════════════════════════
     #  OLIGARCHY — Base Buildings
     # ══════════════════════════════════════════════════════════════════
@@ -387,7 +444,7 @@ BUILDINGS = {
         "power_draw":  0,
         "garrison":    8,
         "produces":    [],
-        "description": "Units produced while held gain +25% XP. 8 garrison slots.",
+        "description": "Centralized repository for the permanent redaction of unauthorized historical data.",
         "palette":     _BRUTALIST,
         "flags":       ["capturable", "xp_boost", "garrisonable"],
         "roof_style":  "flat",
@@ -404,10 +461,27 @@ BUILDINGS = {
         "power_draw":  0,
         "garrison":    6,
         "produces":    [],
-        "description": "Nearby friendly units regenerate HP. 6 garrison slots.",
+        "description": "Facility dedicated to biological maintenance and experimental revenue extraction.",
         "palette":     _pal((200,200,200),(155,155,155),(178,178,178),accent=(200,30,30),window=(180,220,255)),
         "flags":       ["capturable", "heal_aura", "garrisonable"],
         "roof_style":  "cross",
+    },
+
+    "civ_dispensary": {
+        "name":        "CAMPUS DISPENSARY",
+        "sub":         "MORALE + INCOME NODE",
+        "category":    "civilian",
+        "faction":     None,
+        "w": 2, "h": 1, "floors": 1,
+        "cost":        0,
+        "hp":          150,
+        "power_draw":  0,
+        "garrison":    2,
+        "produces":    [],
+        "description": "Neutral building. Provides §8/sec and slow Morale regen in radius. 2 garrison.",
+        "palette":     _GLASS_GRN,
+        "flags":       ["capturable", "income", "morale_aura", "garrisonable"],
+        "roof_style":  "flat",
     },
 
     "civ_dorm_delta": {
@@ -455,7 +529,7 @@ BUILDINGS = {
         "power_draw":  0,
         "garrison":    2,
         "produces":    [],
-        "description": "Provides 60-tile vision radius. Cannot be razed without +50 Infamy.",
+        "description": "Reminder of the finite duration of your current employment contract.",
         "palette":     _CAMPUS,
         "flags":       ["capturable", "vision", "landmark"],
         "roof_style":  "spire",
