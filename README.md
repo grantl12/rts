@@ -1,7 +1,7 @@
 # THE DEEP STATE
 > "In a post-truth world, the only thing more dangerous than a leak is an audit."
 
-Satirical isometric RTS. You are the Regency. Your job is containment. The civilians are the resource. The press is the enemy.
+Satirical isometric RTS. You are the Regency. Your job is containment. The civilians are the resource. The truth is the enemy.
 
 Built in **Python 3 + pygame 2**. No engine, no editor, no excuses.
 
