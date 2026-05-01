@@ -30,6 +30,7 @@ class AIFaction:
         self.PRODUCE_INTERVAL = prod
         self.ORDER_INTERVAL   = order
         self.RAID_INTERVAL    = raid
+        self._vbied_timer     = 45.0   # Sovereign only
 
     # ── Tick ──────────────────────────────────────────────────────────────────
 
@@ -49,6 +50,12 @@ class AIFaction:
         if self._raid_timer <= 0:
             self._raid_timer = self.RAID_INTERVAL
             self._do_raids(world)
+
+        if self.faction == "sovereign":
+            self._vbied_timer -= dt_sec
+            if self._vbied_timer <= 0:
+                self._vbied_timer = random.uniform(50.0, 90.0)
+                self._do_vbied(world)
 
     # ── Production ────────────────────────────────────────────────────────────
 
@@ -215,6 +222,27 @@ class AIFaction:
         hq = self._find_hq(player_faction, world)
         if hq:
             self._move_squad(idle, hq.gx, hq.gy, world)
+
+    # ── Sovereign VBIED — arm a parked car near player cluster ───────────────
+
+    def _do_vbied(self, world):
+        player_faction = world.player_faction
+        parked = [v for v in world.vehicles.values() if v.state == "parked"]
+        if not parked:
+            return
+        player_units = [u for u in world.units.values()
+                        if u.faction == player_faction
+                        and u.state not in ("dead",)]
+        if not player_units:
+            return
+        # Pick the densest player cluster center
+        target = max(player_units,
+                     key=lambda u: sum(1 for v in player_units
+                                       if math.dist((u.gx, u.gy), (v.gx, v.gy)) < 5))
+        # Arm the parked car nearest the target
+        car = min(parked, key=lambda v: math.dist((v.gx, v.gy), (target.gx, target.gy)))
+        car.arm_vbied(target.gx, target.gy)
+        world.events.append(("vbied_armed", {"gx": car.gx, "gy": car.gy}))
 
     # ── Raids ─────────────────────────────────────────────────────────────────
 

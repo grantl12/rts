@@ -6,15 +6,18 @@ UNIT_DEFS = {
     #           hp   spd  dmg  range atk_cd  armor        faction       cost
     "gravy_seal":    (120, 2.8, 14,  4.0, 1.2,  "light",     "regency",   200),
     "ice_agent":     (180, 2.2, 18,  3.5, 1.5,  "medium",    "regency",   350),
+    "ice_agent_tac": (260, 2.0, 26,  4.0, 1.3,  "medium",    "regency",   520),
     "protester":     ( 60, 3.2,  0,  0.0, 0.0,  "unarmored", "neutral",     0),
     "proxy":         (100, 3.5, 22,  5.0, 1.0,  "light",     "sovereign", 280),
     "contractor":    (300, 1.8, 30,  5.5, 2.0,  "heavy",     "oligarchy", 500),
     "drone_scout":   ( 80, 5.0, 10,  6.0, 0.8,  "light",     "frontline", 300),
     "drone_assault": (200, 3.5, 28,  5.5, 1.2,  "medium",    "frontline", 550),
+    "drone_operator":(150, 2.5, 15,  4.5, 1.0,  "light",     "frontline", 400),
     "unmarked_van":  (400, 3.0, 20,  4.0, 1.5,  "medium",    "regency",   450),
     "compliance_bus":(350, 2.5,  0,  0.0, 0.0,  "medium",    "regency",   800),
     "mrap":          (700, 1.6, 40,  4.5, 2.2,  "heavy",     "regency",   750),
     "vbied":         ( 80, 5.5,  0,  1.8, 99.0, "light",     "sovereign", 350),
+    "civilian_car":  (120, 3.5,  0,  0.0, 0.0,  "light",     "neutral",     0),
 }
 
 FACTION_COLORS = {

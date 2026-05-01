@@ -56,7 +56,8 @@ class MainMenu:
              random.uniform(0.1, 0.6), random.uniform(0.5, 3.0)]
             for _ in range(60)
         ]
-        self._scanlines = None
+        self._scanlines   = None
+        self._thermal_bg  = None
         self._fonts_loaded = False
 
     def _load_fonts(self):
@@ -75,6 +76,64 @@ class MainMenu:
         for y in range(0, self.sh, 3):
             pygame.draw.line(s, (0, 0, 0, 50), (0, y), (self.sw, y))
         self._scanlines = s
+
+    def _make_thermal_bg(self):
+        """Pre-bake a static satellite thermal image (heat-map blobs on dark ground)."""
+        if self._thermal_bg:
+            return
+        import random as _r
+        surf = pygame.Surface((self.sw, self.sh))
+        surf.fill((4, 8, 6))
+
+        # Draw heat blobs representing buildings / crowd zones
+        heat_spots = [
+            # (x_frac, y_frac, radius, intensity 0-1)
+            (0.14, 0.42, 55, 0.55),   # west block
+            (0.28, 0.58, 40, 0.45),
+            (0.50, 0.52, 70, 0.80),   # quad center — Kirk rally
+            (0.50, 0.48, 30, 0.95),   # hot crowd core
+            (0.68, 0.38, 45, 0.50),
+            (0.80, 0.62, 38, 0.40),
+            (0.35, 0.25, 50, 0.60),   # north campus
+            (0.60, 0.70, 42, 0.35),
+            (0.20, 0.72, 35, 0.30),
+        ]
+        for (xf, yf, rad, intensity) in heat_spots:
+            cx = int(xf * self.sw)
+            cy = int(yf * self.sh)
+            for _ in range(220):
+                angle  = _r.uniform(0, 2 * math.pi)
+                dist   = _r.gauss(0, rad * 0.45)
+                px     = int(cx + math.cos(angle) * dist)
+                py     = int(cy + math.sin(angle) * dist)
+                if not (0 <= px < self.sw and 0 <= py < self.sh):
+                    continue
+                t = max(0.0, 1.0 - abs(dist) / rad) * intensity
+                # Thermal palette: cold=dark teal, warm=orange, hot=white
+                if t < 0.3:
+                    col = (0, int(t / 0.3 * 60), int(t / 0.3 * 40))
+                elif t < 0.65:
+                    v   = (t - 0.3) / 0.35
+                    col = (int(v * 180), int(60 + v * 60), 0)
+                else:
+                    v   = (t - 0.65) / 0.35
+                    col = (180 + int(v * 75), 120 + int(v * 135), int(v * 200))
+                # Smooth dot
+                r = max(1, int(rad * 0.07))
+                pygame.draw.circle(surf, col, (px, py), r)
+
+        # Road-grid (cool lines — asphalt reads cold in thermal)
+        road_col = (0, 18, 12)
+        for x in range(0, self.sw, int(self.sw / 7)):
+            pygame.draw.line(surf, road_col, (x, 0), (x, self.sh), 2)
+        for y in range(0, self.sh, int(self.sh / 5)):
+            pygame.draw.line(surf, road_col, (0, y), (self.sw, y), 2)
+
+        # Blur pass (simple box-blur via scale trick)
+        small = pygame.transform.smoothscale(surf, (self.sw // 4, self.sh // 4))
+        surf  = pygame.transform.smoothscale(small, (self.sw, self.sh))
+
+        self._thermal_bg = surf
 
     # ── Public ────────────────────────────────────────────────────────────────
 
@@ -124,21 +183,20 @@ class MainMenu:
         self._load_fonts()
         self._make_scanlines()
 
-        surf.fill(DARK)
+        self._make_thermal_bg()
+        surf.blit(self._thermal_bg, (0, 0))
 
-        # Background grid
-        t = pygame.time.get_ticks() / 8000.0
-        for x in range(0, self.sw, 42):
-            alpha = 18 + int(8 * math.sin(t + x * 0.01))
-            pygame.draw.line(surf, (0, alpha, alpha // 2), (x, 0), (x, self.sh))
-        for y in range(0, self.sh, 42):
-            alpha = 18 + int(8 * math.cos(t + y * 0.01))
-            pygame.draw.line(surf, (0, alpha, alpha // 2), (0, y), (self.sw, y))
+        # Pulsing teal vignette overlay (gives the "live satellite feed" look)
+        t = pygame.time.get_ticks() / 6000.0
+        pulse_a = int(28 + 8 * math.sin(t))
+        vignette = pygame.Surface((self.sw, self.sh), pygame.SRCALPHA)
+        pygame.draw.rect(vignette, (0, pulse_a, pulse_a // 2, 60), (0, 0, self.sw, self.sh))
+        surf.blit(vignette, (0, 0))
 
-        # Drift particles
+        # Drift particles (hot sparks over the thermal)
         for p in self._particles:
             a = int(p[2] * 255)
-            pygame.draw.circle(surf, (0, a, a // 2), (int(p[0]), int(p[1])), 1)
+            pygame.draw.circle(surf, (min(255, a * 2), a // 2, 0), (int(p[0]), int(p[1])), 1)
 
         # ── Title ──
         title = self._f_title.render("THE DEEP STATE", True, TEAL)
@@ -210,8 +268,10 @@ class MainMenu:
             cy = y0 + row_i * (card_h + gap)
             crect = pygame.Rect(cx, cy, card_w, card_h)
 
-            hover = crect.collidepoint(mx, my)
-            sel   = (i == self._selected_idx)
+            locked = (fid != "regency")
+            hover  = crect.collidepoint(mx, my) and not locked
+            sel    = (i == self._selected_idx) and not locked
+            
             if hover:
                 self._hover_idx = i
 
@@ -220,39 +280,60 @@ class MainMenu:
                 bg = tuple(min(60, c // 4 + 10) for c in fcol)
             elif hover:
                 bg = (14, 28, 22)
+            elif locked:
+                bg = (4, 8, 6)
             else:
                 bg = (10, 20, 16)
             pygame.draw.rect(surf, bg, crect)
 
-            # Border (pulse on selected)
+            # Border
             bw = 2 if sel else 1
-            t  = pygame.time.get_ticks() / 600.0
-            bc = tuple(int(c * (0.7 + 0.3 * math.sin(t))) for c in fcol) if sel else (TEAL_DIM if not hover else TEAL_MID)
+            if locked:
+                bc = (40, 40, 40)
+            else:
+                t  = pygame.time.get_ticks() / 600.0
+                bc = tuple(int(c * (0.7 + 0.3 * math.sin(t))) for c in fcol) if sel else (TEAL_DIM if not hover else TEAL_MID)
             pygame.draw.rect(surf, bc, crect, bw)
 
-            # Faction color swatch
+            # Faction color swatch (greyscale for locked)
             swatch = pygame.Rect(cx + 10, cy + 14, 16, 16)
-            pygame.draw.rect(surf, fcol, swatch)
-            pygame.draw.rect(surf, (255, 255, 255), swatch, 1)
+            scol = fcol if not locked else (60, 60, 60)
+            pygame.draw.rect(surf, scol, swatch)
+            pygame.draw.rect(surf, (255, 255, 255) if not locked else (100, 100, 100), swatch, 1)
 
             # Text
-            name_col = fcol if sel else (TEAL if hover else TEAL_MID)
+            name_col = (fcol if sel else (TEAL if hover else TEAL_MID)) if not locked else (80, 80, 80)
             nl = self._f_med.render(fname, True, name_col)
             surf.blit(nl, (cx + 34, cy + 12))
 
-            sl = self._f_px.render(fsub, True, TEAL_DIM)
+            sl = self._f_px.render(fsub if not locked else "ACCESS RESTRICTED — PENDING AUDIT", True, (60, 60, 60) if locked else TEAL_DIM)
             surf.blit(sl, (cx + 34, cy + 30))
 
-            # Deploy prompt on selected
-            if sel:
-                blink = int(pygame.time.get_ticks() / 400) % 2 == 0
-                if blink:
-                    dep = self._f_sm.render("[ ENTER TO DEPLOY ]", True,
-                                            tuple(min(255, c + 60) for c in fcol))
-                    surf.blit(dep, (cx + 10, cy + 56))
-            elif hover:
-                dep = self._f_px.render("click to select", True, TEAL_DIM)
-                surf.blit(dep, (cx + 10, cy + 58))
+            # Locked / X Overlay
+            if locked:
+                # Large Red X
+                pygame.draw.line(surf, (150, 0, 0), (cx + 5, cy + 5), (cx + card_w - 5, cy + card_h - 5), 2)
+                pygame.draw.line(surf, (150, 0, 0), (cx + card_w - 5, cy + 5), (cx + 5, cy + card_h - 5), 2)
+                
+                # REDACTED Stamp
+                f_redact = pygame.font.SysFont("impact", 20)
+                rtxt = f_redact.render("REDACTED", True, (200, 30, 0))
+                # Rotate a bit
+                rtxt = pygame.transform.rotate(rtxt, 15)
+                surf.blit(rtxt, (cx + card_w//2 - rtxt.get_width()//2, cy + card_h//2 - rtxt.get_height()//2))
+            else:
+                # Deploy prompt on selected
+                if sel:
+                    blink = int(pygame.time.get_ticks() / 400) % 2 == 0
+                    if blink:
+                        dep = self._f_sm.render("[ ENTER TO DEPLOY ]", True,
+                                                tuple(min(255, c + 60) for c in fcol))
+                        dep_shadow = self._f_sm.render("[ ENTER TO DEPLOY ]", True, (0,0,0))
+                        surf.blit(dep_shadow, (cx + 12, cy + 58))
+                        surf.blit(dep, (cx + 10, cy + 56))
+                elif hover:
+                    dep = self._f_px.render("click to select", True, TEAL_DIM)
+                    surf.blit(dep, (cx + 10, cy + 58))
 
         # Nav instructions
         inst_y = y0 + 2 * (card_h + gap) + 10

@@ -526,6 +526,12 @@ class World:
                 self.credits[player_faction] = \
                     self.credits.get(player_faction, 0) + income
 
+        # Infrastructure silo carry-over bonus from previous missions
+        bonus = getattr(self, "_passive_income_bonus", 0)
+        if bonus:
+            self.credits[player_faction] = \
+                self.credits.get(player_faction, 0) + bonus
+
         # Building auras: propaganda (infamy reduce), medical (unit heal), salvage
         for pb in self.placed_buildings.values():
             flags = pb.bdef.get("flags", [])

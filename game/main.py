@@ -15,6 +15,8 @@ from game.fog       import FogManager
 from game import menu as _menu_mod
 from game import postop as _postop_mod
 from game import executive_board as _eb_mod
+from game import slot_select as _slot_mod
+from game import save_manager as _save_mod
 from game.notifications import NotificationManager
 from game.advisor    import AdvisorSystem
 from game.objectives import ObjectiveManager
@@ -34,14 +36,27 @@ def main():
 
     while True:
         PLAYER_FACTION = _menu_mod.run(screen, clock, FPS)
-        _run_mission(screen, clock, PLAYER_FACTION)
+        slot_result = _slot_mod.run(screen, clock, PLAYER_FACTION, mode="any", fps=FPS)
+        if slot_result is None:
+            continue   # player hit ESC back to menu
+        slot_num, slot_data = slot_result
+        _run_mission(screen, clock, PLAYER_FACTION, slot_num, slot_data)
 
 
-def _run_mission(screen, clock, PLAYER_FACTION):
-    MAP_PHASE = _eb_mod.get_map_phase()
+def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
+    if slot_data is None:
+        slot_data = _save_mod.new_slot(PLAYER_FACTION)
+    MAP_PHASE = slot_data.get("map_phase", 0)
     cam       = Camera(WIN_W, WIN_H)
     world     = World(PLAYER_FACTION, map_phase=MAP_PHASE)
     fog       = FogManager(map_phase=MAP_PHASE)
+    # Apply carry-over state from save slot
+    if slot_data.get("infamy_carryover", 0) > 0:
+        world.roe_manager.add_infamy(slot_data["infamy_carryover"])
+    if slot_data.get("credits_carryover", 0):
+        world.credits[PLAYER_FACTION] = slot_data["credits_carryover"]
+    if slot_data.get("passive_income_bonus", 0):
+        world._passive_income_bonus = slot_data["passive_income_bonus"]
     selection = SelectionManager()
     sidebar   = BuildSidebar(PLAYER_FACTION)
     hud       = HUD(WIN_W, WIN_H)
@@ -258,7 +273,7 @@ def _run_mission(screen, clock, PLAYER_FACTION):
 
                     # Tab = end mission early
                     if event.key == pygame.K_TAB and not roe5_confirm:
-                        _end_mission(screen, clock, world, hud, PLAYER_FACTION)
+                        _end_mission(screen, clock, world, hud, PLAYER_FACTION, slot_num, slot_data)
                         return
 
             cam.handle_event(event)
@@ -303,7 +318,7 @@ def _run_mission(screen, clock, PLAYER_FACTION):
 
         # Game over detection → post-op → executive board → menu
         if intro_state == "end" and world.game_over != 0:
-            _end_mission(screen, clock, world, hud, PLAYER_FACTION)
+            _end_mission(screen, clock, world, hud, PLAYER_FACTION, slot_num, slot_data)
             return
 
         extra_v = []
@@ -430,6 +445,9 @@ def _run_mission(screen, clock, PLAYER_FACTION):
                 _alert_flash = 1.5
             elif ev_type == "salvage":
                 notifs.add(f"SALVAGE — +§{payload['credits']}", (200, 160, 30))
+            elif ev_type == "vbied_armed":
+                notifs.add("!! CIVILIAN VEHICLE INBOUND — POSSIBLE VBIED", (255, 140, 0))
+                _alert_flash = 0.6
             elif ev_type == "vbied_explode":
                 notifs.add("!! SOVEREIGN VBIED DETONATED — AREA COMPROMISED", (255, 60, 20))
                 advisor.trigger("vbied_explode")
@@ -590,17 +608,29 @@ def _run_mission(screen, clock, PLAYER_FACTION):
         pygame.display.flip()
 
 
-def _end_mission(screen, clock, world, hud, player_faction):
-    """Run post-op → press briefing → executive board, then return to menu."""
+def _end_mission(screen, clock, world, hud, player_faction,
+                 slot_num=None, slot_data=None):
+    """Run post-op → press briefing → executive board, then save slot."""
     detained = sum(pb.civs_held for pb in world.placed_buildings.values()
                    if pb.faction == player_faction)
     result = _postop_mod.run(screen, clock, detained,
                               world.roe_manager.infamy,
                               hud.mission_time,
                               world.credits.get(player_faction, 0))
-    _eb_mod.increment_map_phase()
     lp = _eb_mod.compute_lp(result, hud.mission_time)
     _eb_mod.run(screen, clock, lp)
+
+    if slot_num is not None and slot_data is not None:
+        updated = _save_mod.apply_postop(
+            slot_data, result,
+            world.roe_manager.infamy,
+            world.credits.get(player_faction, 0),
+            lp,
+        )
+        # Carry forward executive board upgrades
+        updated["upgrades"]  = _eb_mod._load().get("upgrades", {})
+        updated["lp"]        = _eb_mod._load().get("lp", updated.get("lp", 0))
+        _save_mod.save(slot_num, updated)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
