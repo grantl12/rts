@@ -133,11 +133,13 @@ class World:
         enemy = self._ENEMY_MAP.get(player_faction, "sovereign")
         self.ai_factions = {enemy: AIFaction(enemy)}
 
-        # Spawn civilians at Kirk Rally
+        # Spawn rally crowd — tight cluster, wander locked until intro ends
         from game.map_data import KIRK_RALLY
         kx, ky = KIRK_RALLY
-        for i in range(25):
-            self.spawn_civilian(kx + random.uniform(-4, 4), ky + random.uniform(-4, 4))
+        for i in range(30):
+            c = self.spawn_civilian(kx + random.uniform(-2.5, 2.5),
+                                    ky + random.uniform(-2.5, 2.5))
+            c._wander_timer = 60.0   # won't wander during the ~12s intro
 
         self._bolo_uid = None   # uid of the BOLO target civilian
         self.vehicles  = {}      # uid -> CivilianCar
@@ -482,6 +484,9 @@ class World:
                             u.is_bolo = True
                             self.events.append(("bolo_identified", {"unit": u.utype, "uid": u.uid}))
 
+        # Witness War
+        self._tick_witness_war(dt, player_faction)
+
         # Production queues
         self._income_timer += dt
         if self._income_timer >= self.PASSIVE_INCOME_TICK:
@@ -506,6 +511,73 @@ class World:
                     ex = pb.gx + pb.bdef["w"] // 2
                     ey = pb.gy + pb.bdef["h"]
                     self.spawn_unit(completed, pb.faction, ex, ey)
+
+    def _tick_witness_war(self, dt: float, player_faction: str):
+        from game.civilian import _CONVERT_RANGE, _CONVERT_TIME
+
+        # Build set of which civs are being converted this frame, and by whom
+        converting: dict[int, str] = {}   # civ uid → faction converting them
+
+        for u in self.units.values():
+            if u.state == "dead":
+                continue
+            if u.faction not in ("frontline", "sovereign", "oligarchy"):
+                continue
+            rng = _CONVERT_RANGE[u.faction]
+            for c in self.civilians.values():
+                if c.state == "dead" or c.witness_state != "free":
+                    continue
+                if math.dist((u.gx, u.gy), (c.gx, c.gy)) <= rng:
+                    # Sovereign wins ties (most urgent)
+                    if c.uid not in converting or u.faction == "sovereign":
+                        converting[c.uid] = u.faction
+
+        # Apply conversion ticks or decay
+        radicalized_done = []
+        for c in list(self.civilians.values()):
+            if c.state == "dead" or c.witness_state != "free":
+                continue
+            if c.uid in converting:
+                faction = converting[c.uid]
+                if c.tick_conversion(dt, faction):
+                    if faction == "sovereign":
+                        radicalized_done.append(c)
+                    elif faction == "frontline":
+                        c.witness_state = "empowered"
+                        self.events.append(("witness_empowered", {"gx": c.gx, "gy": c.gy}))
+                    elif faction == "oligarchy":
+                        c.witness_state = "assetized"
+                        self.events.append(("witness_assetized", {"gx": c.gx, "gy": c.gy}))
+            else:
+                c.decay_conversion(dt)
+
+        # Radicalization: remove civ, spawn Militia for Sovereign
+        for c in radicalized_done:
+            c.witness_state = "radicalized"
+            self.spawn_unit("militia", "sovereign", c.gx, c.gy)
+            del self.civilians[c.uid]
+            self.events.append(("witness_radicalized", {"gx": c.gx, "gy": c.gy}))
+
+        # Empowered civs generate Viral Clout for Frontline each tick (§3/civ)
+        empowered = [c for c in self.civilians.values() if c.witness_state == "empowered"]
+        if empowered:
+            clout = len(empowered) * 3 * dt
+            self.credits["frontline"] = self.credits.get("frontline", 0) + clout
+
+        # Assetized civs: if an Oligarchy unit dies nearby, +§75 insurance payout
+        # (handled in unit death → events, checked here via recent dead units)
+        for uid, u in list(self.units.items()):
+            if u.state == "dead" and u.faction == "oligarchy" and not getattr(u, "_insured", False):
+                u._insured = True
+                nearby_assets = sum(
+                    1 for c in self.civilians.values()
+                    if c.witness_state == "assetized"
+                    and math.dist((c.gx, c.gy), (u.gx, u.gy)) < 6.0
+                )
+                if nearby_assets:
+                    payout = nearby_assets * 75
+                    self.credits["oligarchy"] = self.credits.get("oligarchy", 0) + payout
+                    self.events.append(("insurance_payout", {"credits": payout}))
 
     def _tick_income(self, player_faction):
         # Power balance

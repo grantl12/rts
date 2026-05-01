@@ -117,7 +117,7 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
                 cam.pan_to(*KIRK_RALLY)
                 if intro_timer <= 0:
                     intro_state = "wait"
-                    intro_timer = 1.2 # Dramatic pause after speaking
+                    intro_timer = 2.8   # long enough to read the full quote
             
             elif intro_state == "wait":
                 cam.pan_to(*KIRK_RALLY)
@@ -126,7 +126,7 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
                     intro_timer = 0.5
                     kirk_obj.state = "dead"
                     intro_text = ""
-                    audio.play("explosion") # The BANG
+                    audio.play("explosion")
             
             elif intro_state == "shot" and intro_timer <= 0:
                 intro_state = "panic"
@@ -412,7 +412,6 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
                 advisor.trigger("runner_arrived")
                 audio.play("alert")
                 _alert_flash = 1.2
-                cam.pan_to(payload["gx"], payload["gy"])
             elif ev_type == "leak_comms":
                 notifs.add(f"!! LEAK: COMMS INTERCEPTED — +{payload['infamy']} INFAMY", (180, 60, 255))
                 _leak_overlay = ("OPERATIONAL SECURITY BREACH",
@@ -445,6 +444,14 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
                 _alert_flash = 1.5
             elif ev_type == "salvage":
                 notifs.add(f"SALVAGE — +§{payload['credits']}", (200, 160, 30))
+            elif ev_type == "witness_empowered":
+                notifs.add("FRONTLINE: WITNESS EMPOWERED — BROADCASTING LIVE", (80, 220, 80))
+            elif ev_type == "witness_radicalized":
+                notifs.add("SOVEREIGN: WITNESS RADICALIZED — MILITIA SPAWNED", (160, 40, 220))
+            elif ev_type == "witness_assetized":
+                notifs.add("OLIGARCHY: WITNESS ASSETIZED — LEVERAGE ACQUIRED", (220, 180, 40))
+            elif ev_type == "insurance_payout":
+                notifs.add(f"OLIGARCHY: INSURANCE PAYOUT +§{payload['credits']}", (220, 180, 40))
             elif ev_type == "vbied_armed":
                 notifs.add("!! CIVILIAN VEHICLE INBOUND — POSSIBLE VBIED", (255, 140, 0))
                 _alert_flash = 0.6
@@ -519,6 +526,17 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
             if intro_state != "end" or fog.is_visible(c.gx, c.gy):
                 c.draw(screen, cam)
 
+        # Kirk highlight — prominent pulsing ring during intro
+        if intro_state in ("rally", "talk", "wait") and kirk_obj.state != "dead":
+            ksx, ksy = cam.world_to_screen(kirk_obj.gx, kirk_obj.gy)
+            t_ms = pygame.time.get_ticks()
+            pulse = int(16 + math.sin(t_ms * 0.006) * 4)
+            pygame.draw.circle(screen, (255, 200, 0), (int(ksx), int(ksy) - 8), pulse, 2)
+            pygame.draw.circle(screen, (255, 120, 0), (int(ksx), int(ksy) - 8), pulse + 5, 1)
+            f_kirk = pygame.font.SysFont("couriernew", 9, bold=True)
+            klbl = f_kirk.render("◆ KIRK", True, (255, 220, 60))
+            screen.blit(klbl, (int(ksx) - klbl.get_width() // 2, int(ksy) - pulse - 22))
+
         # Intro Overlay
         if intro_state == "shot":
             screen.fill((255, 255, 255))
@@ -536,24 +554,26 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
             rec_lbl = font_sm.render("● REC", True, (255, 0, 0))
             screen.blit(rec_lbl, (50, 50))
 
-        if intro_state == "talk":
-            # Draw talk text at bottom center
+        if intro_state in ("talk", "wait") and intro_text:
             f_talk = pygame.font.SysFont("couriernew", 20, bold=True)
-            # Typewriter effect
-            chars_to_show = int(len(intro_text) * (1 - intro_timer / 4.0))
-            current_str = intro_text[:chars_to_show]
-            
-            # Simple typing sound logic
-            if chars_to_show > 0 and chars_to_show % 3 == 0:
-                 audio.play("infamy_tick") # Using infamy_tick as a placeholder typing sound
-
-            txt_surf = f_talk.render(current_str, True, (255, 255, 255))
-            tx = WIN_W // 2 - txt_surf.get_width() // 2
-            ty = WIN_H - 150
-            # Background bar for readability
-            bg_rect = pygame.Rect(tx - 10, ty - 5, txt_surf.get_width() + 20, txt_surf.get_height() + 10)
-            pygame.draw.rect(screen, (0, 0, 0, 150), bg_rect)
-            screen.blit(txt_surf, (tx, ty))
+            if intro_state == "talk":
+                chars_to_show = int(len(intro_text) * (1 - intro_timer / 4.0))
+                current_str = intro_text[:chars_to_show]
+                if chars_to_show > 0 and chars_to_show % 3 == 0:
+                    audio.play("infamy_tick")
+            else:
+                current_str = intro_text   # fully visible during wait
+            if current_str:
+                txt_surf = f_talk.render(current_str, True, (255, 255, 255))
+                tx = WIN_W // 2 - txt_surf.get_width() // 2
+                ty = WIN_H - 150
+                bg_surf = pygame.Surface((txt_surf.get_width() + 20, txt_surf.get_height() + 10), pygame.SRCALPHA)
+                bg_surf.fill((0, 0, 0, 160))
+                screen.blit(bg_surf, (tx - 10, ty - 5))
+                screen.blit(txt_surf, (tx, ty))
+                # Speaker label
+                spk = font_sm.render("// KIRK :", True, (255, 200, 80))
+                screen.blit(spk, (tx - 10, ty - 18))
 
         # Ghost building preview
         if placing_bid and placing_ghost:

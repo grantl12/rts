@@ -18,6 +18,7 @@ UNIT_DEFS = {
     "mrap":          (700, 1.6, 40,  4.5, 2.2,  "heavy",     "regency",   750),
     "vbied":         ( 80, 5.5,  0,  1.8, 99.0, "light",     "sovereign", 350),
     "civilian_car":  (120, 3.5,  0,  0.0, 0.0,  "light",     "neutral",     0),
+    "militia":       ( 45, 2.5,  8,  2.0, 1.2,  "unarmored", "sovereign",   0),
 }
 
 FACTION_COLORS = {
