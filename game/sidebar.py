@@ -70,21 +70,29 @@ class BuildSidebar:
 
     def update(self, dt_ms, world, player_faction):
         dt = dt_ms / 1000.0
-        creds = world.credits.get(player_faction, 0)
+        underpowered = getattr(world, "power_balance", 0) < 0
 
-        completed_struct = self._tick_queue(self.struct_queue, dt, build_time=15.0)
-        completed_unit   = self._tick_queue(self.unit_queue,   dt, build_time=8.0)
+        completed_struct = self._tick_queue(self.struct_queue, dt, build_time=15.0, stall=underpowered)
+        completed_unit   = self._tick_queue(self.unit_queue,   dt, build_time=8.0,  stall=underpowered)
 
         return completed_struct, completed_unit
 
-    def _tick_queue(self, queue, dt, build_time):
+    def _tick_queue(self, queue, dt, build_time, stall=False):
         if not queue:
             return None
         item = queue[0]
-        item["progress"] += dt / build_time
+        if not stall:
+            item["progress"] += dt / build_time
         if item["progress"] >= 1.0:
             queue.pop(0)
             return item["id"]
+        return None
+
+    def _has_producer(self, utype, world, player_faction):
+        """Return the PlacedBuilding that can produce utype, or None."""
+        for pb in world.placed_buildings.values():
+            if pb.faction == player_faction and utype in pb.bdef.get("produces", []):
+                return pb
         return None
 
     def enqueue_structure(self, bid, world, player_faction):
@@ -95,6 +103,9 @@ class BuildSidebar:
         creds = world.credits.get(player_faction, 0)
         if creds < cost:
             return False
+        is_power = "power" in bdef.get("flags", [])
+        if not is_power and getattr(world, "power_balance", 0) < 0:
+            return False   # underpowered — must build power first
         world.credits[player_faction] -= cost
         self.struct_queue.append({"id": bid, "progress": 0.0})
         return True
@@ -107,6 +118,10 @@ class BuildSidebar:
         creds = world.credits.get(player_faction, 0)
         if creds < cost:
             return False
+        if not self._has_producer(utype, world, player_faction):
+            return False   # no production building for this unit
+        if getattr(world, "power_balance", 0) < 0:
+            return False   # underpowered
         world.credits[player_faction] -= cost
         self.unit_queue.append({"id": utype, "progress": 0.0})
         return True
@@ -133,6 +148,7 @@ class BuildSidebar:
         surf.blit(hr, (col_rx, rect.top + 2))
 
         creds = world.credits.get(player_faction, 0)
+        underpowered = getattr(world, "power_balance", 0) < 0
 
         # Draw buttons for structures
         sy = rect.top + 14
@@ -140,9 +156,11 @@ class BuildSidebar:
             bdef = BDEF.get(bid, {})
             cost = bdef.get("cost", 0)
             affordable = creds >= cost
+            is_power = "power" in bdef.get("flags", [])
+            locked = underpowered and not is_power
             brect = pygame.Rect(col_lx, sy, col_w, BTN_H)
-            self._draw_btn(surf, brect, bdef.get("name", bid)[:12], cost, affordable,
-                           bid in [q["id"] for q in self.struct_queue])
+            self._draw_btn(surf, brect, bdef.get("name", bid)[:12], cost, affordable and not locked,
+                           bid in [q["id"] for q in self.struct_queue], locked)
             click_zones.append((brect, "structure", bid))
             sy += BTN_H + BTN_PAD
 
@@ -152,9 +170,12 @@ class BuildSidebar:
             row = UNIT_DEFS.get(utype)
             cost = row[7] if row else 0
             affordable = creds >= cost
+            has_prereq = self._has_producer(utype, world, player_faction) is not None
+            locked = not has_prereq or underpowered
             brect = pygame.Rect(col_rx, uy, col_w, BTN_H)
-            self._draw_btn(surf, brect, utype.replace("_", " ").upper()[:12], cost, affordable,
-                           utype in [q["id"] for q in self.unit_queue])
+            self._draw_btn(surf, brect, utype.replace("_", " ").upper()[:12], cost,
+                           affordable and not locked,
+                           utype in [q["id"] for q in self.unit_queue], locked)
             click_zones.append((brect, "unit", utype))
             uy += BTN_H + BTN_PAD
 
@@ -167,23 +188,30 @@ class BuildSidebar:
 
         return click_zones
 
-    def _draw_btn(self, surf, rect, name, cost, affordable, queued):
-        bg = (16, 32, 24) if affordable else (20, 15, 12)
-        border_col = TEAL if affordable else (0, 40, 30)
-        if queued:
-            border_col = ORANGE
-            bg = (28, 20, 10)
+    def _draw_btn(self, surf, rect, name, cost, affordable, queued, locked=False):
+        if locked:
+            bg, border_col = (14, 10, 10), (40, 20, 20)
+        elif queued:
+            bg, border_col = (28, 20, 10), ORANGE
+        elif affordable:
+            bg, border_col = (16, 32, 24), TEAL
+        else:
+            bg, border_col = (20, 15, 12), (0, 40, 30)
 
         pygame.draw.rect(surf, bg, rect)
         pygame.draw.rect(surf, border_col, rect, 1)
 
-        nl = self._font_px.render(name, True, TEAL if affordable else TEAL_DIM)
+        name_col = (60, 40, 40) if locked else (TEAL if affordable else TEAL_DIM)
+        nl = self._font_px.render(name, True, name_col)
         surf.blit(nl, (rect.left + 4, rect.top + 4))
 
         cl = self._font_px.render(f"§{cost}", True, ORANGE if not affordable else (0, 180, 100))
         surf.blit(cl, (rect.left + 4, rect.top + 18))
 
-        if queued:
+        if locked:
+            ll = self._font_px.render("LOCKED", True, (100, 40, 40))
+            surf.blit(ll, (rect.left + 4, rect.top + 30))
+        elif queued:
             ql = self._font_px.render("QUEUED", True, ORANGE)
             surf.blit(ql, (rect.left + 4, rect.top + 30))
 

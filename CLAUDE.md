@@ -9,7 +9,7 @@
 
 **Engine:** Python 3 + pygame 2 (isometric RTS)
 **Working branch:** `master`
-**Run:** `python -m game.main` from `/home/user/rts/`
+**Run:** `python -m game.main` from project root (Windows: `D:\Users\grant\Documents\RTS\`)
 **Resolution:** 1280×800 (RESIZABLE)
 
 > Note: The Godot prototype (`client/`) is archived. The active game is the Python/pygame implementation in `game/`.
@@ -146,10 +146,25 @@ Kirk — a prominent activist — is assassinated at a rally on **The Quad**. Ev
 
 ### Build Menu (`sidebar.py`)
 All 4 factions have `FACTION_BUILD_MENU` entries:
-- Regency: 8 structures, 3 units
-- Frontline: 2 structures, 3 units
-- Sovereign: 2 structures, 2 units
-- Oligarchy: 2 structures, 2 units
+- Regency: 8 structures, 5 units (gravy_seal, ice_agent, unmarked_van, compliance_bus, patriot_lawyer)
+- Frontline: 2 structures, 4 units (proxy, drone_scout, drone_assault, news_van)
+- Sovereign: 2 structures, 2 units (proxy, contractor)
+- Oligarchy: 2 structures, 2 units (contractor, gravy_seal)
+
+**Unit prereq system**: Units can only be queued if the player owns a building with that unit in its `produces` list. Buttons show `LOCKED` when prereq or power is missing. Queues stall (no progress) when `world.power_balance < 0`. Completed units spawn adjacent to their producing building, not at a hardcoded tile.
+
+**Structures**: Cannot be queued when `power_balance < 0` unless the building has the `power` flag (power substations are always buildable).
+
+### `building_defs.py` — `produces` field (canonical)
+| Building | Produces |
+|---|---|
+| `reg_barracks` | gravy_seal, ice_agent, ice_agent_tac, patriot_lawyer |
+| `reg_depot` | unmarked_van, mrap, compliance_bus |
+| `fl_drone` | drone_scout, drone_assault, drone_operator |
+| `fl_press` | proxy, news_van |
+| `sov_safehouse` | proxy |
+| `sov_cache` | proxy, vbied |
+| `olig_hq` | contractor, gravy_seal |
 
 ---
 
@@ -167,23 +182,24 @@ All 4 factions have `FACTION_BUILD_MENU` entries:
 
 ## 🚧 Pending / Next Up
 
-### Near-term gameplay
-- [x] Compliance Bus — `ComplianceBus(Unit)` subclass; auto-boards civs within 2.5 tiles; 3× payout (§75/pax) on delivery to pen/HQ; BOLO bonus preserved on delivery
-- [x] Runner ambush notification — `runner_arrived` event fires camera pan + red alert flash + notification
-- [x] Kirk Deepfake reveal — at 5 min (`world._mission_elapsed >= 300`): +50 infamy, 6s purple overlay, `deepfake_live` event
-- [x] Mission timer fixed — `hud.mission_time = int(world._mission_elapsed)`; postop receives correct int seconds
-- [x] Return-to-menu after post-op — `main()` outer loop + `_run_mission()` helper; no more `sys.exit()`
-- [x] Player starting HQ — placed at `(12, 21)` when intro ends; prevents instant defeat condition
+### Implemented this session
+- [x] Hall of Heroes — rank-5 units generate faction-appropriate hero names, persisted in save slots
+- [x] The Tape MacGuffin — spawns on map at shot transition, +15% income to holder, drops on unit death
+- [x] News Van (Frontline) — 6.0-tile Witness War empowerment range (vs standard 3.5)
+- [x] Patriot Lawyer (Regency) — Cease & Desist suppression pulse every 8s, 3.5-tile radius
+- [x] Witness War — 4 civ states: free/empowered/radicalized/assetized; faction proximity conversion; militia spawn on radicalized
+- [x] VBIED AI — Sovereign arms parked civilian car every 50–90s via `_do_vbied()` in `ai.py`
+- [x] Campaign save slots — 3-slot JSON at `save/slot_1-3.json`; carry-over infamy/credits/LP/upgrades/hall_of_heroes
+- [x] Thermal menu background — procedural satellite heat-blob background in `menu.py`
+- [x] Legibility pass — advisor (font 13, 32px bar, opaque), notifications (font 11, backing strip), objectives, HUD
+- [x] Unit spawn prereq system — units require owning a `produces`-matching building; spawn adjacent to it; queue stalls when underpowered; LOCKED visual on buttons
 
-### Vehicle Systems (planned) — see `docs/VEHICLE_LOGIC.md`
-- [ ] Vehicle_Base class: Idle/Audited/Moving/Wrecked states
-- [ ] Sovereign VBIED — civilian car paranoia mechanic
+### Next up
+- [ ] Faction renames (backlog): Oligarchy → Direktorate, Gravy Seals → "2A Audit Volunteer" — deferred, keep internal keys
+- [ ] Visual upgrade tiers — 3 sprite tiers per unit, swap on rank-up — needs AI generator pipeline
 - [ ] Wrecks persistent; Oligarchy Salvage Yard harvests them for credits
-
-### Architecture
 - [ ] Multiple map phases — `map_phase` int on World; pristine/scarred/shattered visual variants; see `docs/MAP_EVOLUTION.md`
-- [ ] Main menu satellite thermal view background
-- [ ] Campaign save state — 3-slot system (one per faction); see `docs/CAMPAIGN_STRUCTURE.md`
+- [ ] Tier 3 units: Sleeper Agent, Journalist, Troll Unit, Wagner Unit, CEO (Oligarchy), The Prepper
 
 ---
 

@@ -1,77 +1,94 @@
-# THE DEEP STATE: Project Status & Roadmap
+# THE DEEP STATE — Gemini Session Brief
 
-## 🎯 Current Vision
-A satirical isometric RTS built in **Python + pygame**. The game blends the weighted squad combat of *Company of Heroes* with the internal system depth of *FTL*, set in a "Post-Truth" world where "Auditing" is the primary weapon.
-
-> Note: An earlier Godot 4.4 prototype exists in `client/` and is no longer being developed. All active code lives in `game/`.
+> Keep this file current. Read it before every session.
 
 ---
 
-## 🏗️ Architectural Progress
+## What This Project Is
 
-### 1. Core Systems (Implemented)
-- **Isometric Renderer:** `game/renderer.py` — per-building palettes (top/wall_l/wall_r/accent/window), floor-height projection, `TILE_W=72 TILE_H=36 WALL_H=22`
-- **A\* Pathfinding:** `game/pathfinding.py` — diagonal movement, formation spreading via `formation_goals(center, n)`
-- **Unit Soul System:** `game/unit_entity.py` — `UNIT_DEFS` dict, STATE_IDLE/MOVING/ATTACK/DEAD, ROE damage scaling
-- **Combat:** Auto-acquire nearest enemy at idle; attack range check; damage applied via ROE multiplier
-- **Dynamic ROE (Rules of Engagement):** `game/roe.py` — 5 levels RESTRAINED→ABSOLUTE IMMUNITY; damage mults `[0.35, 0.65, 1.00, 1.50, 2.50]`; ambient infamy ticks; ROE 5 is irreversible (`is_butcher`)
-- **Infamy System:** `ROEManager.infamy` — thresholds 200/400/750; killing civilians = +50 infamy
-- **Civilian NPCs:** `game/civilian.py` — types NORMIE/PURPLE_HAIR/RIOT_GEAR/RUNNER/KIRK; wander, panic, capture by holding pens
-- **Population Harvest:** `game/world.py` — pens auto-suck civs within 3.0 tiles; `PEN_INCOME_RATE=5 §/sec/occupant`
-- **AI Factions:** `game/ai.py` — Sovereign + Oligarchy run production (12s), orders (6s), raids (25s) ticks
-- **Fog of War:** `game/fog.py` — "Data Blackout" tile visibility system
-- **Building Catalog:** `game/building_defs.py` — full catalog: Regency (9) · Frontline (3) · Sovereign (2) · Oligarchy (2) · Civilian (6) · Garrisonable (4)
-- **Capture System:** Majority-faction rule; progress bar 0–100; contested buildings revert slowly
-- **Production Queues:** `ProductionQueue` per factory; 8s per unit; auto-spawns at building exit tile
-- **Camera:** `game/camera.py` — pan/zoom, `world_to_screen()`, `tile_diamond()` for click-hit-testing
+**Python 3 + pygame-ce isometric RTS.** Satirical. Four factions. One campus assassination. Civilians are the resource.
 
-### 2. The Quad — Current Map
-- **`game/map_data.py`:** 28×24 terrain grid (VOID/GROUND/PATH/PLAZA/GRASS)
-- **UVU campus layout** — Fulton Library · Engineering Center · Sorensen Center · Woodbury Business · Losee Center · Admin Building · Clock Tower · North Parking
-- **KIRK_RALLY = (13.5, 12.0)** — plaza center where assassination occurred
-- 25 civilians spawned at rally point with scatter on mission start
-- Enemy AI (Sovereign + Oligarchy) spawn at tiles (5,5)
+- **Run:** `python -m game.main` from project root
+- **Resolution:** 1280×800 (resizable)
+- **Python target:** 3.8+ (use `Optional[X]` not `X | None`, add `from __future__ import annotations` if needed)
 
-### 3. Interface (Implemented)
-- **HUD:** `game/hud.py` — credits, infamy score, ROE name/color indicator
-- **Sidebar:** `game/sidebar.py` — selected building/unit info, production queue display
-- **Drag-box Selection:** `game/selection.py` — multi-unit select
+The `client/` folder is an archived Godot prototype. **Do not touch it.**
 
 ---
 
-## 🚀 Next Steps
+## Your Lane
 
-### Phase 1: Tactical Polish
-- [ ] **Selection UI:** 16-bit glitch selection boxes around selected units
-- [ ] **Unit Visuals:** Distinct shapes/colors per unit type (Gravy Seal vs. ICE Agent vs. Proxy vs. Drone)
-- [ ] **Suppression UI:** "Red Tape" bars above suppressed units
-- [ ] **ROE Confirmation Dialog:** Second-click authorization before ROE 4→5 ("Absolute Immunity")
-- [ ] **Placement UX:** Pause and ghost-placement phase after building production finishes.
+Gemini owns **asset generation and visual content**:
 
-### Phase 2: Strategic Depth
-- [ ] **Infamy Consequences:** SURVEILLED (≥400) spawns Frontline observer unit; SANCTIONED (≥750) freezes high-tier production
-- [ ] **Runner HVP Sub-objectives:** 3 fast RUNNER civilians flee to fixed zones, trigger enemy ambush squads
-- [ ] **Compliance Bus:** 30-seat escort unit, 3× credit multiplier on extraction to base
-- [ ] **Executive Board:** Post-op meta-progression screen to spend Legacy Points on global buffs
+- Sprite sheets (unit sprites, building tiles, UI icons)
+- Sound effects and audio cues
+- Map terrain tiles and visual variants (pristine / scarred / shattered phases)
+- Flavor text — building descriptions, advisor lines, unit dossiers, faction lore
+- Design docs in `docs/` — brainstorm, unit dossiers, faction lore bibles
 
-### Phase 3: The Narrative Layer
-- [ ] **Press Briefing UI:** Post-op spin tree (Gaslight / Double Down / Redact)
-- [ ] **Post-op Allocation Screen:** Drag harvested civs into Bio-Metric DB / Infrastructure / PR silos
-- [ ] **Narrative Events:** Scripted mid-mission "Leaks" that change objectives dynamically
-- [ ] **Map Phase System:** `map_phase` int on world; visual scarring variants between campaign visits (Pristine → Scarred → Shattered)
-
-### Phase 4: Vehicles & Advanced Units
-- [ ] **Vehicle System:** `Vehicle` base class — Idle/Moving/Wrecked states; VBIED for Sovereign
-- [ ] **BOLO Mechanic:** Per-mission FEMA-style target plate; ALPR Scanner unit scans civilian vehicles
-- [ ] **Civilian NavMesh:** Route civilians around buildings instead of clipping through tiles
-- [ ] **Multi-campaign Saves:** Regency / Frontline / Oligarchy slot selection; persistent world state between runs
+**Leave the main game code alone.** Claude owns the Python/pygame codebase. The architecture is intricate and interconnected — well-intentioned edits to `game/*.py` without full session context cause regressions that take time to untangle. If you see something broken in the code, document it in `docs/BRAINSTORM.md` and flag it rather than patching it directly.
 
 ---
 
-## 📝 Developer Notes
-- **Tone Mandate:** Keep it detached, corporate, and absurdly bureaucratic.
-- **No Godot references** — `client/` is archived. All new features go in `game/`.
-- **Building catalog:** Add new buildings to `game/building_defs.py` `BUILDINGS` dict only — no duplicate keys.
-- **Infamy events:** `world.roe_manager.add_infamy(amount)` — always positive int.
-- **Pathfinding:** `find_path(start_tuple, goal_tuple, blocked_set)` returns list of `(gx,gy)` tuples.
-- **The "Mirror" Loop:** Every map must be playable and narratively distinct from at least two opposing factions.
+## Current Sprite Sheet Format
+
+All unit sprites are in `assets/` as JPEGs (grey background, 1024×559px or similar).
+
+**Standard layout:** 4 columns × 2 rows — 8 frames (4 walk directions, idle + walk per direction)
+
+**Stacked layout (two units on one sheet):** 4 columns × 4 rows — top 2 rows = unit A, bottom 2 rows = unit B.
+- Example: `ScoutandAssaultDrones.jpg` — rows 0–1 = drone_scout, rows 2–3 = drone_assault
+
+**Grey removal:** The sprite loader in `game/sprites.py` strips the grey background via PixelArray — just deliver standard JPEG sheets, no alpha needed.
+
+**Naming:** Match the key in `_SHEET_MAP` inside `game/sprites.py`. When you add a new sprite file, also add the mapping entry there (but coordinate with Claude on the code side).
+
+---
+
+## Active Sprite Requests
+
+These unit types exist in code but need or could use better sprites:
+
+| Unit | Current Sprite | Notes |
+|---|---|---|
+| `militia` | polygon fallback | Radicalized civilian → spawns on Witness War conversion |
+| `ice_agent_tac` | polygon fallback | Upgraded ICE agent with tac gear |
+| `drone_operator` | `drone operator.jpg` | Wired up |
+| `mrap` | polygon fallback | Heavy Regency vehicle |
+| `news_van` | polygon fallback | Frontline vehicle, 6-tile Witness War range |
+
+---
+
+## Active Flavor Text Requests
+
+The advisor system (`game/advisor.py`) uses `_LINES` keyed event dict. Events that could use more lines:
+
+- `rank_5_promotion` — hero gets named, needs a corporate-bureaucratic congratulations
+- `tape_acquired` / `tape_lost` — The Tape MacGuffin, holder gets +15% income
+- `witness_radicalized` — civilian turns militia
+- `cease_desist` — Patriot Lawyer suppression pulse fires
+- `vbied_armed` — Sovereign arms a parked civilian car
+
+Add lines to `_LINES` in `game/advisor.py` — that file is safe to edit for content additions.
+
+---
+
+## Conventions (Don't Break These)
+
+- **Building catalog:** Edit `game/building_defs.py` only to add flavor text (`description` field). Do not change `produces`, `flags`, `cost`, `hp`, or `power_draw` — those are mechanically load-bearing.
+- **No new `.py` files** without coordinating first.
+- **Infamy events:** `world.roe_manager.add_infamy(amount)` — always a positive int.
+- **Pathfinding:** `find_path(start_tuple, goal_tuple, blocked_set)` returns list of `(gx, gy)` tuples.
+
+---
+
+## Faction Tone Reference
+
+| Faction | Voice | Vibe |
+|---|---|---|
+| Regency | Corporate HR, passive-aggressive | "This decision has been logged." |
+| Frontline | Urgent, righteous, media-savvy | "The people are watching." |
+| Sovereign | Conspiratorial, paranoid, blunt | "No witnesses." |
+| Oligarchy | Detached, financial, amoral | "Casualties are a line item." |
+
+The advisor character (**The Auditor**) speaks in all four registers depending on which faction's event fired.

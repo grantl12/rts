@@ -332,7 +332,13 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
             placing_bid = completed_struct
             notifs.add(f"STRUCTURE READY — PLACE {completed_struct.upper().replace('_',' ')}", (0, 255, 100))
         if completed_unit:
-            world.spawn_unit(completed_unit, PLAYER_FACTION, 13, 19)
+            pb = sidebar._has_producer(completed_unit, world, PLAYER_FACTION)
+            if pb:
+                sx = pb.gx + pb.bdef["w"] + 0.5
+                sy = pb.gy + pb.bdef["h"] / 2
+            else:
+                sx, sy = 13, 19
+            world.spawn_unit(completed_unit, PLAYER_FACTION, sx, sy)
             notifs.add(f"UNIT DEPLOYED — {completed_unit.upper().replace('_',' ')}", (0, 220, 180))
             audio.play("spawn")
 
