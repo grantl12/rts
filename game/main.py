@@ -458,6 +458,7 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
 
         # Game over detection → post-op → executive board → menu
         if intro_state == "end" and world.game_over != 0:
+            _draw_game_over_splash(screen, clock, world.game_over, WIN_W, WIN_H)
             _end_mission(screen, clock, world, hud, PLAYER_FACTION, slot_num, slot_data)
             return
 
@@ -672,6 +673,9 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
                 _alert_flash = 1.0
             elif ev_type == "protester_detained":
                 notifs.add("PROTESTER DETAINED — +5 INFAMY", (255, 140, 0))
+            elif ev_type == "iron_dome_intercept":
+                utype = payload.get("utype", "DRONE").replace("_", " ").upper()
+                notifs.add(f"IRON DOME — {utype} SUPPRESSED", (80, 180, 255))
         world.events.clear()
 
         for k in _ability_cd:
@@ -938,6 +942,36 @@ def _end_mission(screen, clock, world, hud, player_faction,
         # Advance map phase each mission (caps at 2 — shattered)
         updated["map_phase"] = min(2, slot_data.get("map_phase", 0) + 1)
         _save_mod.save(slot_num, updated)
+
+
+def _draw_game_over_splash(surf, clock, game_over_state, sw, sh):
+    """Brief full-screen splash shown between game over and post-op debrief."""
+    from game.world import World
+    victory = game_over_state == World.GAME_OVER_VICTORY
+    bg_col  = (0, 30, 20) if victory else (30, 0, 0)
+    txt     = "MISSION COMPLETE" if victory else "MISSION FAILED"
+    sub     = "Compiling operational report..." if victory else "Damage assessment in progress..."
+    txt_col = (0, 255, 180) if victory else (220, 40, 40)
+
+    f_big = pygame.font.SysFont("couriernew", 42, bold=True)
+    f_sm  = pygame.font.SysFont("couriernew", 14)
+
+    start = pygame.time.get_ticks()
+    while pygame.time.get_ticks() - start < 2200:
+        for ev in pygame.event.get():
+            if ev.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
+                return   # skip on any input
+        elapsed = (pygame.time.get_ticks() - start) / 2200.0
+        alpha = int(min(1.0, elapsed * 3) * 255)
+        surf.fill(bg_col)
+        big = f_big.render(txt, True, txt_col)
+        big.set_alpha(alpha)
+        surf.blit(big, (sw // 2 - big.get_width() // 2, sh // 2 - 40))
+        sm = f_sm.render(sub, True, (0, 120, 80) if victory else (160, 60, 60))
+        sm.set_alpha(alpha)
+        surf.blit(sm, (sw // 2 - sm.get_width() // 2, sh // 2 + 20))
+        pygame.display.flip()
+        clock.tick(60)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

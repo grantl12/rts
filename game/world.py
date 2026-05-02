@@ -542,7 +542,12 @@ class World:
                 if u.utype not in ("drone_scout", "drone_assault", "drone_operator"):
                     continue
                 if math.dist((u.gx, u.gy), (dome_cx, dome_cy)) <= 6.0:
+                    if not getattr(u, "_dome_notified", False):
+                        u._dome_notified = True
+                        self.events.append(("iron_dome_intercept", {"utype": u.utype}))
                     u.suppress(2.0)
+                else:
+                    u._dome_notified = False
 
         # ALPR Scanner Logic
         for pb in self.placed_buildings.values():
