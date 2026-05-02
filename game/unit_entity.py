@@ -26,6 +26,7 @@ UNIT_DEFS = {
     "agitator":         (  70, 2.6,  0, 0.0, 0.0,  "unarmored", "frontline", 200),
     "proud_perimeter":  ( 200, 1.6, 20, 1.8, 1.8,  "medium",    "regency",   380),
     "donor":            (  30, 1.2,  0, 0.0, 0.0,  "unarmored", "regency",   450),
+    "settler":          (  80, 2.4,  0, 0.0, 0.0,  "unarmored", "sovereign", 320),
 }
 
 FACTION_COLORS = {
@@ -196,6 +197,11 @@ class Unit:
         if target and target.state == STATE_DEAD:
             self.target_uid = None
             target = None
+            # Auto-retarget: find nearest enemy in range after a kill
+            if self.damage > 0:
+                next_t = world.nearest_enemy(self, max_range=self.attack_range * 1.5)
+                if next_t:
+                    self.order_attack(next_t.uid)
 
         # Check for entering target building
         if self.target_building_id:
@@ -330,17 +336,20 @@ class Unit:
                             world.events.append(("press_amplify",
                                                  {"building": pb.bdef["name"]}))
             if world and self.utype == "journalist":
-                world.roe_manager.add_infamy(30)
-                world.events.append(("journalist_killed", {"faction": getattr(attacker, "faction", "unknown")}))
+                platform_banned = getattr(world, "_platform_ban_timer", 0.0) > 0
+                if not platform_banned:
+                    world.roe_manager.add_infamy(30)
+                    world.events.append(("journalist_killed", {"faction": getattr(attacker, "faction", "unknown")}))
             if world and self.utype == "donor":
-                world.roe_manager.add_infamy(20)
-                # Suppress all nearby attacker-faction units — political backlash
-                attacker_faction = getattr(attacker, "faction", None)
-                if attacker_faction:
-                    for u in world.units.values():
-                        if u.faction == attacker_faction and u.state != STATE_DEAD:
-                            if math.dist((u.gx, u.gy), (self.gx, self.gy)) <= 6.0:
-                                u.suppress(5.0)
+                platform_banned = getattr(world, "_platform_ban_timer", 0.0) > 0
+                if not platform_banned:
+                    world.roe_manager.add_infamy(20)
+                    attacker_faction = getattr(attacker, "faction", None)
+                    if attacker_faction:
+                        for u in world.units.values():
+                            if u.faction == attacker_faction and u.state != STATE_DEAD:
+                                if math.dist((u.gx, u.gy), (self.gx, self.gy)) <= 6.0:
+                                    u.suppress(5.0)
                 world.events.append(("donor_killed", {}))
 
     # ── Draw ──────────────────────────────────────────────────────────────────
@@ -381,6 +390,8 @@ class Unit:
         "proud_perimeter":   [(-9,-6),(-5,-12),(5,-12),(9,-6),(9,4),(5,10),(-5,10),(-9,4)],
         # Donor — fat oval (golf shirt, unthreatening)
         "donor":             [(-7,-5),(-4,-10),(4,-10),(7,-5),(7,5),(4,9),(-4,9),(-7,5)],
+        # Settler — stake/flag shape (narrow body, wide top)
+        "settler":           [(-3,-12),(3,-12),(5,-6),(5,2),(8,2),(8,6),(-8,6),(-8,2),(-5,2),(-5,-6)],
     }
     _DEFAULT_SHAPE = [(-7,-7),(7,-7),(7,7),(-7,7)]  # square fallback
 

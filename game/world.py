@@ -298,6 +298,9 @@ class World:
         # Epstein File Leak superweapon timer
         if getattr(self, "_epstein_timer", 0.0) > 0:
             self._epstein_timer -= dt
+        # Platform Ban timer (Regency — journalist/donor protections suspended)
+        if getattr(self, "_platform_ban_timer", 0.0) > 0:
+            self._platform_ban_timer -= dt
 
         # Kirk Deepfake reveal at 5 minutes
         if not self._deepfake_fired and self._mission_elapsed >= 300.0:
@@ -785,6 +788,20 @@ class World:
                         if math.dist((u.gx, u.gy), (ally.gx, ally.gy)) <= 4.0:
                             if hasattr(ally, "_suppress_timer") and ally._suppress_timer > 0:
                                 ally._suppress_timer = max(0.0, ally._suppress_timer - dt)
+            if u.utype == "settler":
+                # Settler converts nearby neutral buildings 3× faster than normal capture
+                if u.state not in (STATE_MOVING, STATE_DEAD):
+                    for pb in self.placed_buildings.values():
+                        if pb.faction == "neutral":
+                            if math.dist((u.gx, u.gy), (pb.gx + pb.bdef["w"]/2, pb.gy + pb.bdef["h"]/2)) <= 3.0:
+                                pb._capture_progress = min(100.0, pb._capture_progress + dt * 40.0)
+                                if pb._capture_progress >= 100.0:
+                                    old_f = pb.faction
+                                    pb.faction = u.faction
+                                    pb._capture_progress = 0.0
+                                    self.events.append(("building_captured",
+                                                        {"name": getattr(pb, "display_name", pb.bdef["name"]),
+                                                         "by": u.faction, "from": old_f}))
             if u.utype == "proud_perimeter":
                 # Intercepts suppression: if nearby ally gets suppressed, PP takes it instead
                 if not hasattr(u, "_shield_range"):

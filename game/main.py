@@ -340,8 +340,9 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
                                 cx = sum(u.gx for u in sel_units) / len(sel_units)
                                 cy = sum(u.gy for u in sel_units) / len(sel_units)
                                 _scotus_zones.append([cx, cy, 8.0, 60.0])
+                                world._platform_ban_timer = 30.0
                                 _ability_cd["r"] = 120.0
-                                notifs.add("R — SCOTUS GAVEL: AREA DE-ZONED 60s", (200, 180, 0))
+                                notifs.add("R — SCOTUS GAVEL + PLATFORM BAN: AREA DE-ZONED 60s / JOURNALIST IMMUNITY SUSPENDED 30s", (200, 180, 0))
                                 advisor.trigger("scotus_gavel")
                                 _alert_flash = 0.5
                         elif PLAYER_FACTION == "frontline":

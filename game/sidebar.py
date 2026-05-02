@@ -31,7 +31,7 @@ FACTION_BUILD_MENU = {
     },
     "sovereign": {
         "structures": ["sov_safehouse", "sov_cache"],
-        "units": ["proxy", "contractor"],
+        "units": ["proxy", "contractor", "settler"],
     },
     "oligarchy": {
         "structures": ["olig_hq", "olig_salvage", "olig_troll"],

@@ -350,7 +350,7 @@ BUILDINGS = {
         "hp":          900,
         "power_draw":  0,
         "garrison":    8,
-        "produces":    ["proxy"],
+        "produces":    ["proxy", "settler"],
         "description": "Hidden command post. Blends with civilian structures. 8 garrison slots.",
         "palette":     _SOV_BASE,
         "flags":       ["command", "required", "garrisonable"],
