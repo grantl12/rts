@@ -25,6 +25,7 @@ UNIT_DEFS = {
     "journalist":       (  50, 2.8,  0, 0.0, 0.0,  "unarmored", "frontline", 250),
     "agitator":         (  70, 2.6,  0, 0.0, 0.0,  "unarmored", "frontline", 200),
     "proud_perimeter":  ( 200, 1.6, 20, 1.8, 1.8,  "medium",    "regency",   380),
+    "donor":            (  30, 1.2,  0, 0.0, 0.0,  "unarmored", "regency",   450),
 }
 
 FACTION_COLORS = {
@@ -331,6 +332,16 @@ class Unit:
             if world and self.utype == "journalist":
                 world.roe_manager.add_infamy(30)
                 world.events.append(("journalist_killed", {"faction": getattr(attacker, "faction", "unknown")}))
+            if world and self.utype == "donor":
+                world.roe_manager.add_infamy(20)
+                # Suppress all nearby attacker-faction units — political backlash
+                attacker_faction = getattr(attacker, "faction", None)
+                if attacker_faction:
+                    for u in world.units.values():
+                        if u.faction == attacker_faction and u.state != STATE_DEAD:
+                            if math.dist((u.gx, u.gy), (self.gx, self.gy)) <= 6.0:
+                                u.suppress(5.0)
+                world.events.append(("donor_killed", {}))
 
     # ── Draw ──────────────────────────────────────────────────────────────────
 
@@ -368,6 +379,8 @@ class Unit:
         "agitator":          [(-4,-8),(8,0),(-4,8),(-6,4),(-6,-4)],
         # Proud Perimeter — wide shield shape
         "proud_perimeter":   [(-9,-6),(-5,-12),(5,-12),(9,-6),(9,4),(5,10),(-5,10),(-9,4)],
+        # Donor — fat oval (golf shirt, unthreatening)
+        "donor":             [(-7,-5),(-4,-10),(4,-10),(7,-5),(7,5),(4,9),(-4,9),(-7,5)],
     }
     _DEFAULT_SHAPE = [(-7,-7),(7,-7),(7,7),(-7,7)]  # square fallback
 

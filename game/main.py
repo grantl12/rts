@@ -342,6 +342,7 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
                                 _scotus_zones.append([cx, cy, 8.0, 60.0])
                                 _ability_cd["r"] = 120.0
                                 notifs.add("R — SCOTUS GAVEL: AREA DE-ZONED 60s", (200, 180, 0))
+                                advisor.trigger("scotus_gavel")
                                 _alert_flash = 0.5
                         elif PLAYER_FACTION == "frontline":
                             # DRONE SWARM: 4 drone_scouts attack random enemies
@@ -359,6 +360,7 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
                                         d.order_attack(t.uid)
                                 _ability_cd["r"] = 90.0
                                 notifs.add("R — DRONE SWARM: 4 FPV DRONES LAUNCHED", (80, 200, 80))
+                                advisor.trigger("drone_swarm")
                         elif PLAYER_FACTION in ("sovereign", "oligarchy"):
                             # EPSTEIN FILE LEAK: reveal full map for 45s, freeze enemy income
                             if not hasattr(world, "_epstein_timer"):
@@ -367,6 +369,7 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
                             _ability_cd["r"] = 150.0
                             notifs.add("R — EPSTEIN FILE LEAK: MAP REVEALED — ENEMY INCOME FROZEN 45s",
                                        (140, 40, 200))
+                            advisor.trigger("epstein_leak")
                             _alert_flash = 1.0
 
                     # Tab = end mission early
@@ -616,6 +619,14 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
             elif ev_type == "bolo_identified":
                 notifs.add("ALPR HIT — BOLO TARGET IDENTIFIED: {}".format(payload.get("unit", "?").upper()), (255, 166, 0))
                 _alert_flash = 0.4
+            elif ev_type == "donor_killed":
+                notifs.add("!! DONOR NEUTRALIZED — ALLY MORALE COLLAPSED — AREA SUPPRESSED", (255, 100, 20))
+                advisor.trigger("donor_killed")
+                _alert_flash = 0.6
+            elif ev_type == "ddos_hit":
+                bname = payload.get("building", "TARGET")
+                notifs.add(f"HACKTIVIST DDoS — {bname.upper()} OFFLINE 30s", (80, 200, 255))
+                advisor.trigger("ddos_hit")
         world.events.clear()
 
         for k in _ability_cd:

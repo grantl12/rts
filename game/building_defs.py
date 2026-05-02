@@ -86,7 +86,7 @@ BUILDINGS = {
         "hp":          800,
         "power_draw":  -12,
         "garrison":    0,
-        "produces":    ["gravy_seal", "ice_agent", "ice_agent_tac", "proud_perimeter", "patriot_lawyer"],
+        "produces":    ["gravy_seal", "ice_agent", "ice_agent_tac", "proud_perimeter", "donor", "patriot_lawyer"],
         "description": "Orientation facility for citizens awaiting successful personality optimization.",
         "palette":     _REG_BASE,
         "flags":       ["production"],
@@ -300,6 +300,23 @@ BUILDINGS = {
         "palette":     _FRONT_BASE,
         "flags":       ["production", "vehicle"],
         "roof_style":  "dish",
+    },
+
+    "fl_hacktivist": {
+        "name":        "HACKTIVIST CELL",
+        "sub":         "DIGITAL OPERATIONS",
+        "category":    "base",
+        "faction":     "frontline",
+        "w": 2, "h": 2, "floors": 1,
+        "cost":        300,
+        "hp":          300,
+        "power_draw":  -10,
+        "garrison":    0,
+        "produces":    [],
+        "description": "DDoS pulse every 45s — disables nearest enemy scanner/command building for 30s.",
+        "palette":     _FRONT_BASE,
+        "flags":       ["ddos"],
+        "roof_style":  "flat",
     },
 
     "fl_press": {

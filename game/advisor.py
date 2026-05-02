@@ -149,6 +149,31 @@ _LINES = {
         "Megaphone deployed. Bureaucratic interference is being... countered.",
         "Agitator operational. Morale suppression reduced in zone. Temporarily.",
     ],
+    "donor_killed": [
+        "A Donor has been neutralized. This is a political incident. Update your liability waiver.",
+        "High-value political asset eliminated. Nearby units are experiencing morale feedback.",
+        "The Donor has been processed. Your own personnel are now suppressed. As predicted.",
+    ],
+    "ddos_hit": [
+        "DDoS pulse delivered. Enemy systems experiencing... administrative difficulties.",
+        "Target infrastructure disrupted. Their IT department will not be pleased.",
+        "Digital interdiction successful. Production at target facility is offline.",
+    ],
+    "scotus_gavel": [
+        "SCOTUS Gavel deployed. The area has been formally de-zoned. Legally.",
+        "Construction zone declared inactive by executive order. This is binding. Probably.",
+        "Area of operations legally cleared. Enemy building permits: denied.",
+    ],
+    "drone_swarm": [
+        "Drone swarm launched. Four simultaneous kinetic engagements in progress.",
+        "FPV assets deployed. Multiple high-value targets being re-evaluated.",
+        "Swarm protocol active. This is what we call a target-rich environment.",
+    ],
+    "epstein_leak": [
+        "The files are live. Map reveal active. Enemy income is experiencing a confidence crisis.",
+        "Classified archive deployed. Everybody can see everything now. Including us.",
+        "Epstein Protocol initiated. Full spectrum transparency. Temporarily.",
+    ],
 }
 
 

@@ -108,8 +108,8 @@ class AIFaction:
         squad_a = idle[:mid]
         squad_b = idle[mid:]
 
-        player_units = [u for u in world.units.values()
-                        if u.faction == player_faction and u.state != STATE_DEAD]
+        player_units = self._targetable([u for u in world.units.values()
+                        if u.faction == player_faction and u.state != STATE_DEAD])
         player_hq    = self._find_hq(player_faction, world)
 
         if player_units and squad_a:
@@ -141,8 +141,8 @@ class AIFaction:
             return
 
         # Target the largest player cluster
-        player_units = [u for u in world.units.values()
-                        if u.faction == player_faction and u.state != STATE_DEAD]
+        player_units = self._targetable([u for u in world.units.values()
+                        if u.faction == player_faction and u.state != STATE_DEAD])
         if player_units:
             center = max(player_units,
                          key=lambda u: sum(1 for v in player_units
@@ -168,8 +168,8 @@ class AIFaction:
             self._move_squad(cap_squad, target.gx, target.gy, world)
             return
 
-        player_units = [u for u in world.units.values()
-                        if u.faction == player_faction and u.state != STATE_DEAD]
+        player_units = self._targetable([u for u in world.units.values()
+                        if u.faction == player_faction and u.state != STATE_DEAD])
         if player_units:
             nearest = min(player_units,
                           key=lambda u: math.dist((idle[0].gx, idle[0].gy),
@@ -202,8 +202,8 @@ class AIFaction:
                 self._move_squad(idle, hq.gx, hq.gy, world)
                 return
 
-        player_units = [u for u in world.units.values()
-                        if u.faction == player_faction and u.state != STATE_DEAD]
+        player_units = self._targetable([u for u in world.units.values()
+                        if u.faction == player_faction and u.state != STATE_DEAD])
         if player_units:
             nearest = min(player_units,
                           key=lambda u: math.dist((idle[0].gx, idle[0].gy),
@@ -211,8 +211,8 @@ class AIFaction:
             self._move_squad(idle, nearest.gx, nearest.gy, world)
 
     def _orders_default(self, idle, player_faction, world):
-        player_units = [u for u in world.units.values()
-                        if u.faction == player_faction and u.state != STATE_DEAD]
+        player_units = self._targetable([u for u in world.units.values()
+                        if u.faction == player_faction and u.state != STATE_DEAD])
         if player_units:
             nearest = min(player_units,
                           key=lambda u: math.dist((idle[0].gx, idle[0].gy),
@@ -263,6 +263,11 @@ class AIFaction:
         self._move_squad(raid_squad, target_pen.gx, target_pen.gy, world)
 
     # ── Utilities ─────────────────────────────────────────────────────────────
+
+    def _targetable(self, units):
+        """Filter out units that AI should not auto-target (journalists, donors)."""
+        _PROTECTED = {"journalist", "donor"}
+        return [u for u in units if u.utype not in _PROTECTED]
 
     def _find_hq(self, faction, world):
         return next((pb for pb in world.placed_buildings.values()

@@ -531,6 +531,10 @@ class World:
                 continue
             if pb.faction == player_faction and self.power_balance < 0:
                 continue  # No production when underpowered
+            # DDoS disabled building: tick down timer, stall production
+            if getattr(pb, "_ddos_disabled", 0.0) > 0:
+                pb._ddos_disabled = max(0.0, pb._ddos_disabled - dt)
+                continue
             completed = queue.update(dt, self.BUILD_TIME_UNIT)
             if completed:
                 # SANCTIONED: freeze heavy-tier production for player
@@ -793,6 +797,27 @@ class World:
                                 ally._suppress_timer = 0.0
                                 if hasattr(u, "_suppress_timer"):
                                     u._suppress_timer = max(u._suppress_timer, excess * 0.5)
+
+        # Hacktivist Cell: DDoS pulse every 45s on nearest enemy scanner/command
+        for pb in self.placed_buildings.values():
+            if "ddos" not in pb.bdef.get("flags", []):
+                continue
+            if not hasattr(pb, "_ddos_timer"):
+                pb._ddos_timer = 45.0
+            pb._ddos_timer -= dt
+            if pb._ddos_timer <= 0:
+                pb._ddos_timer = 45.0
+                cx = pb.gx + pb.bdef["w"] / 2
+                cy = pb.gy + pb.bdef["h"] / 2
+                targets = [t for t in self.placed_buildings.values()
+                           if t.faction != pb.faction
+                           and any(f in t.bdef.get("flags", []) for f in ("sensor", "command", "scanner"))]
+                if targets:
+                    target = min(targets, key=lambda t: math.dist((t.gx, t.gy), (cx, cy)))
+                    if not hasattr(target, "_ddos_disabled"):
+                        target._ddos_disabled = 0.0
+                    target._ddos_disabled = 30.0
+                    self.events.append(("ddos_hit", {"building": target.bdef["name"]}))
 
     # ── Map pre-placement ─────────────────────────────────────────────────────
 
