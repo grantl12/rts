@@ -828,6 +828,28 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
         selection.draw_unit_selection(screen, world, cam)
         selection.draw_order_marker(screen)
 
+        # Aura range rings for selected aura units
+        _AURA_RANGES = {
+            "patriot_lawyer": (3.5, (28, 80, 200)),
+            "agitator":       (3.5, (80, 200, 80)),
+            "direktor":       (8.0, (200, 160, 30)),
+            "settler":        (3.0, (160, 80, 220)),
+            "journalist":     (5.0, (80, 200, 220)),
+        }
+        for uid in selection.selected_uids:
+            u = world.units.get(uid)
+            if not u or u.utype not in _AURA_RANGES:
+                continue
+            radius, col = _AURA_RANGES[u.utype]
+            cx, cy = cam.world_to_screen(u.gx, u.gy)
+            # Approximate iso ellipse: x radius stays, y radius halved
+            rx = int(radius * cam.zoom * 36)
+            ry = int(rx * 0.5)
+            aura_surf = pygame.Surface((rx * 2 + 2, ry * 2 + 2), pygame.SRCALPHA)
+            pygame.draw.ellipse(aura_surf, (*col, 40), (0, 0, rx * 2, ry * 2))
+            pygame.draw.ellipse(aura_surf, (*col, 120), (0, 0, rx * 2, ry * 2), 1)
+            screen.blit(aura_surf, (cx - rx, cy - ry))
+
         # HUD
         minimap_fn = lambda s: draw_minimap(s, cam, hud.minimap_rect,
                                             world=world, fog=fog,
@@ -1005,9 +1027,10 @@ def _draw_selection_info(surf, selection, world, font, screen_h, panel_w):
         f_sm  = font
 
         rank_str = "★" * u.rank + "☆" * (5 - u.rank)
+        display_name = u.hero_name if (u.rank >= 5 and u.hero_name) else u.utype.upper().replace("_", " ")
         name_lbl = f_med.render(
-            f"{u.utype.upper().replace('_',' ')}  {rank_str}",
-            True, FACTION_COLORS.get(u.faction, (0, 200, 140)))
+            f"{display_name}  {rank_str}",
+            True, (220, 180, 40) if (u.rank >= 5 and u.hero_name) else FACTION_COLORS.get(u.faction, (0, 200, 140)))
         surf.blit(name_lbl, (10, screen_h - bar_h + 4))
 
         state_txt = u.state.upper()
