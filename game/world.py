@@ -295,6 +295,10 @@ class World:
         self.roe_manager.update(dt)
         self._apply_infamy_consequences(dt, player_faction)
 
+        # Epstein File Leak superweapon timer
+        if getattr(self, "_epstein_timer", 0.0) > 0:
+            self._epstein_timer -= dt
+
         # Kirk Deepfake reveal at 5 minutes
         if not self._deepfake_fired and self._mission_elapsed >= 300.0:
             self._deepfake_fired = True
@@ -617,6 +621,7 @@ class World:
         underpowered = net_power < 0
 
         tape_faction = self.tape_holder_faction
+        epstein_active = getattr(self, "_epstein_timer", 0.0) > 0
         for pb in self.placed_buildings.values():
             if pb.faction != player_faction:
                 continue

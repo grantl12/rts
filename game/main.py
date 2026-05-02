@@ -92,7 +92,8 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
     roe5_confirm   = False  # waiting for Y/N confirmation before ROE 5
     show_help      = False  # ? key toggles keybind overlay
     _prev_infamy   = 0
-    _ability_cd    = {"q": 0.0, "e": 0.0}  # seconds remaining on cooldown
+    _ability_cd    = {"q": 0.0, "e": 0.0, "r": 0.0}  # seconds remaining on cooldown
+    _scotus_zones  = []   # list of (cx,cy,radius,timer) — de-zoned areas
     _alert_flash   = 0.0   # seconds of red border flash remaining
 
     while True:
@@ -329,6 +330,45 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
                                 notifs.add("E — SHADOW CELL: 2 PROXIES DEPLOYED (−§150)", (140, 40, 200))
                                 advisor.trigger("shadow_cell")
 
+                    # R = Superweapon (faction-specific, long CD)
+                    if event.key == pygame.K_r and _ability_cd["r"] <= 0:
+                        sel_units = [world.units[uid] for uid in selection.selected_uids
+                                     if uid in world.units]
+                        if PLAYER_FACTION == "regency":
+                            # SCOTUS GAVEL: de-zone area — enemy can't build in radius for 60s
+                            if sel_units:
+                                cx = sum(u.gx for u in sel_units) / len(sel_units)
+                                cy = sum(u.gy for u in sel_units) / len(sel_units)
+                                _scotus_zones.append([cx, cy, 8.0, 60.0])
+                                _ability_cd["r"] = 120.0
+                                notifs.add("R — SCOTUS GAVEL: AREA DE-ZONED 60s", (200, 180, 0))
+                                _alert_flash = 0.5
+                        elif PLAYER_FACTION == "frontline":
+                            # DRONE SWARM: 4 drone_scouts attack random enemies
+                            enemies = [u for u in world.units.values()
+                                       if u.faction in world.enemies_of(PLAYER_FACTION)
+                                       and u.state != "dead"]
+                            if enemies:
+                                import random as _r
+                                targets = _r.sample(enemies, min(4, len(enemies)))
+                                for t in targets:
+                                    d = world.spawn_unit("drone_scout", PLAYER_FACTION,
+                                                         t.gx + _r.uniform(-3, 3),
+                                                         t.gy + _r.uniform(-3, 3))
+                                    if d and hasattr(d, "order_attack"):
+                                        d.order_attack(t.uid)
+                                _ability_cd["r"] = 90.0
+                                notifs.add("R — DRONE SWARM: 4 FPV DRONES LAUNCHED", (80, 200, 80))
+                        elif PLAYER_FACTION in ("sovereign", "oligarchy"):
+                            # EPSTEIN FILE LEAK: reveal full map for 45s, freeze enemy income
+                            if not hasattr(world, "_epstein_timer"):
+                                world._epstein_timer = 0.0
+                            world._epstein_timer = 45.0
+                            _ability_cd["r"] = 150.0
+                            notifs.add("R — EPSTEIN FILE LEAK: MAP REVEALED — ENEMY INCOME FROZEN 45s",
+                                       (140, 40, 200))
+                            _alert_flash = 1.0
+
                     # Tab = end mission early
                     if event.key == pygame.K_TAB and not roe5_confirm:
                         _end_mission(screen, clock, world, hud, PLAYER_FACTION, slot_num, slot_data)
@@ -348,7 +388,16 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
                         audio.play("move_order")
                     if placing_bid:
                         if event.button == 1 and placing_ghost:
-                            pb = world.place_building(placing_bid, PLAYER_FACTION, *placing_ghost)
+                            # Block placement inside SCOTUS de-zones (enemy can't build)
+                            gx_p, gy_p = placing_ghost
+                            in_scotus = any(
+                                math.dist((gx_p, gy_p), (z[0], z[1])) <= z[2]
+                                for z in _scotus_zones
+                            )
+                            if in_scotus and PLAYER_FACTION != "regency":
+                                notifs.add("SCOTUS GAVEL — CONSTRUCTION BLOCKED IN DE-ZONE", (200, 180, 0))
+                            else:
+                                pb = world.place_building(placing_bid, PLAYER_FACTION, *placing_ghost)
                             placing_bid   = None
                             placing_ghost = None
                         elif event.button == 3:
@@ -382,12 +431,22 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
         extra_v = []
         if intro_state != "end":
             extra_v.append((*KIRK_RALLY, 12))
+        # Epstein File Leak: full map reveal while active
+        if getattr(world, "_epstein_timer", 0.0) > 0:
+            from game.map_data import W as _MW, H as _MH
+            extra_v.append((_MW // 2, _MH // 2, max(_MW, _MH)))
         fog.update(world, PLAYER_FACTION, extra_sources=extra_v)
+
+        # Tick SCOTUS de-zone timers
+        for zone in _scotus_zones:
+            zone[3] = max(0.0, zone[3] - dt_sec)
+        _scotus_zones[:] = [z for z in _scotus_zones if z[3] > 0]
 
         completed_struct, completed_unit = sidebar.update(dt, world, PLAYER_FACTION)
         if completed_struct:
             placing_bid = completed_struct
-            notifs.add(f"STRUCTURE READY — PLACE {completed_struct.upper().replace('_',' ')}", (0, 255, 100))
+            placing_ghost = None  # Don't snap ghost until mouse moves
+            notifs.add(f"STRUCTURE READY — CLICK TO PLACE {completed_struct.upper().replace('_',' ')}", (0, 255, 100))
         if completed_unit:
             pb = sidebar._has_producer(completed_unit, world, PLAYER_FACTION)
             if pb:
@@ -600,6 +659,17 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
         # Civilian vehicles
         for v in world.vehicles.values():
             v.draw(screen, cam, fog)
+
+        # SCOTUS de-zone rings
+        for cx, cy, radius, timer in _scotus_zones:
+            sx, sy = cam.world_to_screen(cx, cy)
+            r_px = int(radius * cam.zoom * 36)  # approx tile-width scale
+            alpha = min(200, int(timer * 4))
+            ring_col = (200, 180, 0)
+            pygame.draw.circle(screen, ring_col, (sx, sy), r_px, 2)
+            f_scotus = pygame.font.SysFont("couriernew", 9, bold=True)
+            lbl = f_scotus.render(f"DE-ZONED {int(timer)}s", True, ring_col)
+            screen.blit(lbl, (sx - lbl.get_width() // 2, sy - r_px - 14))
 
         # Wreck markers
         for gx, gy, timer in world.wrecks:
@@ -948,11 +1018,19 @@ def _draw_ability_hud(surf, ability_cd, font, sw, sh, player_faction="regency"):
         "oligarchy": ("E", "KICKBACK",   50.0, (200, 160, 0)),
         "sovereign": ("E", "SHADOW CELL",45.0, (140, 40, 200)),
     }
+    _r_labels = {
+        "regency":   ("R", "SCOTUS",    120.0, (200, 180, 0)),
+        "frontline": ("R", "DRN SWARM",  90.0, (80, 220, 80)),
+        "oligarchy": ("R", "EPSTEIN",   150.0, (140, 40, 200)),
+        "sovereign": ("R", "EPSTEIN",   150.0, (140, 40, 200)),
+    }
     q = _q_labels.get(player_faction, ("Q", "SUPPRESS", 20.0, (0, 200, 255)))
     e = _e_labels.get(player_faction, ("E", "BACKUP",   45.0, (0, 255, 100)))
+    r = _r_labels.get(player_faction, ("R", "WEAPON",  120.0, (200, 180, 0)))
     abilities = [
         (q[0], q[1], ability_cd.get("q", 0), q[2], q[3]),
         (e[0], e[1], ability_cd.get("e", 0), e[2], e[3]),
+        (r[0], r[1], ability_cd.get("r", 0), r[2], r[3]),
     ]
     btn_w, btn_h = 64, 44
     gap = 8

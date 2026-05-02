@@ -110,10 +110,14 @@ class BuildSidebar:
         self.struct_queue.append({"id": bid, "progress": 0.0})
         return True
 
+    UNIT_QUEUE_CAP = 5
+
     def enqueue_unit(self, utype, world, player_faction):
         row = UNIT_DEFS.get(utype)
         if not row:
             return False
+        if len(self.unit_queue) >= self.UNIT_QUEUE_CAP:
+            return False   # queue full
         cost = row[7]
         creds = world.credits.get(player_faction, 0)
         if creds < cost:
@@ -185,6 +189,19 @@ class BuildSidebar:
             self._draw_queue_bar(surf, col_lx, qy, col_w, self.struct_queue[0], "BLDG")
         if self.unit_queue:
             self._draw_queue_bar(surf, col_rx, qy, col_w, self.unit_queue[0], "UNIT")
+            # Show queued items behind the active one
+            if len(self.unit_queue) > 1:
+                pending_y = qy + 26
+                for qi in self.unit_queue[1:]:
+                    lbl = self._font_px.render(
+                        f"  + {qi['id'][:10].upper()}", True, (0, 100, 70))
+                    surf.blit(lbl, (col_rx, pending_y))
+                    pending_y += 12
+            # Queue count indicator
+            cap_lbl = self._font_px.render(
+                f"{len(self.unit_queue)}/{self.UNIT_QUEUE_CAP}", True,
+                (200, 80, 20) if len(self.unit_queue) >= self.UNIT_QUEUE_CAP else (0, 80, 60))
+            surf.blit(cap_lbl, (col_rx + col_w - cap_lbl.get_width() - 2, qy))
 
         return click_zones
 
