@@ -74,6 +74,46 @@ _LINES = {
     "infamy_sanctioned": [
         "Administrative sanctions applied. Certain capabilities are now restricted.",
     ],
+    "rank_5_promotion": [
+        "Executive rank achieved. Naming rights have been processed. Congratulations are contractually mandated.",
+        "Elite designation confirmed. This individual is now a liability. Guard accordingly.",
+        "Operative has exceeded standard performance metrics. A plaque is being considered. Probably.",
+    ],
+    "tape_acquired": [
+        "Sensitive archival material secured. Its contents are, of course, unverified. Officially.",
+        "High-value intelligence asset acquired. Do not describe its contents in writing. Or aloud.",
+        "The tape is now in your custody. This is either very good or very bad. Possibly both.",
+    ],
+    "tape_lost": [
+        "Archival material has been... misplaced. This is a routine administrative incident.",
+        "Sensitive asset no longer in custody. We recommend immediate retrieval before it becomes a headline.",
+        "The tape is loose. Begin not-panicking protocols.",
+    ],
+    "vbied_armed": [
+        "Mobile explosive asset detected in civilian configuration. Do not approach. Do not park nearby.",
+        "Sovereign vehicle improvisation in progress. Recommend immediate tactical repositioning.",
+        "A car is no longer just a car. This is a Sovereign operational update. Good luck.",
+    ],
+    "cease_desist": [
+        "Legal interdiction filed. Enemy personnel are now experiencing administrative difficulties.",
+        "Cease and desist issued. Compliance is mandatory. Enforcement is contractual.",
+        "Patriot Lawyer has deployed procedural suppression. The paperwork is real. The suffering is real.",
+    ],
+    "witness_radicalized": [
+        "Civilian has been radicalized by Sovereign proximity. This was not in the risk model.",
+        "Local witness converted to armed asset. This is why we do not leave civilians unattended.",
+        "Radicalization confirmed. Recommend containment, or at minimum, distance.",
+    ],
+    "power_low": [
+        "Power grid underpowered. Production is on hold pending infrastructure investment.",
+        "Energy deficit detected. Build a substation or accept strategic paralysis.",
+        "Operational capacity suspended. Power is not optional. Build more substations.",
+    ],
+    "unit_locked": [
+        "Production prerequisite not met. The correct building must exist before this unit can be trained.",
+        "This unit requires a facility that you have not yet constructed. That is the rule.",
+        "Acquisition denied. The appropriate infrastructure is absent. Build it first.",
+    ],
 }
 
 

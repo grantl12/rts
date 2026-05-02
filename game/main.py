@@ -455,12 +455,14 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
                 notifs.add("FRONTLINE: WITNESS EMPOWERED — BROADCASTING LIVE", (80, 220, 80))
             elif ev_type == "witness_radicalized":
                 notifs.add("SOVEREIGN: WITNESS RADICALIZED — MILITIA SPAWNED", (160, 40, 220))
+                advisor.trigger("witness_radicalized")
             elif ev_type == "witness_assetized":
                 notifs.add("OLIGARCHY: WITNESS ASSETIZED — LEVERAGE ACQUIRED", (220, 180, 40))
             elif ev_type == "insurance_payout":
                 notifs.add(f"OLIGARCHY: INSURANCE PAYOUT +§{payload['credits']}", (220, 180, 40))
             elif ev_type == "vbied_armed":
                 notifs.add("!! CIVILIAN VEHICLE INBOUND — POSSIBLE VBIED", (255, 140, 0))
+                advisor.trigger("vbied_armed")
                 _alert_flash = 0.6
             elif ev_type == "vbied_explode":
                 notifs.add("!! SOVEREIGN VBIED DETONATED — AREA COMPROMISED", (255, 60, 20))
@@ -468,21 +470,25 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
                 audio.play("explosion")
                 _alert_flash = 1.0
             elif ev_type == "power_low":
-                pass
+                advisor.trigger("power_low")
             elif ev_type == "rank_5_promotion":
                 name = payload.get("hero_name", "UNKNOWN OPERATIVE")
                 utype = payload.get("utype", "").replace("_", " ").upper()
                 notifs.add("★ EXECUTIVE RANK: {} — {}".format(name, utype), (220, 180, 40))
+                advisor.trigger("rank_5_promotion")
                 _alert_flash = 0.5
             elif ev_type == "tape_acquired":
                 faction = payload["faction"].upper()
                 notifs.add("!! EPSTEIN TAPE ACQUIRED BY {} — INTEL BUFF ACTIVE".format(faction), (80, 200, 255))
+                advisor.trigger("tape_acquired")
                 _alert_flash = 0.8
             elif ev_type == "tape_lost":
                 notifs.add("!! EPSTEIN TAPE DROPPED — CONTEST IT NOW", (255, 140, 0))
+                advisor.trigger("tape_lost")
                 _alert_flash = 0.5
             elif ev_type == "cease_desist":
                 notifs.add("PATRIOT LAWYER: CEASE & DESIST FILED — AREA SUPPRESSED", (28, 80, 180))
+                advisor.trigger("cease_desist")
         world.events.clear()
 
         for k in _ability_cd:
