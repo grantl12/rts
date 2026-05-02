@@ -222,14 +222,21 @@ All 4 factions have `FACTION_BUILD_MENU` entries:
 - [x] Sidebar expanded: ice_agent_tac, mrap, drone_operator now visible
 - [x] Journalist doubles capture speed for nearby audit points
 
+### Implemented this session (2026-05-02)
+- [x] Faction research upgrades — all 4 factions now have 2 upgrades each in UNIT_UPGRADES
+- [x] Minimap shows vehicles (grey=civilian, orange=armed VBIED)
+- [x] Help overlay refreshed — added Abilities (Q/E/R/B), G, F, M sections
+- [x] Hero name in info bar — rank-5 units show hero name in gold instead of unit type
+- [x] Unit aura rings on selection — Patriot Lawyer, Agitator, Direktor, Settler, Journalist
+- [x] Building aura rings on selection — Troll Farm, Iron Dome, Vision Tower, Propaganda, Press Bureau, Hacktivist
+- [x] Iron Dome interception notification — fires per-drone on first contact
+- [x] MISSION COMPLETE / MISSION FAILED splash before post-op debrief (2.2s, skippable)
+
 ### Next up
 - [ ] Faction renames (backlog): Oligarchy → Direktorate, Gravy Seals → "2A Audit Volunteer" — deferred, keep internal keys
 - [ ] Visual upgrade tiers — 3 sprite tiers per unit, swap on rank-up — needs AI generator pipeline
-- [ ] The Settler (Sovereign builder) — plants territory flag that converts neutral terrain
-- [ ] The Donor (Regency aura) — fragile political supporter, killing = your own unit morale penalty
-- [ ] SCOTUS Gavel (Regency superweapon R key) — de-zones area, prevents enemy building
-- [ ] Epstein File Leak (Sovereign/Oligarchy R key) — reveals full map, disables enemy income 45s
-- [ ] Hacktivist (Frontline structure) — DDoS: disables enemy Audit Station 45s
+- [ ] Second map — The Quad is the only map; a second theater would unlock after map_phase 2
+- [ ] Wrecks persistent across sessions — currently lost on mission exit; save to slot data
 
 ---
 
