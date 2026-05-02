@@ -48,6 +48,8 @@ class SelectionManager:
             # Single click (or double-click for type-select)
             if not hud.hit_sidebar(pos):
                 u = world.unit_at_screen(mx, my, cam)
+                if u and u.faction != world.player_faction:
+                    u = None
                 if u:
                     now = pygame.time.get_ticks()
                     is_double = (u.uid == self._last_click_uid

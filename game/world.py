@@ -488,10 +488,8 @@ class World:
                             c.state = "dead"
                             self.credits[pb.faction] = self.credits.get(pb.faction, 0) + reward
 
-        # Win/loss detection — skip until player has units (intro still running)
-        has_player_units = any(u.faction == player_faction and u.state != STATE_DEAD
-                               for u in self.units.values())
-        if self.game_over == self.GAME_OVER_NONE and has_player_units:
+        # Win/loss detection — only after intro ends (_mission_elapsed > 0)
+        if self.game_over == self.GAME_OVER_NONE and self._mission_elapsed > 0:
             enemy = self._ENEMY_MAP.get(player_faction, "sovereign")
             player_hq_alive = any(pb.faction == player_faction and "command" in pb.bdef.get("flags", [])
                                   for pb in self.placed_buildings.values())
