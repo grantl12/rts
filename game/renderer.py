@@ -326,6 +326,16 @@ def draw_minimap(surf: pygame.Surface, cam, rect: pygame.Rect,
             uy = rect.y + int(u.gy * sy)
             pygame.draw.rect(surf, col, (ux, uy, max(2, int(sx)), max(2, int(sy))))
 
+        # Vehicle dots — grey for civilian cars, orange tint for armed VBIEDs
+        for v in world.vehicles.values():
+            if fog and not fog.is_visible(v.gx, v.gy):
+                continue
+            is_vbied = getattr(v, "state", "") == "armed"
+            vcol = (220, 100, 20) if is_vbied else (90, 90, 70)
+            vx = rect.x + int(v.gx * sx)
+            vy = rect.y + int(v.gy * sy)
+            pygame.draw.rect(surf, vcol, (vx, vy, max(2, int(sx)), max(2, int(sy))))
+
     # Camera viewport rectangle
     from game.iso import TILE_W, TILE_H
     def cam_to_mini(gx, gy):

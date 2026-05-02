@@ -1156,13 +1156,21 @@ def _draw_help_overlay(surf, sw, sh):
             ("Left-Click",        "Select unit / building"),
             ("Left-Drag",         "Box select units"),
             ("Shift + Click",     "Add to selection"),
+            ("Double-Click",      "Select all of type on screen"),
             ("Ctrl + A",          "Select ALL friendly units"),
         ]),
         ("ORDERS",  [
             ("Right-Click unit",  "Attack order"),
             ("Right-Click ground","Move order (formation)"),
             ("Right-Click bldg", "Garrison order"),
+            ("G",                 "Garrison selected into nearest building"),
             ("S",                 "Stop all selected"),
+        ]),
+        ("ABILITIES",  [
+            ("Q",                 "Primary ability (faction-specific)"),
+            ("E",                 "Secondary ability (faction-specific)"),
+            ("R",                 "Superweapon — long cooldown"),
+            ("B",                 "Toggle build menu"),
         ]),
         ("CAMERA",  [
             ("WASD / Arrow keys", "Pan camera"),
@@ -1177,8 +1185,10 @@ def _draw_help_overlay(surf, sw, sh):
         ]),
         ("MISSION",  [
             ("Tab",               "End mission → post-op debrief"),
+            ("F",                 "Toggle fog of war"),
+            ("M",                 "Mute / unmute audio"),
             ("H or ?",            "Toggle this help overlay"),
-            ("Escape",            "Cancel placement / exit"),
+            ("Escape",            "Cancel placement / deselect"),
         ]),
     ]
 
