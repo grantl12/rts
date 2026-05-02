@@ -731,6 +731,33 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
             lbl = f_scotus.render(f"DE-ZONED {int(timer)}s", True, ring_col)
             screen.blit(lbl, (sx - lbl.get_width() // 2, sy - r_px - 14))
 
+        # Building aura rings when a building is selected
+        _BLD_AURA_RANGES = {
+            "troll":       (10.0, (160, 80, 40),  "TROLL RANGE"),
+            "iron_dome":   ( 6.0, (80, 180, 255), "DOME RANGE"),
+            "vision":      (28.0, (0,  200, 140), "VISION RANGE"),
+            "propaganda":  ( 8.0, (200, 40, 200), "PROPAGANDA"),
+            "infamy_amplify": (12.0, (220, 100, 20), "AMPLIFY RANGE"),
+            "ddos":        (10.0, (80, 200, 255), "DDoS RANGE"),
+        }
+        if hud.selected_bld:
+            pb = hud.selected_bld
+            flags = pb.bdef.get("flags", [])
+            bcx = pb.gx + pb.bdef["w"] / 2
+            bcy = pb.gy + pb.bdef["h"] / 2
+            bsx, bsy = cam.world_to_screen(bcx, bcy)
+            for flag, (radius, col, label) in _BLD_AURA_RANGES.items():
+                if flag in flags:
+                    r_px = int(radius * cam.zoom * 36)
+                    rsy  = int(r_px * 0.5)
+                    a_surf = pygame.Surface((r_px * 2, rsy * 2), pygame.SRCALPHA)
+                    pygame.draw.ellipse(a_surf, (*col, 30), (0, 0, r_px * 2, rsy * 2))
+                    pygame.draw.ellipse(a_surf, (*col, 100), (0, 0, r_px * 2, rsy * 2), 1)
+                    screen.blit(a_surf, (bsx - r_px, bsy - rsy))
+                    f_aura = pygame.font.SysFont("couriernew", 9)
+                    lbl = f_aura.render(label, True, col)
+                    screen.blit(lbl, (bsx - lbl.get_width() // 2, bsy - rsy - 12))
+
         # Wreck markers
         for gx, gy, timer in world.wrecks:
             wx, wy = cam.world_to_screen(gx, gy)
