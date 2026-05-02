@@ -402,11 +402,14 @@ class World:
                 if pb and uid in pb.garrison:
                     pb.garrison.remove(uid)
             if u.armor_type in ("heavy", "medium"):
-                self.wrecks.append([u.gx, u.gy, 30.0])  # 30s wreck marker
+                self.wrecks.append([u.gx, u.gy, 300.0])  # 5-min wreck marker
+            elif u.armor_type == "light":
+                self.wrecks.append([u.gx, u.gy, 120.0])
             del self.units[uid]
 
-        # Tick + cull wrecks
-        self.wrecks = [[gx, gy, t - dt] for gx, gy, t in self.wrecks if t - dt > 0]
+        # Tick + cull wrecks (permanent phase wrecks have t == 99999)
+        self.wrecks = [[gx, gy, t - dt] for gx, gy, t in self.wrecks
+                       if t == 99999 or t - dt > 0]
 
         # Buildings (Capture + Income)
         for iid in list(self.placed_buildings.keys()):
@@ -420,6 +423,11 @@ class World:
                 self.events.append(("building_destroyed",
                                     {"name": getattr(pb, "display_name", pb.bdef["name"]),
                                      "faction": pb.faction}))
+                # Leave rubble wreck markers at building footprint corners
+                cx = pb.gx + pb.bdef["w"] / 2
+                cy = pb.gy + pb.bdef["h"] / 2
+                for ox, oy in [(-.5, -.5), (.5, -.5), (0, .3)]:
+                    self.wrecks.append([cx + ox, cy + oy, 99999.0])
                 del self.placed_buildings[iid]
                 continue
                 

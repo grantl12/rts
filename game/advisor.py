@@ -114,6 +114,11 @@ _LINES = {
         "This unit requires a facility that you have not yet constructed. That is the rule.",
         "Acquisition denied. The appropriate infrastructure is absent. Build it first.",
     ],
+    "salvage": [
+        "Wreck converted to administrative credit. Oligarchy efficiency metrics improving.",
+        "Salvage operation complete. Someone else's loss is now your budget line.",
+        "Asset recovery confirmed. The market finds a way.",
+    ],
 }
 
 

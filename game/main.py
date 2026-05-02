@@ -400,6 +400,9 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
                 audio.play("explosion")
             elif ev_type == "press_amplify":
                 notifs.add("PRESS BUREAU RECORDING — +5 INFAMY", (255, 140, 0))
+            elif ev_type == "bolo_identified":
+                notifs.add("!! ALPR HIT — BOLO TARGET IDENTIFIED", (255, 220, 0))
+                _alert_flash = 0.4
             elif ev_type == "bolo_captured":
                 if payload["faction"] == PLAYER_FACTION:
                     notifs.add("!! BOLO TARGET SECURED — +§500 BONUS", (0, 255, 100))
@@ -450,7 +453,8 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
                 _deepfake_overlay = 6.0
                 _alert_flash = 1.5
             elif ev_type == "salvage":
-                notifs.add(f"SALVAGE — +§{payload['credits']}", (200, 160, 30))
+                notifs.add(f"SALVAGE YARD — +§{payload['credits']}", (200, 160, 30))
+                advisor.trigger("salvage")
             elif ev_type == "witness_empowered":
                 notifs.add("FRONTLINE: WITNESS EMPOWERED — BROADCASTING LIVE", (80, 220, 80))
             elif ev_type == "witness_radicalized":
@@ -536,12 +540,20 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
         # Wreck markers
         for gx, gy, timer in world.wrecks:
             wx, wy = cam.world_to_screen(gx, gy)
-            alpha = min(255, int(timer * 12))
-            col = tuple(int(c * alpha / 255) for c in (80, 60, 40))
-            pygame.draw.line(screen, col, (wx - 6, wy - 10), (wx + 6, wy - 2), 2)
-            pygame.draw.line(screen, col, (wx + 6, wy - 10), (wx - 6, wy - 2), 2)
-            pygame.draw.ellipse(screen, (int(40 * alpha / 255), 8, 6),
-                                (wx - 8, wy - 2, 16, 5))
+            permanent = (timer == 99999)
+            alpha = 200 if permanent else min(255, int(timer * 6))
+            if permanent:
+                # Rubble: dark heap silhouette
+                pygame.draw.ellipse(screen, (30, 22, 14), (wx - 9, wy - 3, 18, 7))
+                pygame.draw.line(screen, (55, 40, 25), (wx - 5, wy - 7), (wx + 2, wy - 4), 2)
+                pygame.draw.line(screen, (45, 32, 18), (wx + 4, wy - 6), (wx - 1, wy - 3), 2)
+            else:
+                # Unit wreck: X cross + smoke ellipse, fades over time
+                col = tuple(int(c * alpha / 255) for c in (80, 60, 40))
+                pygame.draw.line(screen, col, (wx - 6, wy - 10), (wx + 6, wy - 2), 2)
+                pygame.draw.line(screen, col, (wx + 6, wy - 10), (wx - 6, wy - 2), 2)
+                pygame.draw.ellipse(screen, (int(40 * alpha / 255), 8, 6),
+                                    (wx - 8, wy - 2, 16, 5))
 
         # Tape MacGuffin
         if world.tape["active"]:
@@ -711,6 +723,8 @@ def _end_mission(screen, clock, world, hud, player_faction,
         updated["upgrades"]  = _eb_mod._load().get("upgrades", {})
         updated["lp"]        = _eb_mod._load().get("lp", updated.get("lp", 0))
         updated["hall_of_heroes"] = slot_data.get("hall_of_heroes", [])
+        # Advance map phase each mission (caps at 2 — shattered)
+        updated["map_phase"] = min(2, slot_data.get("map_phase", 0) + 1)
         _save_mod.save(slot_num, updated)
 
 
