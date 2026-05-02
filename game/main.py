@@ -241,36 +241,93 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
                         audio.toggle_mute()
                         notifs.add("AUDIO " + ("MUTED" if not audio._enabled else "UNMUTED"), (0, 160, 100))
 
-                    # Q = Suppress Burst
+                    # Q ability — faction-specific
                     if event.key == pygame.K_q and _ability_cd["q"] <= 0:
                         sel_units = [world.units[uid] for uid in selection.selected_uids
                                      if uid in world.units]
-                        if sel_units:
-                            for su in sel_units:
-                                enemies = [u for u in world.units.values()
-                                           if u.faction in world.enemies_of(su.faction)
-                                           and u.state != "dead"
-                                           and math.dist((su.gx, su.gy), (u.gx, u.gy)) <= su.attack_range * 2]
-                                for e in enemies:
-                                    e.suppress(4.0)
-                            _ability_cd["q"] = 20.0
-                            notifs.add("Q — SUPPRESS BURST ACTIVATED", (0, 200, 255))
-
-                    # E = Call Backup
-                    if event.key == pygame.K_e and _ability_cd["e"] <= 0:
-                        if world.credits.get(PLAYER_FACTION, 0) >= 200:
-                            sel_units = [world.units[uid] for uid in selection.selected_uids
-                                         if uid in world.units]
+                        if PLAYER_FACTION == "regency":
                             if sel_units:
+                                for su in sel_units:
+                                    for e in world.units.values():
+                                        if e.faction in world.enemies_of(su.faction) and e.state != "dead":
+                                            if math.dist((su.gx, su.gy), (e.gx, e.gy)) <= su.attack_range * 2:
+                                                e.suppress(4.0)
+                                _ability_cd["q"] = 20.0
+                                notifs.add("Q — RED TAPE BURST (REGENCY)", (0, 200, 255))
+                                advisor.trigger("cease_desist")
+                        elif PLAYER_FACTION == "frontline":
+                            world.credits[PLAYER_FACTION] = world.credits.get(PLAYER_FACTION, 0) + 300
+                            _ability_cd["q"] = 30.0
+                            notifs.add("Q — CROWDFUNDING SURGE +§300", (80, 200, 80))
+                            advisor.trigger("crowdfunding")
+                        elif PLAYER_FACTION == "oligarchy":
+                            cost = 100
+                            if world.credits.get(PLAYER_FACTION, 0) >= cost and sel_units:
                                 cx = sum(u.gx for u in sel_units) / len(sel_units)
                                 cy = sum(u.gy for u in sel_units) / len(sel_units)
-                                btype = "gravy_seal" if PLAYER_FACTION == "regency" else \
-                                        "drone_scout" if PLAYER_FACTION == "frontline" else "proxy"
-                                world.spawn_unit(btype, PLAYER_FACTION, cx + 1, cy)
-                                world.spawn_unit(btype, PLAYER_FACTION, cx - 1, cy)
-                                world.credits[PLAYER_FACTION] -= 200
+                                for i in range(5):
+                                    ox = (i % 3 - 1) * 1.5
+                                    oy = (i // 3) * 1.5
+                                    world.spawn_unit("wagner", PLAYER_FACTION, cx + ox, cy + oy)
+                                world.credits[PLAYER_FACTION] -= cost
+                                _ability_cd["q"] = 35.0
+                                notifs.add("Q — MEAT GRINDER: 5 WAGNERS DEPLOYED (−§100)", (180, 80, 40))
+                                advisor.trigger("meat_grinder")
+                        elif PLAYER_FACTION == "sovereign":
+                            world.credits[PLAYER_FACTION] = world.credits.get(PLAYER_FACTION, 0) + 250
+                            _ability_cd["q"] = 25.0
+                            notifs.add("Q — BLACK MARKET FUNDS +§250", (140, 40, 200))
+
+                    # E ability — faction-specific
+                    if event.key == pygame.K_e and _ability_cd["e"] <= 0:
+                        sel_units = [world.units[uid] for uid in selection.selected_uids
+                                     if uid in world.units]
+                        if PLAYER_FACTION == "regency":
+                            cost = 200
+                            if world.credits.get(PLAYER_FACTION, 0) >= cost and sel_units:
+                                cx = sum(u.gx for u in sel_units) / len(sel_units)
+                                cy = sum(u.gy for u in sel_units) / len(sel_units)
+                                world.spawn_unit("gravy_seal", PLAYER_FACTION, cx + 1, cy)
+                                world.spawn_unit("gravy_seal", PLAYER_FACTION, cx - 1, cy)
+                                world.credits[PLAYER_FACTION] -= cost
                                 _ability_cd["e"] = 45.0
-                                notifs.add("E — BACKUP CALLED (−§200)", (0, 255, 100))
+                                notifs.add("E — STIMULUS DROP: 2 GRAVY SEALS (−§200)", (0, 255, 100))
+                        elif PLAYER_FACTION == "frontline":
+                            if sel_units:
+                                for su in sel_units:
+                                    for e in world.units.values():
+                                        if e.faction in world.enemies_of(su.faction) and e.state != "dead":
+                                            if math.dist((su.gx, su.gy), (e.gx, e.gy)) <= 8.0:
+                                                e.suppress(5.0)
+                                _ability_cd["e"] = 40.0
+                                notifs.add("E — DRONE OVERWATCH: AREA SUPPRESSED", (80, 200, 200))
+                        elif PLAYER_FACTION == "oligarchy":
+                            # Kickback: steal from nearest enemy building
+                            steal_amt = 150
+                            enemy_buildings = [pb for pb in world.placed_buildings.values()
+                                               if pb.faction not in ("neutral", PLAYER_FACTION)]
+                            if enemy_buildings and sel_units:
+                                cx = sum(u.gx for u in sel_units) / len(sel_units)
+                                cy = sum(u.gy for u in sel_units) / len(sel_units)
+                                nearest = min(enemy_buildings, key=lambda pb: math.dist((pb.gx, pb.gy), (cx, cy)))
+                                ef = nearest.faction
+                                stolen = min(steal_amt, world.credits.get(ef, 0))
+                                world.credits[ef] = world.credits.get(ef, 0) - stolen
+                                world.credits[PLAYER_FACTION] = world.credits.get(PLAYER_FACTION, 0) + stolen
+                                _ability_cd["e"] = 50.0
+                                notifs.add(f"E — KICKBACK: §{stolen} SIPHONED", (200, 160, 0))
+                                advisor.trigger("kickback")
+                        elif PLAYER_FACTION == "sovereign":
+                            cost = 150
+                            if world.credits.get(PLAYER_FACTION, 0) >= cost and sel_units:
+                                cx = sum(u.gx for u in sel_units) / len(sel_units)
+                                cy = sum(u.gy for u in sel_units) / len(sel_units)
+                                world.spawn_unit("proxy", PLAYER_FACTION, cx + 1, cy)
+                                world.spawn_unit("proxy", PLAYER_FACTION, cx - 1, cy)
+                                world.credits[PLAYER_FACTION] -= cost
+                                _ability_cd["e"] = 45.0
+                                notifs.add("E — SHADOW CELL: 2 PROXIES DEPLOYED (−§150)", (140, 40, 200))
+                                advisor.trigger("shadow_cell")
 
                     # Tab = end mission early
                     if event.key == pygame.K_TAB and not roe5_confirm:
@@ -493,6 +550,13 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
             elif ev_type == "cease_desist":
                 notifs.add("PATRIOT LAWYER: CEASE & DESIST FILED — AREA SUPPRESSED", (28, 80, 180))
                 advisor.trigger("cease_desist")
+            elif ev_type == "journalist_killed":
+                notifs.add("!! JOURNALIST NEUTRALIZED — +30 INFAMY — INTERNATIONAL INCIDENT", (255, 60, 20))
+                advisor.trigger("journalist_killed")
+                _alert_flash = 0.8
+            elif ev_type == "bolo_identified":
+                notifs.add("ALPR HIT — BOLO TARGET IDENTIFIED: {}".format(payload.get("unit", "?").upper()), (255, 166, 0))
+                _alert_flash = 0.4
         world.events.clear()
 
         for k in _ability_cd:
@@ -661,7 +725,7 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
             _draw_roe5_confirm(screen, font_sm, WIN_W, WIN_H)
 
         if intro_state == "end":
-            _draw_ability_hud(screen, _ability_cd, font_sm, WIN_W, WIN_H)
+            _draw_ability_hud(screen, _ability_cd, font_sm, WIN_W, WIN_H, PLAYER_FACTION)
 
         notifs.draw(screen, x=8, bottom_y=WIN_H - 55)
 
@@ -870,11 +934,25 @@ def _draw_selection_info(surf, selection, world, font, screen_h, panel_w):
             x += 16
 
 
-def _draw_ability_hud(surf, ability_cd, font, sw, sh):
+def _draw_ability_hud(surf, ability_cd, font, sw, sh, player_faction="regency"):
     from game.hud import SIDEBAR_W, TOPBAR_H
+    _q_labels = {
+        "regency":   ("Q", "RED TAPE",   20.0, (0, 200, 255)),
+        "frontline": ("Q", "CROWDFUND",  30.0, (80, 200, 80)),
+        "oligarchy": ("Q", "GRINDER",    35.0, (180, 80, 40)),
+        "sovereign": ("Q", "BLK MKT",    25.0, (140, 40, 200)),
+    }
+    _e_labels = {
+        "regency":   ("E", "STIMULUS",   45.0, (0, 255, 100)),
+        "frontline": ("E", "OVERWATCH",  40.0, (80, 200, 200)),
+        "oligarchy": ("E", "KICKBACK",   50.0, (200, 160, 0)),
+        "sovereign": ("E", "SHADOW CELL",45.0, (140, 40, 200)),
+    }
+    q = _q_labels.get(player_faction, ("Q", "SUPPRESS", 20.0, (0, 200, 255)))
+    e = _e_labels.get(player_faction, ("E", "BACKUP",   45.0, (0, 255, 100)))
     abilities = [
-        ("Q", "SUPPRESS",  ability_cd.get("q", 0), 20.0, (0, 200, 255)),
-        ("E", "BACKUP",    ability_cd.get("e", 0), 45.0, (0, 255, 100)),
+        (q[0], q[1], ability_cd.get("q", 0), q[2], q[3]),
+        (e[0], e[1], ability_cd.get("e", 0), e[2], e[3]),
     ]
     btn_w, btn_h = 64, 44
     gap = 8

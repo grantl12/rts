@@ -119,6 +119,36 @@ _LINES = {
         "Salvage operation complete. Someone else's loss is now your budget line.",
         "Asset recovery confirmed. The market finds a way.",
     ],
+    "journalist_killed": [
+        "Credentialed media asset neutralized. Infamy penalty has been logged. By them.",
+        "A journalist has been processed. This is now international news. Congratulations.",
+        "Press casualty recorded. Expect the infamy meter to have feelings about this.",
+    ],
+    "meat_grinder": [
+        "Wagner contingent deployed. They are aware of the risks. Mostly.",
+        "Five expendable assets en route. Operational efficiency through attrition.",
+        "Meat Grinder activated. They volunteered. This is the official position.",
+    ],
+    "crowdfunding": [
+        "Crowdfunding window opened. Chaos metrics are generating revenue.",
+        "Viral engagement translated to operational capital. As intended.",
+        "Donation surge confirmed. The algorithm is working for us today.",
+    ],
+    "kickback": [
+        "Funds redirected from opposing interests. Administratively speaking, this never happened.",
+        "Kickback processed. Their loss. Our gain. The ledger balances.",
+        "Asset transfer complete. The other faction's accountant will be confused.",
+    ],
+    "shadow_cell": [
+        "Shadow cell deployed. They are not here. You did not see this.",
+        "Proxy assets activated. No attribution. No footprint. As intended.",
+        "Black market reinforcements confirmed. Deniability is a feature, not a bug.",
+    ],
+    "agitator_active": [
+        "Agitator unit in the field. Red Tape dissipation radius active.",
+        "Megaphone deployed. Bureaucratic interference is being... countered.",
+        "Agitator operational. Morale suppression reduced in zone. Temporarily.",
+    ],
 }
 
 

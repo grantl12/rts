@@ -748,6 +748,13 @@ class World:
                             if math.dist((u.gx, u.gy), (target.gx, target.gy)) <= 3.5:
                                 target.suppress(3.5)
                     self.events.append(("cease_desist", {"gx": u.gx, "gy": u.gy}))
+            if u.utype == "agitator":
+                # Burns down suppress timers 2× faster for nearby allies
+                for ally in self.units.values():
+                    if ally.faction == u.faction and ally is not u and ally.state != STATE_DEAD:
+                        if math.dist((u.gx, u.gy), (ally.gx, ally.gy)) <= 4.0:
+                            if hasattr(ally, "_suppress_timer") and ally._suppress_timer > 0:
+                                ally._suppress_timer = max(0.0, ally._suppress_timer - dt)
 
     # ── Map pre-placement ─────────────────────────────────────────────────────
 

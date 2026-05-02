@@ -21,6 +21,9 @@ UNIT_DEFS = {
     "militia":       ( 45, 2.5,  8,  2.0, 1.2,  "unarmored", "sovereign",   0),
     "news_van":      (200, 1.5,  0,  0.0, 0.0,  "light",     "frontline", 450),
     "patriot_lawyer":(  80, 2.0, 0,  0.0, 0.0,  "unarmored", "regency",   300),
+    "wagner":        (  55, 3.0, 10, 3.5, 1.4,  "unarmored", "oligarchy",  60),
+    "journalist":    (  50, 2.8,  0, 0.0, 0.0,  "unarmored", "frontline", 250),
+    "agitator":      (  70, 2.6,  0, 0.0, 0.0,  "unarmored", "frontline", 200),
 }
 
 FACTION_COLORS = {
@@ -324,6 +327,9 @@ class Unit:
                             world.roe_manager.add_infamy(5)
                             world.events.append(("press_amplify",
                                                  {"building": pb.bdef["name"]}))
+            if world and self.utype == "journalist":
+                world.roe_manager.add_infamy(30)
+                world.events.append(("journalist_killed", {"faction": getattr(attacker, "faction", "unknown")}))
 
     # ── Draw ──────────────────────────────────────────────────────────────────
 
@@ -353,6 +359,12 @@ class Unit:
         "news_van":      [(-13,-7),(-11,-10),(11,-10),(13,-7),(13,7),(-13,7)],
         # Patriot Lawyer — slim upright rectangle (briefcase silhouette)
         "patriot_lawyer":[(-5,-12),(5,-12),(6,6),(3,10),(-3,10),(-6,6)],
+        # Wagner — crude triangle (cannon fodder)
+        "wagner":        [(0,-10),(7,8),(-7,8)],
+        # Journalist — camera silhouette (wide top, narrow base)
+        "journalist":    [(-8,-10),(8,-10),(10,-4),(10,2),(5,8),(-5,8),(-10,2),(-10,-4)],
+        # Agitator — megaphone triangle pointing right
+        "agitator":      [(-4,-8),(8,0),(-4,8),(-6,4),(-6,-4)],
     }
     _DEFAULT_SHAPE = [(-7,-7),(7,-7),(7,7),(-7,7)]  # square fallback
 
