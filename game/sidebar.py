@@ -30,8 +30,8 @@ FACTION_BUILD_MENU = {
         "units": ["proxy", "drone_scout", "drone_assault", "drone_operator", "journalist", "agitator", "news_van"],
     },
     "sovereign": {
-        "structures": ["sov_safehouse", "sov_cache"],
-        "units": ["proxy", "contractor", "settler"],
+        "structures": ["sov_safehouse", "sov_cache", "sov_iron_dome"],
+        "units": ["proxy", "contractor", "settler", "interpreter"],
     },
     "oligarchy": {
         "structures": ["olig_hq", "olig_salvage", "olig_troll"],

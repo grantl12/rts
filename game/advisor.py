@@ -174,6 +174,19 @@ _LINES = {
         "Classified archive deployed. Everybody can see everything now. Including us.",
         "Epstein Protocol initiated. Full spectrum transparency. Temporarily.",
     ],
+    "troll_surge": [
+        "Troll Farm output at maximum. Capture erosion doubled. The comments section is unmanageable.",
+        "Amplification surge authorized. Enemy audit progress is now a liability.",
+        "The farms are operating at full influence capacity. We recommend not reading the replies.",
+    ],
+    "iron_dome_intercept": [
+        "Intercept station online. Hostile drones are being administratively suppressed.",
+        "Iron Dome active. Aerial assets in range are experiencing... difficulties.",
+    ],
+    "interpreter_active": [
+        "Interpreter deployed. Enemy audit communications are being... mistranslated.",
+        "Translation services engaged. Capture rate in area reduced by 50%.",
+    ],
 }
 
 

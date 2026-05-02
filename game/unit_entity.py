@@ -27,6 +27,7 @@ UNIT_DEFS = {
     "proud_perimeter":  ( 200, 1.6, 20, 1.8, 1.8,  "medium",    "regency",   380),
     "donor":            (  30, 1.2,  0, 0.0, 0.0,  "unarmored", "regency",   450),
     "settler":          (  80, 2.4,  0, 0.0, 0.0,  "unarmored", "sovereign", 320),
+    "interpreter":      (  60, 2.3,  0, 0.0, 0.0,  "unarmored", "sovereign", 280),
 }
 
 FACTION_COLORS = {
@@ -392,6 +393,8 @@ class Unit:
         "donor":             [(-7,-5),(-4,-10),(4,-10),(7,-5),(7,5),(4,9),(-4,9),(-7,5)],
         # Settler — stake/flag shape (narrow body, wide top)
         "settler":           [(-3,-12),(3,-12),(5,-6),(5,2),(8,2),(8,6),(-8,6),(-8,2),(-5,2),(-5,-6)],
+        # Interpreter — slim earpiece hexagon (diplomatic support)
+        "interpreter":       [(0,-11),(5,-7),(5,7),(0,11),(-5,7),(-5,-7)],
     }
     _DEFAULT_SHAPE = [(-7,-7),(7,-7),(7,7),(-7,7)]  # square fallback
 

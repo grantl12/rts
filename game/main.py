@@ -362,7 +362,18 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
                                 _ability_cd["r"] = 90.0
                                 notifs.add("R — DRONE SWARM: 4 FPV DRONES LAUNCHED", (80, 200, 80))
                                 advisor.trigger("drone_swarm")
-                        elif PLAYER_FACTION in ("sovereign", "oligarchy"):
+                        elif PLAYER_FACTION == "oligarchy":
+                            # TROLL SURGE: double troll farm erosion for 60s
+                            has_troll = any("troll" in pb.bdef.get("flags", [])
+                                            and pb.faction == PLAYER_FACTION
+                                            for pb in world.placed_buildings.values())
+                            if has_troll:
+                                world._troll_surge_timer = 60.0
+                                _ability_cd["r"] = 90.0
+                                notifs.add("R — TROLL SURGE: TROLL FARMS AT MAXIMUM EFFICIENCY 60s", (180, 80, 40))
+                                advisor.trigger("troll_surge")
+                                _alert_flash = 0.5
+                        elif PLAYER_FACTION == "sovereign":
                             # EPSTEIN FILE LEAK: reveal full map for 45s, freeze enemy income
                             if not hasattr(world, "_epstein_timer"):
                                 world._epstein_timer = 0.0
@@ -1033,7 +1044,7 @@ def _draw_ability_hud(surf, ability_cd, font, sw, sh, player_faction="regency"):
     _r_labels = {
         "regency":   ("R", "SCOTUS",    120.0, (200, 180, 0)),
         "frontline": ("R", "DRN SWARM",  90.0, (80, 220, 80)),
-        "oligarchy": ("R", "EPSTEIN",   150.0, (140, 40, 200)),
+        "oligarchy": ("R", "T.SURGE",    90.0, (180, 80, 40)),
         "sovereign": ("R", "EPSTEIN",   150.0, (140, 40, 200)),
     }
     q = _q_labels.get(player_faction, ("Q", "SUPPRESS", 20.0, (0, 200, 255)))

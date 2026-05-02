@@ -116,6 +116,7 @@ class World:
         self.power_balance    = 0    # net power (negative = underpowered)
         self._deepfake_fired  = False  # Kirk Deepfake mid-game reveal
         self._mission_elapsed = 0.0   # seconds since intro ended
+        self._troll_surge_timer = 0.0
         self.game_over        = self.GAME_OVER_NONE
         self.events           = []   # [(event_type, payload)] consumed each frame by main
         self.wrecks           = []   # [(gx, gy, timer)] visual wreck markers
@@ -301,6 +302,9 @@ class World:
         # Platform Ban timer (Regency — journalist/donor protections suspended)
         if getattr(self, "_platform_ban_timer", 0.0) > 0:
             self._platform_ban_timer -= dt
+        # Troll Surge timer (Oligarchy — doubled troll farm erosion)
+        if self._troll_surge_timer > 0:
+            self._troll_surge_timer -= dt
 
         # Kirk Deepfake reveal at 5 minutes
         if not self._deepfake_fired and self._mission_elapsed >= 300.0:
@@ -462,7 +466,16 @@ class World:
                         if math.dist((ju.gx, ju.gy), (pb.gx + pb.bdef["w"]/2, pb.gy + pb.bdef["h"]/2)) <= 5.0:
                             journalist_bonus = 2.0
                             break
-                pb._capture_progress += dt * 20.0 * max_n * journalist_bonus
+                # Interpreter halves enemy capture rate within 5r
+                interpreter_slow = 1.0
+                for iu in self.units.values():
+                    if iu.utype != "interpreter" or iu.state == STATE_DEAD:
+                        continue
+                    if strongest in self.enemies_of(iu.faction):
+                        if math.dist((iu.gx, iu.gy), (pb.gx + pb.bdef["w"]/2, pb.gy + pb.bdef["h"]/2)) <= 5.0:
+                            interpreter_slow = 0.5
+                            break
+                pb._capture_progress += dt * 20.0 * max_n * journalist_bonus * interpreter_slow
                 if pb._capture_progress >= 100.0:
                     old_faction = pb.faction
                     pb.faction = strongest
@@ -499,6 +512,20 @@ class World:
                 self.game_over = self.GAME_OVER_DEFEAT
             elif not enemy_hq_alive:
                 self.game_over = self.GAME_OVER_VICTORY
+
+        # Iron Dome — suppress hostile drone units within 6r
+        for pb in self.placed_buildings.values():
+            if "iron_dome" not in pb.bdef.get("flags", []):
+                continue
+            dome_cx = pb.gx + pb.bdef["w"] / 2
+            dome_cy = pb.gy + pb.bdef["h"] / 2
+            for u in self.units.values():
+                if u.state == STATE_DEAD or u.faction == pb.faction:
+                    continue
+                if u.utype not in ("drone_scout", "drone_assault", "drone_operator"):
+                    continue
+                if math.dist((u.gx, u.gy), (dome_cx, dome_cy)) <= 6.0:
+                    u.suppress(2.0)
 
         # ALPR Scanner Logic
         for pb in self.placed_buildings.values():
@@ -670,6 +697,7 @@ class World:
                     self.events.append(("salvage", {"credits": 200}))
             if "troll" in flags:
                 # Erodes capture progress of enemy-held buildings in radius
+                troll_mult = 2.0 if self._troll_surge_timer > 0 else 1.0
                 troll_cx = pb.gx + pb.bdef["w"] / 2
                 troll_cy = pb.gy + pb.bdef["h"] / 2
                 for target in self.placed_buildings.values():
@@ -681,7 +709,7 @@ class World:
                                       target.gy + target.bdef["h"] / 2),
                                      (troll_cx, troll_cy))
                     if dist <= 10.0 and target._capture_progress > 0:
-                        target._capture_progress = max(0.0, target._capture_progress - 8.0)
+                        target._capture_progress = max(0.0, target._capture_progress - 8.0 * troll_mult)
 
         # Underpowered: stall production queues for player (skip progress)
         if underpowered:
