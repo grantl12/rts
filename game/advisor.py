@@ -192,6 +192,16 @@ _LINES = {
         "Kraznov is down. Asset recovery protocols initiated. The yacht is unaccounted for.",
         "Executive casualty confirmed. The board has been notified. Condolences are pending approval.",
     ],
+    "hq_under_fire": [
+        "This is fine. The structure is fine. Everything is procedurally fine.",
+        "HQ integrity is... sub-optimal. Recommend not panicking. This is fine.",
+        "Command post is experiencing structural feedback. This is fine.",
+    ],
+    "upgrade_purchased": [
+        "Procurement approved. Field personnel have been notified. Probably.",
+        "Equipment upgrade processed. Enhanced compliance assets inbound.",
+        "Research investment confirmed. The board approves. Mostly.",
+    ],
 }
 
 

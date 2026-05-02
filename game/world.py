@@ -117,6 +117,7 @@ class World:
         self._deepfake_fired  = False  # Kirk Deepfake mid-game reveal
         self._mission_elapsed = 0.0   # seconds since intro ended
         self._troll_surge_timer = 0.0
+        self.unit_tier = {}   # base_utype → upgraded_utype, set by sidebar upgrades
         self.game_over        = self.GAME_OVER_NONE
         self.events           = []   # [(event_type, payload)] consumed each frame by main
         self.wrecks           = []   # [(gx, gy, timer)] visual wreck markers

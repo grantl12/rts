@@ -95,6 +95,7 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
     _ability_cd    = {"q": 0.0, "e": 0.0, "r": 0.0}  # seconds remaining on cooldown
     _scotus_zones  = []   # list of (cx,cy,radius,timer) — de-zoned areas
     _alert_flash   = 0.0   # seconds of red border flash remaining
+    _hq_warned     = False  # "this is fine" warning fired this damage threshold
 
     while True:
         dt = clock.tick(FPS)
@@ -427,7 +428,9 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
                     else:
                         result = sidebar.handle_click(event.pos, click_zones, world, PLAYER_FACTION)
                         if result:
-                            pass
+                            if result[0] == "upgrade_purchased":
+                                notifs.add(f"RESEARCH COMPLETE: {result[1].replace('upg_','').replace('_',' ').upper()}", (0, 200, 255))
+                                advisor.trigger("upgrade_purchased")
                         else:
                             selection.mouse_down(event.pos, event.button, cam, world, hud)
 
@@ -437,6 +440,21 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
         # ── Update ────────────────────────────────────────────────────────────
         cam.update()
         world.update(dt, PLAYER_FACTION)
+
+        # HQ low-HP warning — "This is fine"
+        if intro_state == "end":
+            player_hqs = [pb for pb in world.placed_buildings.values()
+                          if pb.faction == PLAYER_FACTION
+                          and "command" in pb.bdef.get("flags", [])]
+            if player_hqs:
+                hq_pct = min(pb.hp / max(pb.max_hp, 1) for pb in player_hqs)
+                if hq_pct < 0.3 and not _hq_warned:
+                    notifs.add("!! HQ STRUCTURE CRITICAL — THIS IS FINE", (255, 40, 20))
+                    advisor.trigger("hq_under_fire")
+                    _alert_flash = max(_alert_flash, 1.5)
+                    _hq_warned = True
+                elif hq_pct > 0.5:
+                    _hq_warned = False
 
         # Game over detection → post-op → executive board → menu
         if intro_state == "end" and world.game_over != 0:
@@ -517,12 +535,20 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
             if ev_type == "building_captured":
                 by = payload["by"]
                 name = payload["name"]
+                _CAPTURE_VOICE = {
+                    "regency":   "PROCESSED AND SECURED",
+                    "frontline": "LIBERATED — FOOTAGE LEAKED",
+                    "sovereign": "OUTPOST DECLARED",
+                    "oligarchy": "ANNEXED — SEE EXHIBIT A",
+                }
                 if by == PLAYER_FACTION:
-                    notifs.add(f"CAPTURED: {name}", (0, 255, 100))
+                    voice = _CAPTURE_VOICE.get(PLAYER_FACTION, "CAPTURED")
+                    notifs.add(f"{voice}: {name}", (0, 255, 100))
                     advisor.trigger("building_captured_player")
                     audio.play("capture")
                 else:
-                    notifs.add(f"LOST: {name} → {by.upper()}", (255, 100, 40))
+                    voice = _CAPTURE_VOICE.get(by, by.upper())
+                    notifs.add(f"LOST: {name} — {voice}", (255, 100, 40))
                     advisor.trigger("building_captured_enemy")
                     audio.play("building_lost")
             elif ev_type == "building_destroyed":

@@ -368,6 +368,8 @@ class Unit:
         "gravy_seal":    [(-6,-10),(6,-10),(8,-4),(8,4),(6,8),(-6,8),(-8,4),(-8,-4)],
         # ICE Agent — tall narrow wedge
         "ice_agent":     [(-4,-12),(4,-12),(7,6),(-7,6)],
+        # ICE Agent Tac — wider wedge, shoulder gear added
+        "ice_agent_tac": [(-5,-12),(5,-12),(10,4),(6,8),(-6,8),(-10,4)],
         # Proxy — diamond
         "proxy":         [(0,-11),(8,0),(0,9),(-8,0)],
         # Contractor — heavy square
