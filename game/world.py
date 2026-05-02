@@ -7,7 +7,7 @@ from game.unit_entity import Unit, ComplianceBus, VBIEDUnit, STATE_DEAD
 from game.building_defs import BUILDINGS as BDEF
 from game.map_data import BUILDINGS as MAP_BLDS, TERRAIN, PATH, W as MAP_W, H as MAP_H
 from game.roe import ROEManager
-from game.civilian import Civilian
+from game.civilian import Civilian, PROTESTER
 from game.vehicles import CivilianCar
 from game.ai import AIFaction
 import random
@@ -141,6 +141,14 @@ class World:
             c = self.spawn_civilian(kx + random.uniform(-2.5, 2.5),
                                     ky + random.uniform(-2.5, 2.5))
             c._wander_timer = 60.0   # won't wander during the ~12s intro
+
+        # Protesters — distributed across the quad near audit points
+        _PROTESTER_SPAWNS = [
+            (kx + 3, ky - 2), (kx - 3, ky + 1), (kx + 5, ky + 3),
+            (kx - 4, ky - 3), (kx + 8, ky - 1), (kx - 6, ky + 4),
+        ]
+        for px, py in _PROTESTER_SPAWNS:
+            self.spawn_civilian(px, py, ctype=PROTESTER)
 
         self._bolo_uid = None   # uid of the BOLO target civilian
         self.vehicles  = {}      # uid -> CivilianCar
@@ -459,6 +467,11 @@ class World:
                     strongest = f
             
             if strongest and strongest != pb.faction:
+                # Command/HQ buildings require damage before capture can begin
+                if "required" in pb.bdef.get("flags", []):
+                    if pb.hp > pb.max_hp * 0.5:
+                        pb._capture_progress = 0.0
+                        continue
                 # Journalist in the area doubles capture speed
                 journalist_bonus = 1.0
                 for ju in self.units.values():
@@ -500,6 +513,9 @@ class World:
                                                     {"faction": pb.faction}))
                             c.state = "dead"
                             self.credits[pb.faction] = self.credits.get(pb.faction, 0) + reward
+                            if c.ctype == PROTESTER and pb.faction == player_faction:
+                                self.roe_manager.add_infamy(5)
+                                self.events.append(("protester_detained", {}))
 
         # Win/loss detection — only after intro ends (_mission_elapsed > 0)
         if self.game_over == self.GAME_OVER_NONE and self._mission_elapsed > 0:
@@ -622,10 +638,10 @@ class World:
             del self.civilians[c.uid]
             self.events.append(("witness_radicalized", {"gx": c.gx, "gy": c.gy}))
 
-        # Empowered civs generate Viral Clout for Frontline each tick (§3/civ)
+        # Empowered civs generate Viral Clout for Frontline; protesters give 2.5× more
         empowered = [c for c in self.civilians.values() if c.witness_state == "empowered"]
         if empowered:
-            clout = len(empowered) * 3 * dt
+            clout = sum(7.5 if c.ctype == PROTESTER else 3.0 for c in empowered) * dt
             self.credits["frontline"] = self.credits.get("frontline", 0) + clout
 
         # Assetized civs: if an Oligarchy unit dies nearby, +§75 insurance payout
@@ -840,6 +856,13 @@ class World:
                                 ally._suppress_timer = 0.0
                                 if hasattr(u, "_suppress_timer"):
                                     u._suppress_timer = max(u._suppress_timer, excess * 0.5)
+            if u.utype == "direktor":
+                # Resource aura: §3/s for each friendly building within 8r
+                for pb in self.placed_buildings.values():
+                    if pb.faction != u.faction:
+                        continue
+                    if math.dist((u.gx, u.gy), (pb.gx + pb.bdef["w"]/2, pb.gy + pb.bdef["h"]/2)) <= 8.0:
+                        self.credits[u.faction] = self.credits.get(u.faction, 0) + 3.0 * dt
 
         # Hacktivist Cell: DDoS pulse every 45s on nearest enemy scanner/command
         for pb in self.placed_buildings.values():

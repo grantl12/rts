@@ -35,7 +35,7 @@ FACTION_BUILD_MENU = {
     },
     "oligarchy": {
         "structures": ["olig_hq", "olig_salvage", "olig_troll"],
-        "units": ["contractor", "gravy_seal", "wagner"],
+        "units": ["contractor", "gravy_seal", "wagner", "direktor"],
     },
 }
 

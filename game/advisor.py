@@ -187,6 +187,11 @@ _LINES = {
         "Interpreter deployed. Enemy audit communications are being... mistranslated.",
         "Translation services engaged. Capture rate in area reduced by 50%.",
     ],
+    "direktor_killed": [
+        "The Direktor has been eliminated. His portfolio will be... redistributed.",
+        "Kraznov is down. Asset recovery protocols initiated. The yacht is unaccounted for.",
+        "Executive casualty confirmed. The board has been notified. Condolences are pending approval.",
+    ],
 }
 
 

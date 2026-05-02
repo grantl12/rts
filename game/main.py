@@ -639,6 +639,13 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
                 bname = payload.get("building", "TARGET")
                 notifs.add(f"HACKTIVIST DDoS — {bname.upper()} OFFLINE 30s", (80, 200, 255))
                 advisor.trigger("ddos_hit")
+            elif ev_type == "direktor_killed":
+                killer = payload.get("killer_faction", "unknown").upper()
+                notifs.add(f"!! THE DIREKTOR ELIMINATED BY {killer} — +§500 BOUNTY", (220, 180, 40))
+                advisor.trigger("direktor_killed")
+                _alert_flash = 1.0
+            elif ev_type == "protester_detained":
+                notifs.add("PROTESTER DETAINED — +5 INFAMY", (255, 140, 0))
         world.events.clear()
 
         for k in _ability_cd:

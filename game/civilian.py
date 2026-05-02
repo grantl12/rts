@@ -15,6 +15,7 @@ PURPLE_HAIR = "purple_hair"
 RIOT_GEAR   = "riot_gear"
 RUNNER      = "runner"
 KIRK        = "kirk"
+PROTESTER   = "protester"
 
 RUNNER_DESTINATIONS = [(51, 4), (4, 21), (4, 39)]
 
@@ -23,6 +24,12 @@ _CONVERT_TIME = {
     "frontline": 8.0,    # seconds to empower
     "sovereign": 12.0,   # seconds to radicalize
     "oligarchy": 5.0,    # seconds to assetize
+}
+# Protesters convert faster — already politically active
+_PROTESTER_CONVERT_TIME = {
+    "frontline": 2.5,
+    "sovereign": 5.0,
+    "oligarchy": 3.0,
 }
 _CONVERT_RANGE = {
     "frontline": 3.5,
@@ -49,7 +56,7 @@ class Civilian:
         self.faction = "neutral"
 
         self.hp    = 50
-        self.speed = 1.2
+        self.speed = 1.6 if ctype == PROTESTER else 1.2
         if ctype == RUNNER:
             self.speed = 4.5
 
@@ -80,7 +87,10 @@ class Civilian:
         if converting_faction != self._convert_faction:
             self._convert_faction  = converting_faction
             self._convert_progress = 0.0
-        total = _CONVERT_TIME.get(converting_faction, 10.0)
+        if self.ctype == PROTESTER:
+            total = _PROTESTER_CONVERT_TIME.get(converting_faction, 4.0)
+        else:
+            total = _CONVERT_TIME.get(converting_faction, 10.0)
         self._convert_progress = min(1.0, self._convert_progress + dt_sec / total)
         return self._convert_progress >= 1.0
 
@@ -189,6 +199,7 @@ class Civilian:
         if self.ctype == RIOT_GEAR:   col = (255, 140, 0)
         if self.ctype == RUNNER:      col = (255, 255, 0)
         if self.ctype == KIRK:        col = (255, 255, 255)
+        if self.ctype == PROTESTER:   col = (255, 160, 0)
 
         if self._panic_timer > 0 and int(pygame.time.get_ticks() / 200) % 2 == 0:
             col = (255, 0, 0)
@@ -246,6 +257,13 @@ class Civilian:
             pygame.draw.circle(surf, (255, 255, 255), (sx, sy - 8), 6)
             s = math.sin(pygame.time.get_ticks() * 0.005) * 2
             pygame.draw.circle(surf, (255, 255, 200), (sx, sy - 8), int(8 + s), 1)
+        elif self.ctype == PROTESTER:
+            # Body + raised fist
+            pts = [(sx-3, sy),(sx-3, sy-8),(sx-6, sy-8),(sx-6, sy-12),
+                   (sx-2, sy-12),(sx-2, sy-10),(sx+3, sy-10),(sx+3, sy-8),(sx+3, sy)]
+            pygame.draw.polygon(surf, col, pts)
+            pygame.draw.polygon(surf, (0, 0, 0), pts, 1)
+            pygame.draw.circle(surf, col, (sx, sy - 14), 3)
         elif self.ctype == RUNNER:
             pts = [(sx, sy - 10), (sx + 5, sy - 5), (sx, sy), (sx - 5, sy - 5)]
             pygame.draw.polygon(surf, col, pts)
@@ -260,7 +278,8 @@ class Civilian:
         # Witness state label
         if ws == "empowered":
             f = pygame.font.SysFont("couriernew", 7)
-            lbl = f.render("LIVE", True, _STATE_COLS["empowered"])
+            tag = "MARCH" if self.ctype == PROTESTER else "LIVE"
+            lbl = f.render(tag, True, _STATE_COLS["empowered"])
             surf.blit(lbl, (sx - lbl.get_width() // 2, sy - 20))
         elif ws == "assetized":
             f = pygame.font.SysFont("couriernew", 7)

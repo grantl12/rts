@@ -422,7 +422,7 @@ BUILDINGS = {
         "hp":          1800,
         "power_draw":  -30,
         "garrison":    0,
-        "produces":    ["contractor", "gravy_seal", "wagner"],
+        "produces":    ["contractor", "gravy_seal", "wagner", "direktor"],
         "description": "Legitimate-looking corporate office. Produces all Oligarchy units.",
         "palette":     _OLIG_BASE,
         "flags":       ["command", "required"],
