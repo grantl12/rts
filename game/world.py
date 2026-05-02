@@ -448,7 +448,14 @@ class World:
                     strongest = f
             
             if strongest and strongest != pb.faction:
-                pb._capture_progress += dt * 20.0 * max_n
+                # Journalist in the area doubles capture speed
+                journalist_bonus = 1.0
+                for ju in self.units.values():
+                    if ju.utype == "journalist" and ju.faction == strongest and ju.state != STATE_DEAD:
+                        if math.dist((ju.gx, ju.gy), (pb.gx + pb.bdef["w"]/2, pb.gy + pb.bdef["h"]/2)) <= 5.0:
+                            journalist_bonus = 2.0
+                            break
+                pb._capture_progress += dt * 20.0 * max_n * journalist_bonus
                 if pb._capture_progress >= 100.0:
                     old_faction = pb.faction
                     pb.faction = strongest
@@ -651,6 +658,20 @@ class World:
                     self.credits[player_faction] = \
                         self.credits.get(player_faction, 0) + 200
                     self.events.append(("salvage", {"credits": 200}))
+            if "troll" in flags:
+                # Erodes capture progress of enemy-held buildings in radius
+                troll_cx = pb.gx + pb.bdef["w"] / 2
+                troll_cy = pb.gy + pb.bdef["h"] / 2
+                for target in self.placed_buildings.values():
+                    if target is pb:
+                        continue
+                    if target.faction == pb.faction or target.faction == "neutral":
+                        continue
+                    dist = math.dist((target.gx + target.bdef["w"] / 2,
+                                      target.gy + target.bdef["h"] / 2),
+                                     (troll_cx, troll_cy))
+                    if dist <= 10.0 and target._capture_progress > 0:
+                        target._capture_progress = max(0.0, target._capture_progress - 8.0)
 
         # Underpowered: stall production queues for player (skip progress)
         if underpowered:
@@ -755,6 +776,18 @@ class World:
                         if math.dist((u.gx, u.gy), (ally.gx, ally.gy)) <= 4.0:
                             if hasattr(ally, "_suppress_timer") and ally._suppress_timer > 0:
                                 ally._suppress_timer = max(0.0, ally._suppress_timer - dt)
+            if u.utype == "proud_perimeter":
+                # Intercepts suppression: if nearby ally gets suppressed, PP takes it instead
+                if not hasattr(u, "_shield_range"):
+                    u._shield_range = 3.5
+                for ally in self.units.values():
+                    if ally.faction == u.faction and ally is not u and ally.state != STATE_DEAD:
+                        if math.dist((u.gx, u.gy), (ally.gx, ally.gy)) <= u._shield_range:
+                            if hasattr(ally, "_suppress_timer") and ally._suppress_timer > 0:
+                                excess = ally._suppress_timer
+                                ally._suppress_timer = 0.0
+                                if hasattr(u, "_suppress_timer"):
+                                    u._suppress_timer = max(u._suppress_timer, excess * 0.5)
 
     # ── Map pre-placement ─────────────────────────────────────────────────────
 

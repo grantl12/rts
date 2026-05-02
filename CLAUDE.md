@@ -146,25 +146,45 @@ Kirk — a prominent activist — is assassinated at a rally on **The Quad**. Ev
 
 ### Build Menu (`sidebar.py`)
 All 4 factions have `FACTION_BUILD_MENU` entries:
-- Regency: 8 structures, 5 units (gravy_seal, ice_agent, unmarked_van, compliance_bus, patriot_lawyer)
-- Frontline: 2 structures, 4 units (proxy, drone_scout, drone_assault, news_van)
+- Regency: 8 structures, 8 units (gravy_seal, ice_agent, ice_agent_tac, proud_perimeter, unmarked_van, mrap, compliance_bus, patriot_lawyer)
+- Frontline: 2 structures, 7 units (proxy, drone_scout, drone_assault, drone_operator, journalist, agitator, news_van)
 - Sovereign: 2 structures, 2 units (proxy, contractor)
-- Oligarchy: 2 structures, 2 units (contractor, gravy_seal)
+- Oligarchy: 3 structures, 3 units (contractor, gravy_seal, wagner)
 
 **Unit prereq system**: Units can only be queued if the player owns a building with that unit in its `produces` list. Buttons show `LOCKED` when prereq or power is missing. Queues stall (no progress) when `world.power_balance < 0`. Completed units spawn adjacent to their producing building, not at a hardcoded tile.
 
 **Structures**: Cannot be queued when `power_balance < 0` unless the building has the `power` flag (power substations are always buildable).
 
+### New unit types (latest session)
+| Unit | Faction | Role | Special |
+|---|---|---|---|
+| `wagner` | oligarchy | §60 cannon fodder | Triangle shape, high turnover |
+| `journalist` | frontline | §250 support | 0 dmg; killing grants +30 infamy; doubles capture speed in 5r |
+| `agitator` | frontline | §200 support | Megaphone aura: burns suppress timer 2× for nearby allies |
+| `proud_perimeter` | regency | §380 melee tank | Intercepts suppression from nearby allies (takes 50% of it) |
+
+### New buildings (latest session)
+| Building | Faction | Effect |
+|---|---|---|
+| `olig_troll` | oligarchy | "Troll Farm" — erodes enemy capture progress in 10r passively |
+
+### Q/E abilities are faction-specific
+- **Regency**: Q = Red Tape Burst (suppress burst, 20s), E = Stimulus Drop (2 gravy seals, §200, 45s)
+- **Frontline**: Q = Crowdfunding Surge (+§300, 30s), E = Drone Overwatch (area suppress 8r, 40s)
+- **Oligarchy**: Q = Meat Grinder (5 wagners, §100, 35s), E = Kickback (steal §150 from nearest enemy, 50s)
+- **Sovereign**: Q = Black Market (+§250, 25s), E = Shadow Cell (2 proxies, §150, 45s)
+
 ### `building_defs.py` — `produces` field (canonical)
 | Building | Produces |
 |---|---|
-| `reg_barracks` | gravy_seal, ice_agent, ice_agent_tac, patriot_lawyer |
+| `reg_barracks` | gravy_seal, ice_agent, ice_agent_tac, proud_perimeter, patriot_lawyer |
 | `reg_depot` | unmarked_van, mrap, compliance_bus |
 | `fl_drone` | drone_scout, drone_assault, drone_operator |
-| `fl_press` | proxy, news_van |
+| `fl_press` | proxy, news_van, journalist, agitator |
 | `sov_safehouse` | proxy |
 | `sov_cache` | proxy, vbied |
-| `olig_hq` | contractor, gravy_seal |
+| `olig_hq` | contractor, gravy_seal, wagner |
+| `olig_troll` | (none — passive aura building) |
 
 ---
 
@@ -194,12 +214,22 @@ All 4 factions have `FACTION_BUILD_MENU` entries:
 - [x] Legibility pass — advisor (font 13, 32px bar, opaque), notifications (font 11, backing strip), objectives, HUD
 - [x] Unit spawn prereq system — units require owning a `produces`-matching building; spawn adjacent to it; queue stalls when underpowered; LOCKED visual on buttons
 
+### Also implemented (this Claude session)
+- [x] Wagner unit (Oligarchy §60 cannon fodder), Journalist (Frontline, kill=infamy, capture bonus), Agitator (suppress aura)
+- [x] Proud Perimeter (Regency melee tank, intercepts suppression for nearby allies)
+- [x] Troll Farm building (Oligarchy, passive enemy capture erosion in 10r)
+- [x] Faction-specific Q/E abilities (Regency/Frontline/Oligarchy/Sovereign each have unique abilities)
+- [x] Sidebar expanded: ice_agent_tac, mrap, drone_operator now visible
+- [x] Journalist doubles capture speed for nearby audit points
+
 ### Next up
 - [ ] Faction renames (backlog): Oligarchy → Direktorate, Gravy Seals → "2A Audit Volunteer" — deferred, keep internal keys
 - [ ] Visual upgrade tiers — 3 sprite tiers per unit, swap on rank-up — needs AI generator pipeline
-- [ ] Wrecks persistent; Oligarchy Salvage Yard harvests them for credits
-- [ ] Multiple map phases — `map_phase` int on World; pristine/scarred/shattered visual variants; see `docs/MAP_EVOLUTION.md`
-- [ ] Tier 3 units: Sleeper Agent, Journalist, Troll Unit, Wagner Unit, CEO (Oligarchy), The Prepper
+- [ ] The Settler (Sovereign builder) — plants territory flag that converts neutral terrain
+- [ ] The Donor (Regency aura) — fragile political supporter, killing = your own unit morale penalty
+- [ ] SCOTUS Gavel (Regency superweapon R key) — de-zones area, prevents enemy building
+- [ ] Epstein File Leak (Sovereign/Oligarchy R key) — reveals full map, disables enemy income 45s
+- [ ] Hacktivist (Frontline structure) — DDoS: disables enemy Audit Station 45s
 
 ---
 

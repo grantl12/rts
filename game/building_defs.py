@@ -86,7 +86,7 @@ BUILDINGS = {
         "hp":          800,
         "power_draw":  -12,
         "garrison":    0,
-        "produces":    ["gravy_seal", "ice_agent", "ice_agent_tac", "patriot_lawyer"],
+        "produces":    ["gravy_seal", "ice_agent", "ice_agent_tac", "proud_perimeter", "patriot_lawyer"],
         "description": "Orientation facility for citizens awaiting successful personality optimization.",
         "palette":     _REG_BASE,
         "flags":       ["production"],
@@ -410,6 +410,23 @@ BUILDINGS = {
         "palette":     _OLIG_BASE,
         "flags":       ["income", "salvage"],
         "roof_style":  "crane",
+    },
+
+    "olig_troll": {
+        "name":        "TROLL FARM",
+        "sub":         "NARRATIVE OPERATIONS",
+        "category":    "base",
+        "faction":     "oligarchy",
+        "w": 2, "h": 2, "floors": 1,
+        "cost":        400,
+        "hp":          400,
+        "power_draw":  -8,
+        "garrison":    0,
+        "produces":    [],
+        "description": "Passively erodes enemy capture progress on nearby objectives. Most annoying building in the game.",
+        "palette":     _OLIG_BASE,
+        "flags":       ["troll"],
+        "roof_style":  "flat",
     },
 
     # ══════════════════════════════════════════════════════════════════

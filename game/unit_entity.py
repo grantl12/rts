@@ -21,9 +21,10 @@ UNIT_DEFS = {
     "militia":       ( 45, 2.5,  8,  2.0, 1.2,  "unarmored", "sovereign",   0),
     "news_van":      (200, 1.5,  0,  0.0, 0.0,  "light",     "frontline", 450),
     "patriot_lawyer":(  80, 2.0, 0,  0.0, 0.0,  "unarmored", "regency",   300),
-    "wagner":        (  55, 3.0, 10, 3.5, 1.4,  "unarmored", "oligarchy",  60),
-    "journalist":    (  50, 2.8,  0, 0.0, 0.0,  "unarmored", "frontline", 250),
-    "agitator":      (  70, 2.6,  0, 0.0, 0.0,  "unarmored", "frontline", 200),
+    "wagner":           (  55, 3.0, 10, 3.5, 1.4,  "unarmored", "oligarchy",  60),
+    "journalist":       (  50, 2.8,  0, 0.0, 0.0,  "unarmored", "frontline", 250),
+    "agitator":         (  70, 2.6,  0, 0.0, 0.0,  "unarmored", "frontline", 200),
+    "proud_perimeter":  ( 200, 1.6, 20, 1.8, 1.8,  "medium",    "regency",   380),
 }
 
 FACTION_COLORS = {
@@ -364,7 +365,9 @@ class Unit:
         # Journalist — camera silhouette (wide top, narrow base)
         "journalist":    [(-8,-10),(8,-10),(10,-4),(10,2),(5,8),(-5,8),(-10,2),(-10,-4)],
         # Agitator — megaphone triangle pointing right
-        "agitator":      [(-4,-8),(8,0),(-4,8),(-6,4),(-6,-4)],
+        "agitator":          [(-4,-8),(8,0),(-4,8),(-6,4),(-6,-4)],
+        # Proud Perimeter — wide shield shape
+        "proud_perimeter":   [(-9,-6),(-5,-12),(5,-12),(9,-6),(9,4),(5,10),(-5,10),(-9,4)],
     }
     _DEFAULT_SHAPE = [(-7,-7),(7,-7),(7,7),(-7,7)]  # square fallback
 
