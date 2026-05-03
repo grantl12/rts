@@ -7,7 +7,7 @@ from game.unit_entity import Unit, ComplianceBus, VBIEDUnit, STATE_DEAD
 from game.building_defs import BUILDINGS as BDEF
 from game.map_data import BUILDINGS as MAP_BLDS, TERRAIN, PATH, W as MAP_W, H as MAP_H
 from game.roe import ROEManager
-from game.civilian import Civilian, PROTESTER
+from game.civilian import Civilian, PROTESTER, NORMIE, PURPLE_HAIR, RIOT_GEAR
 from game.vehicles import CivilianCar
 from game.ai import AIFaction
 import random
@@ -119,6 +119,9 @@ class World:
         self._deepfake_fired  = False  # Kirk Deepfake mid-game reveal
         self._mission_elapsed = 0.0   # seconds since intro ended
         self._troll_surge_timer = 0.0
+        self._objective_harass_level = 0
+        self._objective_harass_timer = 0.0
+        self._civ_spawn_timer = 0.0
         self.unit_tier = {}   # base_utype → upgraded_utype, set by sidebar upgrades
         self.game_over        = self.GAME_OVER_NONE
         self.intro_done       = False  # set by main.py when intro ends; gates win/loss check
@@ -157,6 +160,7 @@ class World:
         ]
         for px, py in _PROTESTER_SPAWNS:
             self.spawn_civilian(px, py, ctype=PROTESTER)
+        self._spawn_background_civilians(26 if self.map_id == "quad" else 18)
 
         self._bolo_uid = None   # uid of the BOLO target civilian
         self.vehicles  = {}      # uid -> CivilianCar
@@ -347,6 +351,7 @@ class World:
 
         for ai in self.ai_factions.values():
             ai.update(dt, self)
+        self._tick_objective_harassment(dt, player_faction)
 
         # Units
         for u in list(self.units.values()):
@@ -420,6 +425,7 @@ class World:
         dead_civs = [cid for cid, c in self.civilians.items() if c.state == "dead"]
         for cid in dead_civs:
             del self.civilians[cid]
+        self._tick_civilian_presence(dt)
 
         # Remove dead units — leave wrecks for heavy units
         dead = [uid for uid, u in self.units.items() if u.state == STATE_DEAD]
@@ -505,7 +511,7 @@ class World:
                     pb._capture_by = None
                     self.events.append(("building_captured",
                                         {"name": getattr(pb, "display_name", pb.bdef["name"]),
-                                         "by": strongest, "from": old_faction}))
+                                         "by": strongest, "from": old_faction, "bid": pb.bid}))
             elif pb._capture_progress > 0:
                 pb._capture_progress = max(0, pb._capture_progress - dt * 10.0)
                 if pb._capture_progress <= 0:
@@ -864,7 +870,7 @@ class World:
                                     pb._capture_progress = 0.0
                                     self.events.append(("building_captured",
                                                         {"name": getattr(pb, "display_name", pb.bdef["name"]),
-                                                         "by": u.faction, "from": old_f}))
+                                                         "by": u.faction, "from": old_f, "bid": pb.bid}))
             if u.utype == "proud_perimeter":
                 # Intercepts suppression: if nearby ally gets suppressed, PP takes it instead
                 if not hasattr(u, "_shield_range"):
@@ -884,6 +890,57 @@ class World:
                         continue
                     if math.dist((u.gx, u.gy), (pb.gx + pb.bdef["w"]/2, pb.gy + pb.bdef["h"]/2)) <= 8.0:
                         self.credits[u.faction] = self.credits.get(u.faction, 0) + 3.0 * dt
+
+    def escalate_objective_harassment(self, level: int):
+        self._objective_harass_level = max(self._objective_harass_level, int(level))
+        self._objective_harass_timer = 0.0
+
+    def _tick_objective_harassment(self, dt: float, player_faction: str):
+        if not self.intro_done or self._objective_harass_level <= 0:
+            return
+        self._objective_harass_timer += dt
+        interval = 55.0 if self._objective_harass_level == 1 else 35.0
+        if self._objective_harass_timer < interval:
+            return
+        self._objective_harass_timer = 0.0
+        enemy = self._ENEMY_MAP.get(player_faction, "sovereign")
+        if self.map_id == "quad":
+            spawn_points = [(6, 4), (10, 5), (13, 9), (18, 12), (23, 16), (31, 18)]
+        else:
+            spawn_points = [(50, 4), (48, 6), (46, 8), (44, 10)]
+        random.shuffle(spawn_points)
+        wave_n = 2 if self._objective_harass_level == 1 else 3
+        for sx, sy in spawn_points[:wave_n]:
+            self.spawn_unit("proxy", enemy, sx + random.uniform(-0.5, 0.5), sy + random.uniform(-0.5, 0.5))
+        if self._objective_harass_level >= 2:
+            sx, sy = spawn_points[0]
+            self.spawn_unit("drone_scout", "frontline", sx + 1.2, sy + 0.4)
+
+    def _spawn_background_civilians(self, count: int):
+        attempts = 0
+        spawned = 0
+        blocked = self.blocked_tiles()
+        while spawned < count and attempts < count * 12:
+            attempts += 1
+            gx = random.uniform(2.0, MAP_W - 3.0)
+            gy = random.uniform(2.0, MAP_H - 3.0)
+            if (int(gx), int(gy)) in blocked:
+                continue
+            if math.dist((gx, gy), self.rally_point) < 8.0:
+                continue
+            ctype = random.choice([NORMIE, NORMIE, PURPLE_HAIR, RIOT_GEAR, PROTESTER])
+            self.spawn_civilian(gx, gy, ctype=ctype)
+            spawned += 1
+
+    def _tick_civilian_presence(self, dt: float):
+        self._civ_spawn_timer += dt
+        if self._civ_spawn_timer < 20.0:
+            return
+        self._civ_spawn_timer = 0.0
+        target = 80 if self.map_id == "quad" else 55
+        if len(self.civilians) >= target:
+            return
+        self._spawn_background_civilians(4)
 
         # Hacktivist Cell: DDoS pulse every 45s on nearest enemy scanner/command
         for pb in self.placed_buildings.values():

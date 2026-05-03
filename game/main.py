@@ -150,6 +150,16 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None, m
     _scotus_zones  = []   # list of (cx,cy,radius,timer) — de-zoned areas
     _alert_flash   = 0.0   # seconds of red border flash remaining
     _hq_warned     = False  # "this is fine" warning fired this damage threshold
+    _crime_scene_bid = None
+    _crime_scene_secured = False
+    _drive_unlocked = False
+    _kirk_stage_sprite = None
+    _kirk_stage_path = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "assets", "sprites", "kirk_tent_table.png"))
+    if os.path.exists(_kirk_stage_path):
+        try:
+            _kirk_stage_sprite = pygame.image.load(_kirk_stage_path).convert_alpha()
+        except Exception:
+            _kirk_stage_sprite = None
 
     while True:
         dt = clock.tick(FPS)
@@ -187,7 +197,6 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None, m
             elif intro_state == "shot" and intro_timer <= 0:
                 intro_state = "panic"
                 intro_timer = 2.5
-                world.spawn_tape(*KIRK_RALLY)
                 for c in world.civilians.values():
                     if math.dist((c.gx, c.gy), KIRK_RALLY) < 15:
                         c.panic(world)
@@ -217,6 +226,18 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None, m
                 enemy = world._ENEMY_MAP.get(PLAYER_FACTION, "sovereign")
                 for i in range(3):
                     world.spawn_unit("proxy", enemy, 6 + i, 4)
+                if map_id == "quad":
+                    _crime_scene = world.place_building("audit_point", "neutral",
+                                                        int(KIRK_RALLY[0] - 1), int(KIRK_RALLY[1] - 1))
+                    if _crime_scene:
+                        _crime_scene.display_name = "KIRK CRIME SCENE"
+                        _crime_scene.display_sub = "SECURE SITE TO RECOVER EVIDENCE"
+                        _crime_scene_bid = _crime_scene.bid
+                    # Static route pressure: pickets on approach lanes.
+                    if PLAYER_FACTION == "regency":
+                        for px, py in [(37, 31), (34, 28), (31, 25), (27, 23), (23, 21), (20, 19)]:
+                            p = world.spawn_unit("proxy", "frontline", px, py)
+                            p.order_move([])
                 import random as _rnd
                 _r_dests = getattr(_active_map, "RUNNER_DESTINATIONS", None)
                 if _r_dests is None:
@@ -712,6 +733,14 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None, m
                     notifs.add(f"{voice}: {name}", (0, 255, 100))
                     advisor.trigger("building_captured_player")
                     audio.play("capture")
+                    if (map_id == "quad" and not _crime_scene_secured
+                            and payload.get("bid") == _crime_scene_bid):
+                        _crime_scene_secured = True
+                        if not _drive_unlocked:
+                            _drive_unlocked = True
+                            world.spawn_tape(*KIRK_RALLY)
+                            world.escalate_objective_harassment(1)
+                            notifs.add("OBJECTIVE COMPLETE — CRIME SCENE SECURED. THUMB DRIVE RECOVERED.", (80, 220, 255))
                 else:
                     voice = _CAPTURE_VOICE.get(by, by.upper())
                     notifs.add(f"LOST: {name} — {voice}", (255, 100, 40))
@@ -809,6 +838,9 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None, m
                 notifs.add("!! EPSTEIN TAPE ACQUIRED BY {} — INTEL BUFF ACTIVE".format(faction), (80, 200, 255))
                 advisor.trigger("tape_acquired")
                 _alert_flash = 0.8
+                if map_id == "quad" and payload.get("faction") == PLAYER_FACTION:
+                    world.escalate_objective_harassment(2)
+                    notifs.add("HOSTILE RESPONSE ESCALATING — ENEMY SWEEPS INBOUND", (255, 140, 0))
             elif ev_type == "tape_lost":
                 notifs.add("!! EPSTEIN TAPE DROPPED — CONTEST IT NOW", (255, 140, 0))
                 advisor.trigger("tape_lost")
@@ -877,6 +909,12 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None, m
             pygame.draw.circle(screen, (220, 50, 50), (int(kx), int(ky)), 8, 2)
             lbl = font_sm.render(_live_label, True, (255, 255, 255))
             screen.blit(lbl, (int(kx) - lbl.get_width() // 2, int(ky) - 30))
+            if map_id == "quad" and _kirk_stage_sprite is not None:
+                stage_w = int(_kirk_stage_sprite.get_width() * max(0.6, cam.zoom))
+                stage_h = int(_kirk_stage_sprite.get_height() * max(0.6, cam.zoom))
+                stage = pygame.transform.smoothscale(_kirk_stage_sprite, (stage_w, stage_h))
+                sx, sy = cam.world_to_screen(KIRK_RALLY[0] - 0.8, KIRK_RALLY[1] - 1.0)
+                screen.blit(stage, (int(sx - stage_w // 2), int(sy - stage_h + 6)))
         elif fog.is_explored(*KIRK_RALLY):
             pygame.draw.circle(screen, (220, 50, 50), (int(kx), int(ky)), 8, 2)
             pygame.draw.circle(screen, (220, 50, 50), (int(kx), int(ky)), 16, 1)

@@ -30,6 +30,12 @@ _SHEET_MAP = {
     "vbied":          ("coloredcars.jpg",           0, 2),
     "civilian_car":   ("cars.jpg",                 0, 2),
     "patriot_lawyer": ("MAGAmericaFirst.jpg",       0, 2),
+    "normie":         ("civilian_normie.png",       0, 2),
+    "purple_hair":    ("civilian_purple_hair.png",  0, 2),
+    "riot_gear":      ("civilian_riot_gear.png",    0, 2),
+    "runner":         ("civilian_runner.png",       0, 2),
+    "protester":      ("civilian_protester.png",    0, 2),
+    "kirk":           ("kirk.png",                  0, 2),
 }
 
 _TARGET_W = 44    # rendered sprite width  (px)

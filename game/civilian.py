@@ -69,6 +69,7 @@ class Civilian:
         self._reached_dest   = False
         self._ambush_spawned = False
         self.is_bolo = False
+        self.facing = 0
 
         # Witness War
         self.witness_state    = "free"   # free / empowered / radicalized / assetized
@@ -105,6 +106,9 @@ class Civilian:
 
     def update(self, dt_sec, world):
         if self.state == "dead":
+            return
+        if self.ctype == KIRK:
+            self.waypoints = []
             return
 
         # Empowered civs stand their ground and broadcast
@@ -178,6 +182,11 @@ class Civilian:
         else:
             self.gx += dx / dist * min(step, dist)
             self.gy += dy / dist * min(step, dist)
+            angle = math.atan2(dy, dx) * 180 / math.pi
+            if   -135 <= angle < -45:  self.facing = 2  # NE
+            elif  -45 <= angle <  45:  self.facing = 1  # SE
+            elif   45 <= angle < 135:  self.facing = 3  # NW
+            else:                       self.facing = 0  # SW
 
     def take_damage(self, amount, world, attacker=None):
         self.hp -= amount
@@ -193,6 +202,13 @@ class Civilian:
         if self.state == "dead":
             return
         sx, sy = cam.world_to_screen(self.gx, self.gy)
+        moving = bool(self.waypoints)
+
+        from game.sprites import get_manager
+        frame = get_manager().get_frame(self.ctype, self.facing, moving)
+        using_sprite = frame is not None
+        if using_sprite:
+            surf.blit(frame, (sx - frame.get_width() // 2, sy - frame.get_height() + 4))
 
         col = (180, 180, 160)
         if self.ctype == PURPLE_HAIR: col = (180, 50, 255)
@@ -241,7 +257,8 @@ class Civilian:
                 py  = (sy - 6) + int(math.sin(rad) * r)
                 pygame.draw.circle(surf, fc, (px, py), 1)
 
-        pygame.draw.ellipse(surf, (0, 8, 6), (sx - 5, sy - 2, 10, 4))
+        if not using_sprite:
+            pygame.draw.ellipse(surf, (0, 8, 6), (sx - 5, sy - 2, 10, 4))
 
         if self.is_bolo:
             r = int(10 + math.sin(pygame.time.get_ticks() * 0.006) * 2)
@@ -252,7 +269,9 @@ class Civilian:
             lbl = f.render("BOLO", True, (255, 80, 80))
             surf.blit(lbl, (sx - lbl.get_width() // 2, sy - 22))
 
-        if self.ctype == KIRK:
+        if using_sprite:
+            pass
+        elif self.ctype == KIRK:
             pygame.draw.rect(surf, (60, 60, 60), (sx - 8, sy - 4, 16, 6))
             pygame.draw.circle(surf, (255, 255, 255), (sx, sy - 8), 6)
             s = math.sin(pygame.time.get_ticks() * 0.005) * 2

@@ -248,6 +248,9 @@ All 4 factions have `FACTION_BUILD_MENU` entries:
 - [x] District AI tuning — `map_data` / `map_data_2` define `AI_*` spawn and interval multipliers; `AIFaction` + frontline/regency district behavior
 - [x] NG arrival — `advisor.trigger("ng_arrival_district")` + `AI_NG_*` spawns; Whipple copy in `advisor.py`
 - [x] Troll Farm + Journalist capture audit — `PlacedBuilding._capture_by` tracks attacker; troll erosion now affects active enemy captures (including neutral objectives); journalist bonus checks active nearby squad members
+- [x] Story sprite groundwork — civilian/Kirk sprite sheet hooks in `sprites.py`, runtime civilian sprite rendering in `civilian.py`, generated assets via `tools/gen_story_sprites.py`, and quad intro prop sprite (`kirk_tent_table.png`) drawn near rally
+- [x] Quad objective pacing pass — tape now unlocks on securing `KIRK CRIME SCENE` objective; harassment escalates on objective secure + tape pickup; route pickets added for Regency quad intro
+- [x] Civilian presence pass — background civilian population now seeded and replenished over mission runtime (`_spawn_background_civilians`, `_tick_civilian_presence`)
 
 ---
 
