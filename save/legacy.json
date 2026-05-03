@@ -1,0 +1,9 @@
+{
+  "lp": 65,
+  "upgrades": {
+    "fog_reveal": 1,
+    "pen_capacity": 2,
+    "extra_credits": 1
+  },
+  "map_phase": 2
+}

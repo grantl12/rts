@@ -19,7 +19,7 @@
 ## 🗺️ Active Game Architecture
 
 ### Entry Point
-`game/main.py` → `main()` → menu → game loop
+`game/main.py` → `main()` → menu → slot select → **theater select** → game loop
 
 ### Core Module Map
 | File | Responsibility |
@@ -35,13 +35,14 @@
 | `game/hud.py` | Top bar (ROE/credits/clock), sidebar (minimap, building info, infamy bar) |
 | `game/sidebar.py` | Build menu: structures + units, per-faction FACTION_BUILD_MENU |
 | `game/selection.py` | Drag-box select, right-click orders, formation move, garrison order |
-| `game/pathfinding.py` | A* on 28×24 tile grid; `find_path` + `formation_goals` |
+| `game/pathfinding.py` | A* on 56×44 tile grid; `find_path` + `formation_goals` |
 | `game/roe.py` | ROEManager: 5 levels, damage mults, infamy accrual |
 | `game/ai.py` | AIFaction: produce, order objectives, raid player pens |
 | `game/menu.py` | Main menu: terminal boot animation, 4 faction cards, keyboard nav |
 | `game/postop.py` | Post-op allocation screen: detained civs → 3 silos |
 | `game/notifications.py` | Left-edge scrolling event log with fade |
-| `game/map_data.py` | Map terrain grid (28×24), static buildings, KIRK_RALLY coords |
+| `game/map_data.py` | Map 1 terrain (56×44), static buildings, KIRK_RALLY — **mutated in-place on map swap** |
+| `game/map_data_2.py` | Map 2 "Whipple District" terrain, buildings, incident coords |
 
 ---
 
@@ -188,55 +189,64 @@ All 4 factions have `FACTION_BUILD_MENU` entries:
 
 ---
 
-## 🗺️ Map — "The Quad"
+## 🗺️ Maps
 
-28×24 tile isometric grid
-**KIRK_RALLY:** map center (~14, 12)
-**Enemy base:** (3, 2) — reg_hq + reg_barracks (pre-placed for enemy faction)
-**Player spawn:** (13, 19) — starter squad after intro
+### Map 1 — "The Quad" (`game/map_data.py`)
+56×44 tile isometric grid
+**KIRK_RALLY:** (14.0, 12.0) — map center
+**Enemy base:** (3, 2) — reg_hq + reg_barracks pre-placed
+**Player HQ placed:** (46, 37) at intro end; starters spawn (43, 38)
+**Runner destinations:** hardcoded in `game/civilian.py` RUNNER_DESTINATIONS
 
-**Pre-placed neutral buildings** (from map_data.BUILDINGS → world._place_map_buildings):
-- Campus Café, Student Library, Medical Center, Delta/Sigma Houses, Audit Points, etc.
+### Map 2 — "Whipple District" (`game/map_data_2.py`)
+56×44 tile isometric grid (same dimensions — required for pathfinding W/H)
+**Incident point (KIRK_RALLY):** (29.0, 16.5) — Aurora Ave compliance check
+**SUV crash target:** (29.0, 13.0) — lurches north into civic plaza
+**Player HQ placed:** (30, 36) at intro end; starters spawn (28, 37)
+**Enemy spawn:** 3 proxies at (50, 3) — northeast staging
+**Runner destinations:** (52,2), (2,42), (52,40)
+**Win condition:** NG arrival timer at T=300s spawns reinforcements at (42,11) + triggers GAME_OVER_VICTORY
+**Key buildings:** Whipple Federal Bldg (40,1), ICE Field Office (47,1), NG Armory (40,10), Federal Courthouse (27,1)
+
+### Map swap mechanism
+`_run_mission()` mutates `game.map_data` **in place** so renderer.py and pathfinding.py (which bind TERRAIN at import time) see new data:
+- `_MAP_MOD.TERRAIN[:] = new_terrain` — list in-place
+- `_MAP_MOD.BUILDINGS[:] = new_buildings` — list in-place
+- `_MAP_MOD.BTYPE_COLORS.clear(); .update(...)` — dict in-place
+- `_MAP_MOD.KIRK_RALLY = new_val` + `global KIRK_RALLY; KIRK_RALLY = new_val` — tuple reassign
+- `world = World(..., map_module=_active_map)` — World reads KIRK_RALLY from map_module
 
 ---
 
 ## 🚧 Pending / Next Up
 
-### Implemented this session
-- [x] Hall of Heroes — rank-5 units generate faction-appropriate hero names, persisted in save slots
-- [x] The Tape MacGuffin — spawns on map at shot transition, +15% income to holder, drops on unit death
-- [x] News Van (Frontline) — 6.0-tile Witness War empowerment range (vs standard 3.5)
-- [x] Patriot Lawyer (Regency) — Cease & Desist suppression pulse every 8s, 3.5-tile radius
-- [x] Witness War — 4 civ states: free/empowered/radicalized/assetized; faction proximity conversion; militia spawn on radicalized
-- [x] VBIED AI — Sovereign arms parked civilian car every 50–90s via `_do_vbied()` in `ai.py`
-- [x] Campaign save slots — 3-slot JSON at `save/slot_1-3.json`; carry-over infamy/credits/LP/upgrades/hall_of_heroes
-- [x] Thermal menu background — procedural satellite heat-blob background in `menu.py`
-- [x] Legibility pass — advisor (font 13, 32px bar, opaque), notifications (font 11, backing strip), objectives, HUD
-- [x] Unit spawn prereq system — units require owning a `produces`-matching building; spawn adjacent to it; queue stalls when underpowered; LOCKED visual on buttons
-
-### Also implemented (this Claude session)
-- [x] Wagner unit (Oligarchy §60 cannon fodder), Journalist (Frontline, kill=infamy, capture bonus), Agitator (suppress aura)
-- [x] Proud Perimeter (Regency melee tank, intercepts suppression for nearby allies)
-- [x] Troll Farm building (Oligarchy, passive enemy capture erosion in 10r)
-- [x] Faction-specific Q/E abilities (Regency/Frontline/Oligarchy/Sovereign each have unique abilities)
-- [x] Sidebar expanded: ice_agent_tac, mrap, drone_operator now visible
-- [x] Journalist doubles capture speed for nearby audit points
+### Implemented (prior sessions)
+- [x] Hall of Heroes, Tape MacGuffin, Witness War, VBIED AI, campaign save slots (3-slot JSON)
+- [x] Thermal menu background, legibility pass, unit spawn prereq system
+- [x] Wagner, Journalist, Agitator, Proud Perimeter units; Troll Farm building
+- [x] Faction-specific Q/E/R abilities (all 4 factions)
+- [x] Faction research upgrades (2 per faction in UNIT_UPGRADES)
+- [x] Minimap vehicle dots, hero name in info bar, aura rings (units + buildings)
+- [x] Iron Dome interception notification, MISSION COMPLETE/FAILED splash
 
 ### Implemented this session (2026-05-02)
-- [x] Faction research upgrades — all 4 factions now have 2 upgrades each in UNIT_UPGRADES
-- [x] Minimap shows vehicles (grey=civilian, orange=armed VBIED)
-- [x] Help overlay refreshed — added Abilities (Q/E/R/B), G, F, M sections
-- [x] Hero name in info bar — rank-5 units show hero name in gold instead of unit type
-- [x] Unit aura rings on selection — Patriot Lawyer, Agitator, Direktor, Settler, Journalist
-- [x] Building aura rings on selection — Troll Farm, Iron Dome, Vision Tower, Propaganda, Press Bureau, Hacktivist
-- [x] Iron Dome interception notification — fires per-drone on first contact
-- [x] MISSION COMPLETE / MISSION FAILED splash before post-op debrief (2.2s, skippable)
+- [x] **Whipple District map** (`map_data_2.py`) — 56×44 urban grid, 17 pre-placed buildings, Aurora Ave road network
+- [x] **Theater select screen** (`_pick_theater()`) — shown after slot select, [1]/[2]/arrow keys
+- [x] **District intro state machine** — d_approach → d_check → d_shot → d_crash → d_panic → end
+  - ICE officer typewriter dialogue during d_check
+  - Animated SUV ellipse crashes north toward `INCIDENT_SUV_CRASH_TARGET` during d_crash
+  - Permanent wreck placed at crash position; civilians in 12r panic
+  - Overlay text: "AURORA AVE — 09:14 LOCAL" / "SHOTS FIRED — NARRATIVE CONTAINMENT ACTIVE"
+- [x] **NG arrival timer** — 300s countdown; spawns 3 gravy seals + MRAP at NG Armory → GAME_OVER_VICTORY
+- [x] **Map-aware labels** — incident marker says "COMPLIANCE CHECK" / "AURORA AVE — INCIDENT" on district
+- [x] **Runner destinations** pulled from `_active_map.RUNNER_DESTINATIONS` (not hardcoded import)
 
 ### Next up
-- [ ] Faction renames (backlog): Oligarchy → Direktorate, Gravy Seals → "2A Audit Volunteer" — deferred, keep internal keys
-- [ ] Visual upgrade tiers — 3 sprite tiers per unit, swap on rank-up — needs AI generator pipeline
-- [ ] Second map — The Quad is the only map; a second theater would unlock after map_phase 2
-- [ ] Wrecks persistent across sessions — currently lost on mission exit; save to slot data
+- [ ] Faction renames (backlog): Oligarchy → Direktorate — deferred, keep internal keys
+- [ ] Visual upgrade tiers — 3 sprite tiers per unit, swap on rank-up — needs asset pipeline
+- [ ] Wrecks persistent across sessions — currently lost on mission exit
+- [x] District AI tuning — `map_data` / `map_data_2` define `AI_*` spawn and interval multipliers; `AIFaction` + frontline/regency district behavior
+- [x] NG arrival — `advisor.trigger("ng_arrival_district")` + `AI_NG_*` spawns; Whipple copy in `advisor.py`
 
 ---
 

@@ -1,0 +1,17 @@
+{
+  "faction": "regency",
+  "mission_count": 2,
+  "map_phase": 2,
+  "infamy_carryover": 0,
+  "credits_carryover": 100,
+  "passive_income_bonus": 0,
+  "lp": 65,
+  "upgrades": {
+    "fog_reveal": 1,
+    "pen_capacity": 2,
+    "extra_credits": 1
+  },
+  "hall_of_heroes": [],
+  "slot": 1,
+  "timestamp": "2026-05-02 11:11"
+}
