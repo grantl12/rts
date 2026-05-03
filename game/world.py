@@ -135,12 +135,13 @@ class World:
         self._narrative_fired = set()
 
         enemy = self._ENEMY_MAP.get(player_faction, "sovereign")
-        self.ai_factions = {enemy: AIFaction(enemy)}
+        self.ai_factions = {enemy: AIFaction(enemy, map_id=self.map_id)}
 
         # Spawn rally crowd — tight cluster, wander locked until intro ends
         import game.map_data as _md
         _active_map = map_module if map_module is not None else _md
         kx, ky = _active_map.KIRK_RALLY
+        self.rally_point = (float(kx), float(ky))
         for i in range(30):
             c = self.spawn_civilian(kx + random.uniform(-2.5, 2.5),
                                     ky + random.uniform(-2.5, 2.5))

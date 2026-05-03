@@ -278,8 +278,8 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None, m
                         world.spawn_unit(utype, PLAYER_FACTION, sx0 + i * 0.8, sy0)
                     sy0 += 1
                 enemy = world._ENEMY_MAP.get(PLAYER_FACTION, "sovereign")
-                for i in range(3):
-                    world.spawn_unit("proxy", enemy, 50 + i, 3)
+                for px, py in getattr(_active_map, "AI_INTRO_PROXIES", [(50, 3), (51, 3), (52, 3)]):
+                    world.spawn_unit("proxy", enemy, px, py)
                 import random as _rnd2
                 for dest in _active_map.RUNNER_DESTINATIONS:
                     rx = KIRK_RALLY[0] + _rnd2.uniform(-2, 2)
@@ -640,20 +640,26 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None, m
             if not _ng_wave_done and _ng_timer <= 150.0:
                 _ng_wave_done = True
                 _wave_enemy = world._ENEMY_MAP.get(PLAYER_FACTION, "sovereign")
-                for _wi in range(3):
-                    world.spawn_unit("proxy",      _wave_enemy, 50 + _wi, 3)
-                world.spawn_unit("drone_scout", "frontline", 48, 5)
+                for px, py in getattr(_active_map, "AI_HOSTILE_WAVE_PROXIES", [(50, 3), (51, 3), (52, 3)]):
+                    world.spawn_unit("proxy", _wave_enemy, px, py)
+                _ew_f, _ew_u, _ew_x, _ew_y = getattr(
+                    _active_map, "AI_HOSTILE_WAVE_EXTRA", ("frontline", "drone_scout", 48, 5))
+                world.spawn_unit(_ew_u, _ew_f, _ew_x, _ew_y)
                 notifs.add("!! HOSTILE REINFORCEMENTS — PERIMETER BREACH NORTH", (220, 80, 40))
                 advisor.trigger("surveilled")
                 _alert_flash = max(_alert_flash, 1.0)
 
             if _ng_timer <= 0:
                 _ng_timer = -1.0
-                for _i in range(3):
-                    world.spawn_unit("gravy_seal", PLAYER_FACTION, 42 + _i * 0.9, 11)
-                world.spawn_unit("mrap", PLAYER_FACTION, 43, 12)
+                _ng_g = getattr(_active_map, "AI_NG_GRAVY_POSITIONS", None)
+                if _ng_g is None:
+                    _ng_g = [(42 + _i * 0.9, 11) for _i in range(3)]
+                for _ngx, _ngy in _ng_g:
+                    world.spawn_unit("gravy_seal", PLAYER_FACTION, _ngx, _ngy)
+                _mx, _my = getattr(_active_map, "AI_NG_MRAP_POSITION", (43, 12))
+                world.spawn_unit("mrap", PLAYER_FACTION, _mx, _my)
                 notifs.add("!! NATIONAL GUARD ARRIVES — WHIPPLE DISTRICT SECURED", (0, 200, 255))
-                advisor.trigger("ng_arrival")
+                advisor.trigger("ng_arrival_district")
                 _alert_flash = max(_alert_flash, 1.5)
                 world.game_over = world.GAME_OVER_VICTORY
 

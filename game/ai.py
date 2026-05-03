@@ -21,9 +21,14 @@ _INTERVALS = {
 
 
 class AIFaction:
-    def __init__(self, faction):
+    def __init__(self, faction, map_id="quad"):
         self.faction = faction
+        self.map_id  = map_id
         prod, order, raid = _INTERVALS.get(faction, (12.0, 6.0, 25.0))
+        om = {"district": 0.84}.get(map_id, 1.0)
+        rm = {"district": 0.92}.get(map_id, 1.0)
+        order *= om
+        raid  *= rm
         self.produce_timer    = prod
         self.order_timer      = order
         self._raid_timer      = raid
@@ -131,8 +136,15 @@ class AIFaction:
         # Target audit/sensor nodes first to amplify infamy
         sensors = [pb for pb in world.placed_buildings.values()
                    if ("sensor" in pb.bdef.get("flags", [])
+                       or "objective" in pb.bdef.get("flags", [])
                        or "infamy_amplify" in pb.bdef.get("flags", []))
                    and pb.faction != self.faction]
+        if self.map_id == "district" and sensors and hasattr(world, "rally_point"):
+            rx, ry = world.rally_point
+            near = [s for s in sensors
+                    if math.dist((s.gx, s.gy), (rx, ry)) < 20.0]
+            if near:
+                sensors = near
         if sensors:
             target = min(sensors,
                          key=lambda pb: math.dist((idle[0].gx, idle[0].gy),
@@ -161,9 +173,21 @@ class AIFaction:
         capturable = [pb for pb in world.placed_buildings.values()
                       if pb.faction != self.faction]
         if capturable and len(idle) >= 2:
-            target = min(capturable,
-                         key=lambda pb: math.dist((idle[0].gx, idle[0].gy),
-                                                  (pb.gx, pb.gy)))
+            if self.map_id == "district":
+                rx, ry = getattr(world, "rally_point", (idle[0].gx, idle[0].gy))
+                def _cap_score(pb):
+                    d = math.dist((idle[0].gx, idle[0].gy), (pb.gx, pb.gy))
+                    z = 0.0
+                    if "objective" in pb.bdef.get("flags", []) or "scanner" in pb.bdef.get("flags", []):
+                        z -= 5.0 * max(0.0, 1.0 - math.dist((pb.gx, pb.gy), (rx, ry)) / 22.0)
+                    if pb.bdef.get("passive_income", 0) > 0:
+                        z -= 3.0
+                    return d + z
+                target = min(capturable, key=_cap_score)
+            else:
+                target = min(capturable,
+                             key=lambda pb: math.dist((idle[0].gx, idle[0].gy),
+                                                      (pb.gx, pb.gy)))
             cap_squad = idle[:len(idle) // 2 + 1]
             self._move_squad(cap_squad, target.gx, target.gy, world)
             return

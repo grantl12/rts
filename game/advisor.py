@@ -184,6 +184,11 @@ _LINES = {
         "NG reinforcements confirmed. The district is secure. Officially. For now.",
         "Guard units deployed. Narrative containment: complete. File the report.",
     ],
+    "ng_arrival_district": [
+        "Guard column exiting NG Armory. Federal perimeter is now the brief. Stand down the optics.",
+        "Whipple District is declared stabilized. Armored assets on Ford Parkway — incident closed for press.",
+        "National Guard in sector. ICE holds the paperwork; you hold the line. Debrief when convenient.",
+    ],
     "iron_dome_intercept": [
         "Intercept station online. Hostile drones are being administratively suppressed.",
         "Iron Dome active. Aerial assets in range are experiencing... difficulties.",

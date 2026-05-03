@@ -142,8 +142,16 @@ BUILDINGS = [
     ("comms_tower",    "COMMS TOWER",            "INTEL RELAY",    12, 21, 2, 2, 4, "intel",    300,  300),
 ]
 
+MAP_ID = "quad"
+
 # Kirk's rally point — center of the quad plaza
 KIRK_RALLY = (26.5, 21.0)
+
+AI_ORDER_INTERVAL_MULT = 1.0
+AI_RAID_INTERVAL_MULT    = 1.0
+AI_INTRO_PROXIES         = [(50, 3), (51, 3), (52, 3)]
+AI_HOSTILE_WAVE_PROXIES  = [(50, 3), (51, 3), (52, 3)]
+AI_HOSTILE_WAVE_EXTRA    = ("frontline", "drone_scout", 48, 5)
 
 # Building color palettes by type
 BTYPE_COLORS = {

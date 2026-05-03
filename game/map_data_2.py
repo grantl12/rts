@@ -121,6 +121,14 @@ RUNNER_DESTINATIONS = [(52, 2), (2, 42), (52, 40)]
 MAP_ID    = "district"
 MAP_TITLE = "WHIPPLE DISTRICT"
 
+AI_ORDER_INTERVAL_MULT  = 0.84
+AI_RAID_INTERVAL_MULT   = 0.92
+AI_INTRO_PROXIES        = [(49, 4), (50, 4), (51, 4)]
+AI_HOSTILE_WAVE_PROXIES = [(47, 5), (48, 5), (49, 5)]
+AI_HOSTILE_WAVE_EXTRA   = ("frontline", "drone_scout", 44, 8)
+AI_NG_GRAVY_POSITIONS   = [(39.5, 11.5), (41.0, 11.5), (42.5, 11.5)]
+AI_NG_MRAP_POSITION     = (41.0, 12.8)
+
 # Building color palettes (same keys as map_data.py)
 BTYPE_COLORS = {
     "intel":    {"top": (30, 40, 55),  "wall_l": (18, 25, 36),  "wall_r": (24, 32, 45)},
