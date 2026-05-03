@@ -179,11 +179,6 @@ _LINES = {
         "Amplification surge authorized. Enemy audit progress is now a liability.",
         "The farms are operating at full influence capacity. We recommend not reading the replies.",
     ],
-    "ng_arrival": [
-        "National Guard assets on site. Area now under federal jurisdiction. Good work. Probably.",
-        "NG reinforcements confirmed. The district is secure. Officially. For now.",
-        "Guard units deployed. Narrative containment: complete. File the report.",
-    ],
     "ng_arrival_district": [
         "Guard column exiting NG Armory. Federal perimeter is now the brief. Stand down the optics.",
         "Whipple District is declared stabilized. Armored assets on Ford Parkway — incident closed for press.",

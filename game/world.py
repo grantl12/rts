@@ -27,6 +27,7 @@ class PlacedBuilding:
         self.civs_held = 0
         self.selected = False
         self._capture_progress = 0.0
+        self._capture_by = None
 
     @property
     def tile_set(self):
@@ -135,7 +136,9 @@ class World:
         self._narrative_fired = set()
 
         enemy = self._ENEMY_MAP.get(player_faction, "sovereign")
-        self.ai_factions = {enemy: AIFaction(enemy, map_id=self.map_id)}
+        _om = getattr(map_module, "AI_ORDER_INTERVAL_MULT", 1.0) if map_module else 1.0
+        _rm = getattr(map_module, "AI_RAID_INTERVAL_MULT",  1.0) if map_module else 1.0
+        self.ai_factions = {enemy: AIFaction(enemy, map_id=self.map_id, order_mult=_om, raid_mult=_rm)}
 
         # Spawn rally crowd — tight cluster, wander locked until intro ends
         import game.map_data as _md
@@ -477,14 +480,14 @@ class World:
                 if "required" in pb.bdef.get("flags", []):
                     if pb.hp > pb.max_hp * 0.5:
                         pb._capture_progress = 0.0
+                        pb._capture_by = None
                         continue
                 # Journalist in the area doubles capture speed
-                journalist_bonus = 1.0
-                for ju in self.units.values():
-                    if ju.utype == "journalist" and ju.faction == strongest and ju.state != STATE_DEAD:
-                        if math.dist((ju.gx, ju.gy), (pb.gx + pb.bdef["w"]/2, pb.gy + pb.bdef["h"]/2)) <= 5.0:
-                            journalist_bonus = 2.0
-                            break
+                pb._capture_by = strongest
+                journalist_bonus = 2.0 if any(
+                    ju.utype == "journalist" and ju.faction == strongest and ju.state != STATE_DEAD
+                    for ju in nearby_units
+                ) else 1.0
                 # Interpreter halves enemy capture rate within 5r
                 interpreter_slow = 1.0
                 for iu in self.units.values():
@@ -499,11 +502,14 @@ class World:
                     old_faction = pb.faction
                     pb.faction = strongest
                     pb._capture_progress = 0.0
+                    pb._capture_by = None
                     self.events.append(("building_captured",
                                         {"name": getattr(pb, "display_name", pb.bdef["name"]),
                                          "by": strongest, "from": old_faction}))
             elif pb._capture_progress > 0:
                 pb._capture_progress = max(0, pb._capture_progress - dt * 10.0)
+                if pb._capture_progress <= 0:
+                    pb._capture_by = None
 
             # Pull civilians into holding pens
             if pb.bdef.get("garrison", 0) > 0 and pb.faction != "neutral":
@@ -735,7 +741,11 @@ class World:
                     dist = math.dist((target.gx + target.bdef["w"] / 2,
                                       target.gy + target.bdef["h"] / 2),
                                      (troll_cx, troll_cy))
-                    if dist <= 10.0 and target._capture_progress > 0:
+                    attacker = getattr(target, "_capture_by", None)
+                    if (dist <= 10.0 and target._capture_progress > 0
+                            and attacker
+                            and attacker != pb.faction
+                            and attacker in self.enemies_of(pb.faction)):
                         target._capture_progress = max(0.0, target._capture_progress - 8.0 * troll_mult)
 
         # Underpowered: stall production queues for player (skip progress)

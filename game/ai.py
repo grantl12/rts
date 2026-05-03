@@ -21,14 +21,12 @@ _INTERVALS = {
 
 
 class AIFaction:
-    def __init__(self, faction, map_id="quad"):
+    def __init__(self, faction, map_id="quad", order_mult=1.0, raid_mult=1.0):
         self.faction = faction
         self.map_id  = map_id
         prod, order, raid = _INTERVALS.get(faction, (12.0, 6.0, 25.0))
-        om = {"district": 0.84}.get(map_id, 1.0)
-        rm = {"district": 0.92}.get(map_id, 1.0)
-        order *= om
-        raid  *= rm
+        order *= order_mult
+        raid  *= raid_mult
         self.produce_timer    = prod
         self.order_timer      = order
         self._raid_timer      = raid
