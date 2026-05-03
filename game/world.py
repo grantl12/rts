@@ -97,9 +97,10 @@ class World:
     # Units blocked from production at SANCTIONED infamy tier
     _HEAVY_TIER = {"contractor", "drone_assault", "unmarked_van"}
 
-    def __init__(self, player_faction="regency", map_phase=0):
+    def __init__(self, player_faction="regency", map_phase=0, map_module=None):
         self.player_faction   = player_faction
         self.map_phase        = map_phase
+        self.map_id           = getattr(map_module, "MAP_ID", "quad") if map_module else "quad"
         self.units            = {}   # uid -> Unit
         self.civilians        = {}   # uid -> Civilian
         self.placed_buildings = {}   # bid_instance_id -> PlacedBuilding
@@ -119,6 +120,7 @@ class World:
         self._troll_surge_timer = 0.0
         self.unit_tier = {}   # base_utype → upgraded_utype, set by sidebar upgrades
         self.game_over        = self.GAME_OVER_NONE
+        self.intro_done       = False  # set by main.py when intro ends; gates win/loss check
         self.events           = []   # [(event_type, payload)] consumed each frame by main
         self.wrecks           = []   # [(gx, gy, timer)] visual wreck markers
 
@@ -136,8 +138,9 @@ class World:
         self.ai_factions = {enemy: AIFaction(enemy)}
 
         # Spawn rally crowd — tight cluster, wander locked until intro ends
-        from game.map_data import KIRK_RALLY
-        kx, ky = KIRK_RALLY
+        import game.map_data as _md
+        _active_map = map_module if map_module is not None else _md
+        kx, ky = _active_map.KIRK_RALLY
         for i in range(30):
             c = self.spawn_civilian(kx + random.uniform(-2.5, 2.5),
                                     ky + random.uniform(-2.5, 2.5))
@@ -301,7 +304,8 @@ class World:
 
     def update(self, dt_ms: int, player_faction="regency"):
         dt = dt_ms / 1000.0
-        self._mission_elapsed += dt
+        if self.intro_done:
+            self._mission_elapsed += dt
         self.roe_manager.update(dt)
         self._apply_infamy_consequences(dt, player_faction)
 
@@ -518,8 +522,8 @@ class World:
                                 self.roe_manager.add_infamy(5)
                                 self.events.append(("protester_detained", {}))
 
-        # Win/loss detection — only after intro ends (_mission_elapsed > 0)
-        if self.game_over == self.GAME_OVER_NONE and self._mission_elapsed > 0:
+        # Win/loss detection — only after intro ends
+        if self.game_over == self.GAME_OVER_NONE and self.intro_done:
             enemy = self._ENEMY_MAP.get(player_faction, "sovereign")
             player_hq_alive = any(pb.faction == player_faction and "command" in pb.bdef.get("flags", [])
                                   for pb in self.placed_buildings.values())

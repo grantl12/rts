@@ -10,6 +10,7 @@ from game.selection import SelectionManager
 from game.sidebar   import BuildSidebar
 from game.renderer  import draw_terrain, draw_buildings, draw_minimap, DARK
 from game.hud       import HUD, TOPBAR_H, SIDEBAR_W
+import game.map_data as _MAP_MOD   # mutable — swapped per mission
 from game.map_data  import KIRK_RALLY, BUILDINGS as MAP_BLDS
 from game.fog       import FogManager
 from game import menu as _menu_mod
@@ -40,15 +41,42 @@ def main():
         if slot_result is None:
             continue   # player hit ESC back to menu
         slot_num, slot_data = slot_result
-        _run_mission(screen, clock, PLAYER_FACTION, slot_num, slot_data)
+        map_id = _pick_theater(screen, clock)
+        if map_id is None:
+            continue
+        _run_mission(screen, clock, PLAYER_FACTION, slot_num, slot_data, map_id=map_id)
 
 
-def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
+def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None, map_id="quad"):
+    global KIRK_RALLY, MAP_BLDS
+
+    # ── Swap active map module in place so renderer/pathfinding see new terrain ──
+    import game.map_data_2 as _MAP2
+    if map_id == "district":
+        _MAP_MOD.TERRAIN[:]    = _MAP2.TERRAIN
+        _MAP_MOD.BUILDINGS[:]  = _MAP2.BUILDINGS
+        _MAP_MOD.BTYPE_COLORS.clear()
+        _MAP_MOD.BTYPE_COLORS.update(_MAP2.BTYPE_COLORS)
+        _MAP_MOD.KIRK_RALLY    = _MAP2.KIRK_RALLY
+        KIRK_RALLY             = _MAP2.KIRK_RALLY
+        MAP_BLDS               = _MAP2.BUILDINGS
+        _active_map            = _MAP2
+    else:
+        import game.map_data as _MAP1_orig
+        _MAP_MOD.TERRAIN[:]    = _MAP1_orig.TERRAIN
+        _MAP_MOD.BUILDINGS[:]  = _MAP1_orig.BUILDINGS
+        _MAP_MOD.BTYPE_COLORS.clear()
+        _MAP_MOD.BTYPE_COLORS.update(_MAP1_orig.BTYPE_COLORS)
+        _MAP_MOD.KIRK_RALLY    = _MAP1_orig.KIRK_RALLY
+        KIRK_RALLY             = _MAP1_orig.KIRK_RALLY
+        MAP_BLDS               = _MAP1_orig.BUILDINGS
+        _active_map            = _MAP1_orig
+
     if slot_data is None:
         slot_data = _save_mod.new_slot(PLAYER_FACTION)
     MAP_PHASE = slot_data.get("map_phase", 0)
     cam       = Camera(WIN_W, WIN_H)
-    world     = World(PLAYER_FACTION, map_phase=MAP_PHASE)
+    world     = World(PLAYER_FACTION, map_phase=MAP_PHASE, map_module=_active_map)
     fog       = FogManager(map_phase=MAP_PHASE)
     # Apply carry-over state from save slot
     if slot_data.get("infamy_carryover", 0) > 0:
@@ -66,19 +94,29 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
     advisor  = AdvisorSystem()
     audio    = AudioManager()
     enemy_f  = world._ENEMY_MAP.get(PLAYER_FACTION, "sovereign")
-    objectives = ObjectiveManager(PLAYER_FACTION, enemy_f)
+    objectives = ObjectiveManager(PLAYER_FACTION, enemy_f, map_id=map_id)
     _combat_sound_timer = 0.0   # rate-limits per-frame combat sound checks
     _deepfake_overlay = 0.0   # seconds remaining on deepfake reveal overlay
     _leak_overlay     = None  # (title, body, timer) for narrative leak popups
 
     # ── Intro State ──
-    intro_state = "rally" # rally, talk, wait, shot, panic, end
-    intro_timer = 5.0
+    if map_id == "district":
+        intro_state = "d_approach"
+        intro_timer = 4.0
+        _d_suv_gx   = float(KIRK_RALLY[0])
+        _d_suv_gy   = float(KIRK_RALLY[1])
+    else:
+        intro_state = "rally"
+        intro_timer = 5.0
+        _d_suv_gx   = 0.0
+        _d_suv_gy   = 0.0
     intro_text  = ""
-    kirk_obj = world.spawn_civilian(*KIRK_RALLY, ctype="kirk")
-    # Intro pan: start far top-left, smoothly move to rally over 5s
+    _subject_ctype = "normie" if map_id == "district" else "kirk"
+    kirk_obj = world.spawn_civilian(*KIRK_RALLY, ctype=_subject_ctype)
     cam.pan_to(KIRK_RALLY[0] - 14, KIRK_RALLY[1] - 14)
     _intro_cam_start = (cam.ox, cam.oy)
+    _ng_timer        = 300.0 if map_id == "district" else -1.0
+    _ng_wave_done    = False   # mid-game enemy wave for district at T≈150s
 
     # Build sidebar rect (bottom portion of right sidebar)
     def sidebar_rect():
@@ -139,7 +177,8 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
                         c.panic(world)
             elif intro_state == "panic" and intro_timer <= 0:
                 intro_state = "end"
-                cam.pan_to(48, 37) # Snap to player start instead of following runners
+                world.intro_done = True
+                cam.pan_to(48, 37)
                 _STARTER = {
                     "regency":   [("gravy_seal",3),("ice_agent",2)],
                     "frontline": [("drone_scout",3),("proxy",2)],
@@ -162,11 +201,89 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
                 enemy = world._ENEMY_MAP.get(PLAYER_FACTION, "sovereign")
                 for i in range(3):
                     world.spawn_unit("proxy", enemy, 6 + i, 4)
-                from game.civilian import RUNNER_DESTINATIONS
                 import random as _rnd
-                for dest in RUNNER_DESTINATIONS:
+                _r_dests = getattr(_active_map, "RUNNER_DESTINATIONS", None)
+                if _r_dests is None:
+                    from game.civilian import RUNNER_DESTINATIONS as _r_dests
+                for dest in _r_dests:
                     rx = KIRK_RALLY[0] + _rnd.uniform(-2, 2)
                     ry = KIRK_RALLY[1] + _rnd.uniform(-2, 2)
+                    runner = world.spawn_civilian(rx, ry, ctype="runner")
+                    runner.set_destination(*dest)
+
+            # ── District map intro states ──────────────────────────────────────
+            elif intro_state == "d_approach":
+                cam.pan_to(*KIRK_RALLY)
+                target_ox, target_oy = cam.ox, cam.oy
+                cam.ox = int(_intro_cam_start[0] + (target_ox - _intro_cam_start[0]) * (1 - intro_timer / 4.0))
+                cam.oy = int(_intro_cam_start[1] + (target_oy - _intro_cam_start[1]) * (1 - intro_timer / 4.0))
+                if intro_timer <= 0:
+                    intro_state = "d_check"
+                    intro_timer = 3.0
+                    intro_text  = "LICENSE AND REGISTRATION. STEP OUT OF THE VEHICLE."
+
+            elif intro_state == "d_check":
+                cam.pan_to(*KIRK_RALLY)
+                if intro_timer <= 0:
+                    intro_state = "d_shot"
+                    intro_timer = 0.5
+                    kirk_obj.state = "dead"
+                    intro_text = ""
+                    audio.play("explosion")
+
+            elif intro_state == "d_shot" and intro_timer <= 0:
+                intro_state = "d_crash"
+                intro_timer = 2.2
+
+            elif intro_state == "d_crash":
+                _crash_target = getattr(_active_map, "INCIDENT_SUV_CRASH_TARGET",
+                                        (KIRK_RALLY[0], KIRK_RALLY[1] - 3.5))
+                _dtx = _crash_target[0] - _d_suv_gx
+                _dty = _crash_target[1] - _d_suv_gy
+                _ddist = math.sqrt(_dtx * _dtx + _dty * _dty)
+                if _ddist > 0.15:
+                    _suv_spd = 3.0
+                    _d_suv_gx += (_dtx / _ddist) * _suv_spd * dt_sec
+                    _d_suv_gy += (_dty / _ddist) * _suv_spd * dt_sec
+                if intro_timer <= 0 or _ddist <= 0.15:
+                    intro_state = "d_panic"
+                    intro_timer = 2.5
+                    audio.play("explosion")
+                    world.wrecks.append([_d_suv_gx, _d_suv_gy, 99999])
+                    for c in world.civilians.values():
+                        if math.dist((c.gx, c.gy), (_d_suv_gx, _d_suv_gy)) < 12:
+                            c.panic(world)
+
+            elif intro_state == "d_panic" and intro_timer <= 0:
+                intro_state = "end"
+                world.intro_done = True
+                cam.pan_to(30, 36)
+                _STARTER_D = {
+                    "regency":   [("gravy_seal",3),("ice_agent",2)],
+                    "frontline": [("drone_scout",3),("proxy",2)],
+                    "sovereign": [("proxy",3),("contractor",1)],
+                    "oligarchy": [("contractor",2),("gravy_seal",2)],
+                }
+                _HQ_BID_D = {
+                    "regency":   "reg_hq",
+                    "frontline": "reg_hq",
+                    "sovereign": "sov_hq",
+                    "oligarchy": "oli_hq",
+                }
+                world.place_building(_HQ_BID_D.get(PLAYER_FACTION, "reg_hq"),
+                                     PLAYER_FACTION, 30, 36)
+                sx0, sy0 = 28, 37
+                for utype, count in _STARTER_D.get(PLAYER_FACTION, [("gravy_seal",3)]):
+                    for i in range(count):
+                        world.spawn_unit(utype, PLAYER_FACTION, sx0 + i * 0.8, sy0)
+                    sy0 += 1
+                enemy = world._ENEMY_MAP.get(PLAYER_FACTION, "sovereign")
+                for i in range(3):
+                    world.spawn_unit("proxy", enemy, 50 + i, 3)
+                import random as _rnd2
+                for dest in _active_map.RUNNER_DESTINATIONS:
+                    rx = KIRK_RALLY[0] + _rnd2.uniform(-2, 2)
+                    ry = KIRK_RALLY[1] + _rnd2.uniform(-2, 2)
                     runner = world.spawn_civilian(rx, ry, ctype="runner")
                     runner.set_destination(*dest)
 
@@ -513,7 +630,33 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
         _alert_flash = max(0.0, _alert_flash - dt_sec)
 
         if intro_state == "end":
+            objectives.ng_timer = _ng_timer
             objectives.update(world)
+
+        if _ng_timer > 0 and intro_state == "end":
+            _ng_timer -= dt_sec
+
+            # Mid-game hostile reinforcement wave at ~150s remaining
+            if not _ng_wave_done and _ng_timer <= 150.0:
+                _ng_wave_done = True
+                _wave_enemy = world._ENEMY_MAP.get(PLAYER_FACTION, "sovereign")
+                for _wi in range(3):
+                    world.spawn_unit("proxy",      _wave_enemy, 50 + _wi, 3)
+                world.spawn_unit("drone_scout", "frontline", 48, 5)
+                notifs.add("!! HOSTILE REINFORCEMENTS — PERIMETER BREACH NORTH", (220, 80, 40))
+                advisor.trigger("surveilled")
+                _alert_flash = max(_alert_flash, 1.0)
+
+            if _ng_timer <= 0:
+                _ng_timer = -1.0
+                for _i in range(3):
+                    world.spawn_unit("gravy_seal", PLAYER_FACTION, 42 + _i * 0.9, 11)
+                world.spawn_unit("mrap", PLAYER_FACTION, 43, 12)
+                notifs.add("!! NATIONAL GUARD ARRIVES — WHIPPLE DISTRICT SECURED", (0, 200, 255))
+                advisor.trigger("ng_arrival")
+                _alert_flash = max(_alert_flash, 1.5)
+                world.game_over = world.GAME_OVER_VICTORY
+
         advisor.update(dt_sec)
         audio.update(dt_sec)
 
@@ -704,21 +847,34 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
 
         _draw_placed_buildings(screen, cam, world, font_sm, selection, fog)
 
-        # Kirk rally marker
+        # Kirk rally / incident marker
         kx, ky = cam.world_to_screen(*KIRK_RALLY)
+        _live_label = "COMPLIANCE CHECK" if map_id == "district" else "LIVE RALLY"
+        _site_label = getattr(_active_map, "INCIDENT_LABEL", "AURORA AVE") + " — INCIDENT" if map_id == "district" else "KIRK RALLY"
         if intro_state != "end":
             pygame.draw.circle(screen, (220, 50, 50), (int(kx), int(ky)), 8, 2)
-            lbl = font_sm.render("LIVE RALLY", True, (255, 255, 255))
+            lbl = font_sm.render(_live_label, True, (255, 255, 255))
             screen.blit(lbl, (int(kx) - lbl.get_width() // 2, int(ky) - 30))
         elif fog.is_explored(*KIRK_RALLY):
             pygame.draw.circle(screen, (220, 50, 50), (int(kx), int(ky)), 8, 2)
             pygame.draw.circle(screen, (220, 50, 50), (int(kx), int(ky)), 16, 1)
-            lbl = font_sm.render("KIRK RALLY", True, (220, 50, 50))
+            lbl = font_sm.render(_site_label, True, (220, 50, 50))
             screen.blit(lbl, (int(kx) - lbl.get_width() // 2, int(ky) - 20))
 
         # Civilian vehicles
         for v in world.vehicles.values():
             v.draw(screen, cam, fog)
+
+        # District intro: animate SUV
+        if map_id == "district" and intro_state in ("d_approach", "d_check", "d_crash"):
+            _svx, _svy = cam.world_to_screen(_d_suv_gx, _d_suv_gy)
+            _suv_body_col = (180, 50, 40) if intro_state == "d_crash" else (90, 75, 45)
+            pygame.draw.ellipse(screen, _suv_body_col, (int(_svx)-14, int(_svy)-6, 28, 12))
+            pygame.draw.ellipse(screen, (50, 35, 20), (int(_svx)-14, int(_svy)-6, 28, 12), 1)
+            if intro_state != "d_crash":
+                _f_suv = pygame.font.SysFont("couriernew", 8)
+                _suv_lbl = _f_suv.render("ICE SUV", True, (140, 100, 55))
+                screen.blit(_suv_lbl, (int(_svx) - _suv_lbl.get_width()//2, int(_svy) - 18))
 
         # SCOTUS de-zone rings
         for cx, cy, radius, timer in _scotus_zones:
@@ -800,7 +956,7 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
                 c.draw(screen, cam)
 
         # Kirk highlight — prominent pulsing ring during intro
-        if intro_state in ("rally", "talk", "wait") and kirk_obj.state != "dead":
+        if intro_state in ("rally", "talk", "wait", "d_approach", "d_check") and kirk_obj.state != "dead":
             ksx, ksy = cam.world_to_screen(kirk_obj.gx, kirk_obj.gy)
             t_ms = pygame.time.get_ticks()
             pulse = int(16 + math.sin(t_ms * 0.006) * 4)
@@ -811,7 +967,7 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
             screen.blit(klbl, (int(ksx) - klbl.get_width() // 2, int(ksy) - pulse - 22))
 
         # Intro Overlay
-        if intro_state == "shot":
+        if intro_state in ("shot", "d_shot"):
             screen.fill((255, 255, 255))
         elif intro_state == "rally":
             overlay = pygame.Surface((WIN_W, WIN_H), pygame.SRCALPHA)
@@ -827,6 +983,29 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
             rec_lbl = font_sm.render("● REC", True, (255, 0, 0))
             screen.blit(rec_lbl, (50, 50))
 
+        elif intro_state == "d_approach":
+            _ov = pygame.Surface((WIN_W, WIN_H), pygame.SRCALPHA)
+            pygame.draw.rect(_ov, (0, 0, 0, 180), (0, 0, WIN_W, 80))
+            pygame.draw.rect(_ov, (0, 0, 0, 180), (0, WIN_H - 120, WIN_W, 120))
+            screen.blit(_ov, (0, 0))
+            f_lg = pygame.font.SysFont("couriernew", 24, bold=True)
+            msg = f_lg.render("AURORA AVE — 09:14 LOCAL", True, (60, 120, 255))
+            screen.blit(msg, (50, WIN_H - 100))
+            msg2 = font_sm.render("ICE FIELD OPERATION — COMPLIANCE CHECK IN PROGRESS...", True, (40, 80, 200))
+            screen.blit(msg2, (50, WIN_H - 65))
+            pygame.draw.rect(screen, (60, 120, 255), (40, 40, 100, 40), 2)
+            rec_lbl = font_sm.render("● REC", True, (60, 120, 255))
+            screen.blit(rec_lbl, (50, 50))
+
+        elif intro_state in ("d_crash", "d_panic"):
+            _ov2 = pygame.Surface((WIN_W, WIN_H), pygame.SRCALPHA)
+            pygame.draw.rect(_ov2, (0, 0, 0, 180), (0, WIN_H - 80, WIN_W, 80))
+            screen.blit(_ov2, (0, 0))
+            f_lg2 = pygame.font.SysFont("couriernew", 16, bold=True)
+            msg3 = f_lg2.render("SHOTS FIRED — SUBJECT DOWN — NARRATIVE CONTAINMENT ACTIVE",
+                                True, (255, 60, 30))
+            screen.blit(msg3, (WIN_W // 2 - msg3.get_width() // 2, WIN_H - 55))
+
         if intro_state in ("talk", "wait") and intro_text:
             f_talk = pygame.font.SysFont("couriernew", 20, bold=True)
             if intro_state == "talk":
@@ -835,7 +1014,7 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
                 if chars_to_show > 0 and chars_to_show % 3 == 0:
                     audio.play("infamy_tick")
             else:
-                current_str = intro_text   # fully visible during wait
+                current_str = intro_text
             if current_str:
                 txt_surf = f_talk.render(current_str, True, (255, 255, 255))
                 tx = WIN_W // 2 - txt_surf.get_width() // 2
@@ -844,8 +1023,22 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
                 bg_surf.fill((0, 0, 0, 160))
                 screen.blit(bg_surf, (tx - 10, ty - 5))
                 screen.blit(txt_surf, (tx, ty))
-                # Speaker label
                 spk = font_sm.render("// KIRK :", True, (255, 200, 80))
+                screen.blit(spk, (tx - 10, ty - 18))
+
+        if intro_state == "d_check" and intro_text:
+            f_talk = pygame.font.SysFont("couriernew", 18, bold=True)
+            chars_to_show = int(len(intro_text) * max(0.0, 1 - intro_timer / 3.0))
+            current_str = intro_text[:chars_to_show]
+            if current_str:
+                txt_surf = f_talk.render(current_str, True, (255, 255, 255))
+                tx = WIN_W // 2 - txt_surf.get_width() // 2
+                ty = WIN_H - 150
+                bg_surf = pygame.Surface((txt_surf.get_width() + 20, txt_surf.get_height() + 10), pygame.SRCALPHA)
+                bg_surf.fill((0, 0, 0, 160))
+                screen.blit(bg_surf, (tx - 10, ty - 5))
+                screen.blit(txt_surf, (tx, ty))
+                spk = font_sm.render("// ICE OFFICER :", True, (80, 140, 255))
                 screen.blit(spk, (tx - 10, ty - 18))
 
         # Ghost building preview
@@ -921,6 +1114,61 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None):
             _draw_help_overlay(screen, WIN_W, WIN_H)
 
         pygame.display.flip()
+
+
+def _pick_theater(screen, clock):
+    """Theater selection screen — returns 'quad' or 'district', or None on ESC."""
+    f_title = pygame.font.SysFont("couriernew", 26, bold=True)
+    f_opt   = pygame.font.SysFont("couriernew", 18, bold=True)
+    f_sub   = pygame.font.SysFont("couriernew", 11)
+    options = [
+        ("quad",     "THE QUAD",         "UVU CAMPUS — KIRK CATALYST EVENT"),
+        ("district", "WHIPPLE DISTRICT", "MN GOVT QUARTER — AURORA AVE INCIDENT"),
+    ]
+    sel = 0
+    while True:
+        sw, sh = screen.get_size()
+        for ev in pygame.event.get():
+            if ev.type == pygame.QUIT:
+                pygame.quit(); sys.exit()
+            if ev.type == pygame.KEYDOWN:
+                if ev.key in (pygame.K_UP, pygame.K_w):
+                    sel = (sel - 1) % len(options)
+                elif ev.key in (pygame.K_DOWN, pygame.K_s):
+                    sel = (sel + 1) % len(options)
+                elif ev.key == pygame.K_1:
+                    return options[0][0]
+                elif ev.key == pygame.K_2:
+                    return options[1][0]
+                elif ev.key in (pygame.K_RETURN, pygame.K_SPACE):
+                    return options[sel][0]
+                elif ev.key == pygame.K_ESCAPE:
+                    return None
+
+        screen.fill((6, 12, 10))
+        title = f_title.render("SELECT OPERATIONAL THEATER", True, (0, 255, 180))
+        screen.blit(title, (sw // 2 - title.get_width() // 2, 110))
+        pygame.draw.line(screen, (0, 80, 60), (60, 148), (sw - 60, 148))
+
+        for i, (_mid, name, sub) in enumerate(options):
+            y = 220 + i * 100
+            active = (i == sel)
+            col    = (0, 255, 160) if active else (0, 80, 60)
+            bg_col = (8, 24, 18)   if active else (4, 10, 8)
+            rect   = pygame.Rect(sw // 2 - 300, y - 8, 600, 72)
+            pygame.draw.rect(screen, bg_col, rect)
+            pygame.draw.rect(screen, col, rect, 2 if active else 1)
+            num_lbl  = f_opt.render(f"[{i+1}]", True, col)
+            name_lbl = f_opt.render(name, True, col)
+            sub_lbl  = f_sub.render(sub, True, (0, 130, 90) if active else (0, 50, 40))
+            screen.blit(num_lbl,  (rect.left + 16, y + 8))
+            screen.blit(name_lbl, (rect.left + 64, y + 8))
+            screen.blit(sub_lbl,  (rect.left + 64, y + 34))
+
+        hint = f_sub.render("[ UP/DOWN ] SELECT    [ ENTER ] CONFIRM    [ ESC ] BACK", True, (0, 60, 50))
+        screen.blit(hint, (sw // 2 - hint.get_width() // 2, sh - 60))
+        pygame.display.flip()
+        clock.tick(FPS)
 
 
 def _end_mission(screen, clock, world, hud, player_faction,

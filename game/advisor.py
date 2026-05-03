@@ -179,6 +179,11 @@ _LINES = {
         "Amplification surge authorized. Enemy audit progress is now a liability.",
         "The farms are operating at full influence capacity. We recommend not reading the replies.",
     ],
+    "ng_arrival": [
+        "National Guard assets on site. Area now under federal jurisdiction. Good work. Probably.",
+        "NG reinforcements confirmed. The district is secure. Officially. For now.",
+        "Guard units deployed. Narrative containment: complete. File the report.",
+    ],
     "iron_dome_intercept": [
         "Intercept station online. Hostile drones are being administratively suppressed.",
         "Iron Dome active. Aerial assets in range are experiencing... difficulties.",

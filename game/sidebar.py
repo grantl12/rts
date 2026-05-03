@@ -234,7 +234,7 @@ class BuildSidebar:
         # Check requires building
         req = upg.get("requires")
         if req:
-            has_bld = any(req in pb.bid and pb.faction == player_faction
+            has_bld = any(req == pb.bid and pb.faction == player_faction
                           for pb in world.placed_buildings.values())
             if not has_bld:
                 return False
@@ -329,7 +329,7 @@ class BuildSidebar:
                 purchased = upg["base"] in world.unit_tier
                 affordable = creds >= upg["cost"]
                 req = upg.get("requires")
-                has_bld = (not req or any(req in pb.bid and pb.faction == player_faction
+                has_bld = (not req or any(req == pb.bid and pb.faction == player_faction
                                           for pb in world.placed_buildings.values()))
                 locked = not has_bld
                 urect = pygame.Rect(col_lx, upy, full_w, UPG_H)
