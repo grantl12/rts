@@ -2,7 +2,7 @@
 Deep State RTS — main game loop.
 Run: python -m game.main
 """
-import sys, math, pygame
+import os, sys, math, pygame
 
 from game.camera    import Camera
 from game.world     import World
@@ -31,6 +31,7 @@ FPS      = 60
 def main():
     pygame.mixer.pre_init(22050, -16, 1, 256)
     pygame.init()
+    os.makedirs("save", exist_ok=True)
     screen = pygame.display.set_mode((WIN_W, WIN_H), pygame.RESIZABLE)
     pygame.display.set_caption(TITLE)
     clock  = pygame.time.Clock()
@@ -85,6 +86,21 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None, m
         world.credits[PLAYER_FACTION] = slot_data["credits_carryover"]
     if slot_data.get("passive_income_bonus", 0):
         world._passive_income_bonus = slot_data["passive_income_bonus"]
+    saved_wrecks = slot_data.get("persisted_wrecks", {}).get(map_id, [])
+    if saved_wrecks:
+        for w in saved_wrecks:
+            if not isinstance(w, (list, tuple)) or len(w) != 3:
+                continue
+            wx, wy, wt = w
+            try:
+                wx = float(wx)
+                wy = float(wy)
+                wt = float(wt)
+            except (TypeError, ValueError):
+                continue
+            if wt <= 0:
+                continue
+            world.wrecks.append([wx, wy, wt])
     selection = SelectionManager()
     sidebar   = BuildSidebar(PLAYER_FACTION)
     hud       = HUD(WIN_W, WIN_H)
@@ -504,7 +520,7 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None, m
 
                     # Tab = end mission early
                     if event.key == pygame.K_TAB and not roe5_confirm:
-                        _end_mission(screen, clock, world, hud, PLAYER_FACTION, slot_num, slot_data)
+                        _end_mission(screen, clock, world, hud, PLAYER_FACTION, map_id, slot_num, slot_data)
                         return
 
             cam.handle_event(event)
@@ -576,7 +592,7 @@ def _run_mission(screen, clock, PLAYER_FACTION, slot_num=None, slot_data=None, m
         # Game over detection → post-op → executive board → menu
         if intro_state == "end" and world.game_over != 0:
             _draw_game_over_splash(screen, clock, world.game_over, WIN_W, WIN_H)
-            _end_mission(screen, clock, world, hud, PLAYER_FACTION, slot_num, slot_data)
+            _end_mission(screen, clock, world, hud, PLAYER_FACTION, map_id, slot_num, slot_data)
             return
 
         extra_v = []
@@ -1177,7 +1193,7 @@ def _pick_theater(screen, clock):
         clock.tick(FPS)
 
 
-def _end_mission(screen, clock, world, hud, player_faction,
+def _end_mission(screen, clock, world, hud, player_faction, map_id,
                  slot_num=None, slot_data=None):
     """Run post-op → press briefing → executive board, then save slot."""
     detained = sum(pb.civs_held for pb in world.placed_buildings.values()
@@ -1216,6 +1232,23 @@ def _end_mission(screen, clock, world, hud, player_faction,
             world.credits.get(player_faction, 0),
             lp,
         )
+        # Persist visual wrecks by theater so map swaps do not leak state.
+        _saved_by_map = dict(slot_data.get("persisted_wrecks", {}))
+        _uniq_wrecks = []
+        _seen_wrecks = set()
+        for gx, gy, timer in world.wrecks:
+            if timer <= 0:
+                continue
+            item = [round(float(gx), 2), round(float(gy), 2), round(float(timer), 1)]
+            key = (item[0], item[1], item[2])
+            if key in _seen_wrecks:
+                continue
+            _seen_wrecks.add(key)
+            _uniq_wrecks.append(item)
+            if len(_uniq_wrecks) >= 400:
+                break
+        _saved_by_map[map_id] = _uniq_wrecks
+        updated["persisted_wrecks"] = _saved_by_map
         # Carry forward executive board upgrades
         updated["upgrades"]  = _eb_mod._load().get("upgrades", {})
         updated["lp"]        = _eb_mod._load().get("lp", updated.get("lp", 0))

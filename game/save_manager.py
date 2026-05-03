@@ -62,6 +62,7 @@ def new_slot(faction: str) -> dict:
         "lp":                   0,
         "upgrades":             {},
         "hall_of_heroes":       [],
+        "persisted_wrecks":     {},
     }
 
 

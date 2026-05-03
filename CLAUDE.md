@@ -244,7 +244,7 @@ All 4 factions have `FACTION_BUILD_MENU` entries:
 ### Next up
 - [ ] Faction renames (backlog): Oligarchy → Direktorate — deferred, keep internal keys
 - [ ] Visual upgrade tiers — 3 sprite tiers per unit, swap on rank-up — needs asset pipeline
-- [ ] Wrecks persistent across sessions — currently lost on mission exit
+- [x] Wrecks persistent across sessions — saved per-theater in slot JSON (`persisted_wrecks[map_id]`) and restored on mission load
 - [x] District AI tuning — `map_data` / `map_data_2` define `AI_*` spawn and interval multipliers; `AIFaction` + frontline/regency district behavior
 - [x] NG arrival — `advisor.trigger("ng_arrival_district")` + `AI_NG_*` spawns; Whipple copy in `advisor.py`
 - [x] Troll Farm + Journalist capture audit — `PlacedBuilding._capture_by` tracks attacker; troll erosion now affects active enemy captures (including neutral objectives); journalist bonus checks active nearby squad members
